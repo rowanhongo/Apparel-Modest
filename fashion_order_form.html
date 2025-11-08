@@ -359,6 +359,60 @@
             margin-left: 2px;
         }
 
+        .size-chart {
+            margin: 20px 0;
+            background: #ffffff;
+            border-radius: 12px;
+            padding: 24px;
+            border: 1.5px solid rgba(0, 0, 0, 0.08);
+        }
+
+        .size-chart-title {
+            font-size: 24px;
+            font-weight: 700;
+            font-style: italic;
+            color: #000000;
+            margin-bottom: 16px;
+            text-align: center;
+        }
+
+        .size-chart-divider {
+            width: 100%;
+            height: 1px;
+            background: #000;
+            margin-bottom: 12px;
+        }
+
+        .size-chart-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 12px;
+        }
+
+        .size-chart-table th {
+            padding: 12px 8px;
+            text-align: left;
+            font-size: 14px;
+            font-weight: 600;
+            color: #000000;
+            border-bottom: 2px solid rgba(0, 0, 0, 0.1);
+        }
+
+        .size-chart-table td {
+            padding: 12px 8px;
+            font-size: 14px;
+            color: #000000;
+            border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+        }
+
+        .size-chart-table tr:last-child td {
+            border-bottom: none;
+        }
+
+        .size-chart-table tr:hover {
+            background: rgba(253, 160, 133, 0.05);
+        }
+
         @media (max-width: 640px) {
             .measurement-grid {
                 grid-template-columns: 1fr;
@@ -419,15 +473,73 @@
 
             <div class="form-group">
                 <label for="bodyMeasurements">Body Measurements <span class="required">*</span></label>
+                <div class="size-chart">
+                    <div class="size-chart-title">Size Chart</div>
+                    <div class="size-chart-divider"></div>
+                    <table class="size-chart-table">
+                        <thead>
+                            <tr>
+                                <th>A/M</th>
+                                <th>SIZE</th>
+                                <th>BUST</th>
+                                <th>WAIST</th>
+                                <th>HIPS</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>SS</td>
+                                <td>6</td>
+                                <td>32</td>
+                                <td>25</td>
+                                <td>36</td>
+                            </tr>
+                            <tr>
+                                <td>S</td>
+                                <td>8</td>
+                                <td>34</td>
+                                <td>27</td>
+                                <td>39</td>
+                            </tr>
+                            <tr>
+                                <td>SM</td>
+                                <td>10</td>
+                                <td>36</td>
+                                <td>30</td>
+                                <td>41</td>
+                            </tr>
+                            <tr>
+                                <td>M</td>
+                                <td>12</td>
+                                <td>38</td>
+                                <td>32</td>
+                                <td>43</td>
+                            </tr>
+                            <tr>
+                                <td>SL</td>
+                                <td>14</td>
+                                <td>40</td>
+                                <td>34</td>
+                                <td>45</td>
+                            </tr>
+                            <tr>
+                                <td>L</td>
+                                <td>16</td>
+                                <td>44</td>
+                                <td>36</td>
+                                <td>48</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
                 <select id="bodyMeasurements" required>
                     <option value="">Select your size</option>
-                    <option value="XS">XS - Extra Small</option>
-                    <option value="S">S - Small</option>
-                    <option value="M">M - Medium</option>
-                    <option value="L">L - Large</option>
-                    <option value="XL">XL - Extra Large</option>
-                    <option value="XXL">XXL - Extra Extra Large</option>
-                    <option value="XXXL">XXXL - Extra Extra Extra Large</option>
+                    <option value="SS">SS 6, 32, 25, 36</option>
+                    <option value="S">S 8, 34, 27, 39</option>
+                    <option value="SM">SM 10, 36, 30, 41</option>
+                    <option value="M">M 12, 38, 32, 43</option>
+                    <option value="SL">SL 14, 40, 34, 45</option>
+                    <option value="L">L 16, 44, 36, 48</option>
                     <option value="custom">Custom Size (Enter your own measurements)</option>
                 </select>
                 <div class="custom-size-input" id="customSizeInput" style="display: none;">
@@ -446,6 +558,9 @@
                 </select>
                 <div class="custom-size-input" id="deliveryLocationInput" style="display: none;">
                     <input type="text" id="deliveryLocation" placeholder="Enter delivery location" required>
+                </div>
+                <div class="custom-size-input" id="storeLocationMessage" style="display: none;">
+                    <p style="margin-top: 12px; padding: 14px 18px; background: rgba(246, 211, 101, 0.1); border-radius: 12px; border: 1px solid rgba(253, 160, 133, 0.2); color: #2d3748; font-size: 14px;">The store is opposite Jevanjee, Muindi Mbingu street, next to delight college.</p>
                 </div>
             </div>
 
@@ -564,13 +679,21 @@
         document.getElementById('deliveryOption').addEventListener('change', function() {
             const deliveryLocationInput = document.getElementById('deliveryLocationInput');
             const deliveryLocation = document.getElementById('deliveryLocation');
+            const storeLocationMessage = document.getElementById('storeLocationMessage');
             if (this.value === 'uber' || this.value === 'pickup-mtaani' || this.value === 'courier') {
                 deliveryLocationInput.style.display = 'block';
                 deliveryLocation.required = true;
+                storeLocationMessage.style.display = 'none';
+            } else if (this.value === 'in-store-pickup') {
+                deliveryLocationInput.style.display = 'none';
+                deliveryLocation.required = false;
+                deliveryLocation.value = '';
+                storeLocationMessage.style.display = 'block';
             } else {
                 deliveryLocationInput.style.display = 'none';
                 deliveryLocation.required = false;
                 deliveryLocation.value = '';
+                storeLocationMessage.style.display = 'none';
             }
         });
 
@@ -634,6 +757,7 @@
             colorOptionsDiv.classList.remove('active');
             document.getElementById('customSizeInput').style.display = 'none';
             document.getElementById('deliveryLocationInput').style.display = 'none';
+            document.getElementById('storeLocationMessage').style.display = 'none';
             selectedProduct = null;
             selectedColor = null;
         });
