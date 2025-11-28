@@ -100,6 +100,18 @@
             font-size: 15px;
             transition: all 0.3s ease;
             font-family: inherit;
+            -webkit-appearance: none;
+            -moz-appearance: none;
+            appearance: none;
+        }
+
+        /* Style select dropdown arrow */
+        .form-group select {
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%234a5568' d='M6 9L1 4h10z'/%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: right 14px center;
+            background-size: 12px;
+            padding-right: 40px;
         }
 
         .form-group input:focus,
@@ -129,8 +141,9 @@
             max-height: 320px;
             overflow-y: auto;
             box-shadow: 0 12px 40px rgba(0, 0, 0, 0.12);
-            z-index: 100;
+            z-index: 1000;
             display: none;
+            pointer-events: auto;
         }
 
         .search-results.active {
@@ -144,6 +157,9 @@
             cursor: pointer;
             transition: all 0.2s ease;
             border-bottom: 1px solid rgba(0, 0, 0, 0.04);
+            user-select: none;
+            -webkit-user-select: none;
+            pointer-events: auto;
         }
 
         .search-result-item:hover {
@@ -266,6 +282,48 @@
 
         .custom-size-input {
             margin-top: 12px;
+        }
+
+        .custom-size-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 16px;
+            margin-top: 12px;
+        }
+
+        .custom-size-field {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .custom-size-field label {
+            font-size: 13px;
+            font-weight: 600;
+            color: #4a5568;
+            margin-bottom: 8px;
+        }
+
+        .custom-size-field input {
+            width: 100%;
+            padding: 12px 16px;
+            border: 1.5px solid rgba(0, 0, 0, 0.08);
+            background: rgba(255, 255, 255, 0.9);
+            backdrop-filter: blur(10px);
+            border-radius: 10px;
+            font-size: 14px;
+            transition: all 0.3s ease;
+            font-family: inherit;
+        }
+
+        .custom-size-field input:focus {
+            outline: none;
+            border-color: #fda085;
+            background: rgba(255, 255, 255, 1);
+            box-shadow: 0 4px 20px rgba(253, 160, 133, 0.15), 0 0 0 3px rgba(253, 160, 133, 0.1);
+        }
+
+        .custom-size-field input:invalid {
+            border-color: #fc8181;
         }
 
         .clothing-type-selector {
@@ -413,8 +471,12 @@
             background: rgba(253, 160, 133, 0.05);
         }
 
-        @media (max-width: 640px) {
+            @media (max-width: 640px) {
             .measurement-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .custom-size-grid {
                 grid-template-columns: 1fr;
             }
 
@@ -428,6 +490,34 @@
 
             .clothing-type-selector {
                 grid-template-columns: 1fr;
+            }
+
+            /* Make select boxes smaller and more compact on mobile */
+            .form-group select {
+                padding: 10px 12px;
+                padding-right: 36px;
+                font-size: 14px;
+                border-radius: 8px;
+                background-size: 10px;
+                background-position: right 12px center;
+                min-height: 42px;
+                line-height: 1.4;
+            }
+
+            /* Make inputs smaller on mobile too for consistency */
+            .form-group input,
+            .form-group textarea {
+                padding: 10px 12px;
+                font-size: 14px;
+                border-radius: 8px;
+                min-height: 42px;
+            }
+
+            /* Style select options on mobile - make them more compact */
+            .form-group select option {
+                padding: 10px 12px;
+                font-size: 14px;
+                line-height: 1.5;
             }
         }
     </style>
@@ -446,8 +536,17 @@
             </div>
 
             <div class="form-group">
-                <label for="phone">WhatsApp Number <span class="required">*</span></label>
-                <input type="tel" id="phone" required placeholder="+254 700 000 000">
+                <label>WhatsApp Number <span class="required">*</span></label>
+                <div style="display: grid; grid-template-columns: 120px 1fr; gap: 12px;">
+                    <div>
+                        <input type="tel" id="countryCode" required placeholder="+254" maxlength="4" style="text-align: center;">
+                        <small style="display: block; margin-top: 4px; font-size: 12px; color: #718096; text-align: center;">Country Code</small>
+                    </div>
+                    <div>
+                        <input type="tel" id="phoneNumber" required placeholder="0712345678" maxlength="15">
+                        <small style="display: block; margin-top: 4px; font-size: 12px; color: #718096;">Phone Number</small>
+                    </div>
+                </div>
             </div>
 
             <div class="form-group">
@@ -543,7 +642,24 @@
                     <option value="custom">Custom Size (Enter your own measurements)</option>
                 </select>
                 <div class="custom-size-input" id="customSizeInput" style="display: none;">
-                    <input type="text" id="customSize" placeholder="Enter your custom measurements (e.g., Chest: 40, Waist: 32, etc.)">
+                    <div class="custom-size-grid">
+                        <div class="custom-size-field">
+                            <label for="customSize">Size <span class="required">*</span></label>
+                            <input type="number" id="customSize" min="0" step="1" placeholder="e.g., 14" required>
+                        </div>
+                        <div class="custom-size-field">
+                            <label for="customBust">Bust <span class="required">*</span></label>
+                            <input type="number" id="customBust" min="0" step="1" placeholder="e.g., 42" required>
+                        </div>
+                        <div class="custom-size-field">
+                            <label for="customWaist">Waist <span class="required">*</span></label>
+                            <input type="number" id="customWaist" min="0" step="1" placeholder="e.g., 34" required>
+                        </div>
+                        <div class="custom-size-field">
+                            <label for="customHips">Hips <span class="required">*</span></label>
+                            <input type="number" id="customHips" min="0" step="1" placeholder="e.g., 46" required>
+                        </div>
+                    </div>
                 </div>
             </div>
 
@@ -585,15 +701,80 @@
         </form>
     </div>
 
+    <!-- Supabase JS Library -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    
+    <!-- Environment Configuration Loader -->
+    <script src="config/env-loader.js"></script>
     <script>
-        const products = [
-            { id: 1, name: "Sunset Maxi Dress", price: 4500, image: "https://images.unsplash.com/photo-1595777457583-95e059d581b8?w=400", colors: ["Crimson Red", "Sunset Orange", "Golden Yellow", "Midnight Black"] },
-            { id: 2, name: "Midnight Blazer", price: 6800, image: "https://images.unsplash.com/photo-1591369822096-ffd140ec948f?w=400", colors: ["Classic Black", "Navy Blue", "Charcoal Gray", "Cream White"] },
-            { id: 3, name: "Aurora Evening Gown", price: 8500, image: "https://images.unsplash.com/photo-1566174053879-31528523f8ae?w=400", colors: ["Royal Purple", "Emerald Green", "Sapphire Blue", "Rose Gold"] },
-            { id: 4, name: "Luna Cocktail Dress", price: 5200, image: "https://images.unsplash.com/photo-1572804013309-59a88b7e92f1?w=400", colors: ["Silver Moon", "Pearl White", "Soft Pink", "Champagne"] },
-            { id: 5, name: "Savanna Safari Jacket", price: 7200, image: "https://images.unsplash.com/photo-1551028719-00167b16eac5?w=400", colors: ["Desert Tan", "Olive Green", "Earth Brown", "Khaki Beige"] },
-            { id: 6, name: "Ocean Breeze Romper", price: 3800, image: "https://images.unsplash.com/photo-1583496661160-fb5886a0aaaa?w=400", colors: ["Sky Blue", "Coral Pink", "Sea Green", "Sandy Beige"] }
-        ];
+        // Load environment variables from Netlify function
+        // This must complete before other scripts initialize
+        (async function() {
+            try {
+                await loadEnvConfig();
+                console.log('✅ All environment variables loaded');
+            } catch (error) {
+                console.error('❌ Failed to load environment variables:', error);
+                alert('⚠️ Configuration error. Please check your Netlify environment variables.');
+            }
+        })();
+    </script>
+    <script src="config/supabase.js"></script>
+
+    <script>
+        // Products will be loaded from Supabase
+        let products = [];
+        let supabaseClient = null;
+
+        // Wait for Supabase library and environment variables to be available
+        async function waitForSupabase(callback, maxAttempts = 50) {
+            // First, wait for environment config to be loaded
+            try {
+                if (typeof window.waitForEnvConfig === 'function') {
+                    await window.waitForEnvConfig();
+                    console.log('✅ Environment config loaded, checking Supabase...');
+                } else if (typeof window.loadEnvConfig === 'function') {
+                    await window.loadEnvConfig();
+                    console.log('✅ Environment config loaded via loadEnvConfig, checking Supabase...');
+                } else {
+                    // Fallback: wait for env config to be available
+                    let envAttempts = 0;
+                    while (!window.ENV_CONFIG_LOADED && envAttempts < 50) {
+                        await new Promise(resolve => setTimeout(resolve, 100));
+                        envAttempts++;
+                    }
+                    if (window.ENV_CONFIG_LOADED) {
+                        console.log('✅ Environment config loaded (via flag), checking Supabase...');
+                    }
+                }
+            } catch (error) {
+                console.warn('⚠️ Error loading environment config:', error);
+                // Continue anyway, might still work if env vars are set
+            }
+            
+            // Now wait for Supabase library to be available
+            let attempts = 0;
+            const checkSupabase = () => {
+                attempts++;
+                if (typeof supabase !== 'undefined' && typeof getSupabaseClient === 'function') {
+                    // Also verify environment variables are set
+                    if (window.SUPABASE_URL && window.SUPABASE_ANON_KEY) {
+                        callback();
+                    } else if (attempts < maxAttempts) {
+                        setTimeout(checkSupabase, 100);
+                    } else {
+                        console.error('❌ Supabase credentials not available after environment config loaded');
+                        console.error('   SUPABASE_URL:', window.SUPABASE_URL ? 'Set ✓' : 'Missing ❌');
+                        console.error('   SUPABASE_ANON_KEY:', window.SUPABASE_ANON_KEY ? 'Set ✓' : 'Missing ❌');
+                    }
+                } else if (attempts < maxAttempts) {
+                    setTimeout(checkSupabase, 100);
+                } else {
+                    console.error('❌ Supabase library failed to load after multiple attempts');
+                }
+            };
+            checkSupabase();
+        }
 
         let selectedProduct = null;
         let selectedColor = null;
@@ -603,6 +784,108 @@
         const selectedProductDiv = document.getElementById('selectedProduct');
         const colorOptionsDiv = document.getElementById('colorOptions');
         const colorGrid = document.getElementById('colorGrid');
+
+        // Initialize Supabase and load products
+        async function initializeSupabase() {
+            try {
+                // Get Supabase client (Supabase library is guaranteed to be loaded by now)
+                supabaseClient = getSupabaseClient();
+                if (!supabaseClient) {
+                    console.error('❌ Failed to initialize Supabase client');
+                    return;
+                }
+
+                // Verify client has the .from method
+                if (typeof supabaseClient.from !== 'function') {
+                    console.error('❌ Supabase client is not valid. Client:', supabaseClient);
+                    return;
+                }
+
+                console.log('✅ Supabase initialized');
+                await loadProductsFromDatabase();
+            } catch (error) {
+                console.error('Error initializing Supabase:', error);
+            }
+        }
+
+        // Load products from Supabase database
+        async function loadProductsFromDatabase() {
+            try {
+                const { data: productsData, error } = await supabaseClient
+                    .from('products')
+                    .select('*')
+                    .order('name', { ascending: true });
+
+                if (error) {
+                    console.error('Error loading products:', error);
+                    // Fallback to empty array
+                    products = [];
+                    return;
+                }
+
+                // Transform Supabase products to match expected format
+                products = (productsData || []).map(product => {
+                    // Parse colors if stored as JSON or comma-separated string
+                    let colors = [];
+                    if (product.colors) {
+                        if (typeof product.colors === 'string') {
+                            try {
+                                colors = JSON.parse(product.colors);
+                            } catch (e) {
+                                // If not JSON, try splitting by comma
+                                colors = product.colors.split(',').map(c => c.trim()).filter(c => c);
+                            }
+                        } else if (Array.isArray(product.colors)) {
+                            colors = product.colors;
+                        }
+                    }
+
+                    // Default colors if none specified
+                    if (colors.length === 0) {
+                        colors = ['Black', 'White', 'Red', 'Blue'];
+                    }
+
+                    // Keep ID as string (UUID) - don't convert to number
+                    const productId = String(product.id);
+
+                    return {
+                        id: productId,
+                        name: product.name || 'Unknown Product',
+                        price: product.price || 0,
+                        image: product.image_url || 'https://via.placeholder.com/400',
+                        colors: colors
+                    };
+                });
+                
+                // Log products with their IDs for debugging
+                console.log('Products loaded with IDs:', products.map(p => ({ id: p.id, name: p.name, idType: typeof p.id })));
+
+                console.log(`✅ Loaded ${products.length} products from database`);
+            } catch (error) {
+                console.error('Error loading products:', error);
+                products = [];
+            }
+        }
+
+        // Use event delegation on searchResults container (set up once)
+        searchResults.addEventListener('click', (e) => {
+            const item = e.target.closest('.search-result-item');
+            if (item) {
+                e.preventDefault();
+                e.stopPropagation();
+                const productId = String(item.dataset.id); // Keep as string (UUID)
+                console.log('Product clicked:', productId, 'Type:', typeof productId);
+                selectProduct(productId);
+            }
+        });
+
+        // Initialize on page load
+        document.addEventListener('DOMContentLoaded', async () => {
+            // Wait for Supabase library and environment variables to be fully loaded
+            await waitForSupabase(() => {
+                initializeSupabase();
+            });
+        });
 
         searchInput.addEventListener('input', (e) => {
             const query = e.target.value.toLowerCase().trim();
@@ -630,22 +913,40 @@
                 </div>
             `).join('');
             searchResults.classList.add('active');
-            document.querySelectorAll('.search-result-item').forEach(item => {
-                item.addEventListener('click', () => {
-                    selectProduct(parseInt(item.dataset.id));
-                });
-            });
         }
 
         function selectProduct(productId) {
-            selectedProduct = products.find(p => p.id === productId);
+            console.log('selectProduct called with ID:', productId, 'Type:', typeof productId);
+            console.log('Available products:', products.map(p => ({ id: p.id, name: p.name, idType: typeof p.id })));
+            
+            // Keep productId as string (UUID) - don't convert to number
+            const idString = String(productId);
+            
+            // Find product by string comparison
+            selectedProduct = products.find(p => String(p.id) === idString);
+            
+            if (!selectedProduct) {
+                console.error('Product not found with ID:', idString);
+                console.error('Available product IDs:', products.map(p => p.id));
+                alert('Product not found. Please try searching again.');
+                return;
+            }
+            
+            console.log('Selected product:', selectedProduct);
+            
             searchInput.value = selectedProduct.name;
             searchResults.classList.remove('active');
             document.getElementById('selectedImage').src = selectedProduct.image;
             document.getElementById('selectedName').textContent = selectedProduct.name;
             document.getElementById('selectedPrice').textContent = `KES ${selectedProduct.price.toLocaleString()}`;
             selectedProductDiv.classList.add('active');
-            displayColorOptions(selectedProduct.colors);
+            
+            if (selectedProduct.colors && selectedProduct.colors.length > 0) {
+                displayColorOptions(selectedProduct.colors);
+            } else {
+                console.warn('No colors available for product');
+                colorOptionsDiv.classList.remove('active');
+            }
         }
 
         function displayColorOptions(colors) {
@@ -665,13 +966,107 @@
         // Body measurements dropdown - show custom input if custom is selected
         document.getElementById('bodyMeasurements').addEventListener('change', function() {
             const customInput = document.getElementById('customSizeInput');
+            const customSize = document.getElementById('customSize');
+            const customBust = document.getElementById('customBust');
+            const customWaist = document.getElementById('customWaist');
+            const customHips = document.getElementById('customHips');
+            
             if (this.value === 'custom') {
                 customInput.style.display = 'block';
-                document.getElementById('customSize').required = true;
+                customSize.required = true;
+                customBust.required = true;
+                customWaist.required = true;
+                customHips.required = true;
             } else {
                 customInput.style.display = 'none';
-                document.getElementById('customSize').required = false;
-                document.getElementById('customSize').value = '';
+                customSize.required = false;
+                customBust.required = false;
+                customWaist.required = false;
+                customHips.required = false;
+                customSize.value = '';
+                customBust.value = '';
+                customWaist.value = '';
+                customHips.value = '';
+            }
+        });
+
+        // Ensure only numbers can be entered in custom size fields
+        ['customSize', 'customBust', 'customWaist', 'customHips'].forEach(id => {
+            const field = document.getElementById(id);
+            field.addEventListener('input', function(e) {
+                // Remove any non-numeric characters
+                this.value = this.value.replace(/[^0-9]/g, '');
+            });
+            
+            field.addEventListener('keypress', function(e) {
+                // Prevent non-numeric characters from being typed
+                if (!/[0-9]/.test(e.key) && !['Backspace', 'Delete', 'Tab', 'ArrowLeft', 'ArrowRight'].includes(e.key)) {
+                    e.preventDefault();
+                }
+            });
+        });
+
+        // Ensure only text (letters, spaces, hyphens, apostrophes) can be entered in name field
+        const nameField = document.getElementById('name');
+        nameField.addEventListener('input', function(e) {
+            // Remove any non-text characters (keep only letters, spaces, hyphens, apostrophes, and periods)
+            this.value = this.value.replace(/[^a-zA-Z\s\-'\.]/g, '');
+        });
+        
+        nameField.addEventListener('keypress', function(e) {
+            // Prevent non-text characters from being typed
+            const allowedKeys = ['Backspace', 'Delete', 'Tab', 'ArrowLeft', 'ArrowRight', 'Home', 'End'];
+            if (!/[a-zA-Z\s\-'\.]/.test(e.key) && !allowedKeys.includes(e.key)) {
+                e.preventDefault();
+            }
+        });
+
+        // Country code field - only digits, auto-add + prefix
+        const countryCodeField = document.getElementById('countryCode');
+        countryCodeField.addEventListener('input', function(e) {
+            // Remove any non-numeric characters
+            let value = this.value.replace(/[^0-9]/g, '');
+            // Auto-add + prefix if not present
+            if (value && !this.value.startsWith('+')) {
+                this.value = '+' + value;
+            } else if (!value) {
+                this.value = '+';
+            } else {
+                this.value = '+' + value;
+            }
+        });
+        
+        countryCodeField.addEventListener('keypress', function(e) {
+            // Allow + only at the start, then only digits
+            const allowedKeys = ['Backspace', 'Delete', 'Tab', 'ArrowLeft', 'ArrowRight', 'Home', 'End'];
+            if (this.value === '+' && e.key === '+') {
+                e.preventDefault();
+                return;
+            }
+            if (!/[0-9]/.test(e.key) && !allowedKeys.includes(e.key)) {
+                e.preventDefault();
+            }
+        });
+
+        // Phone number field - only digits
+        const phoneNumberField = document.getElementById('phoneNumber');
+        phoneNumberField.addEventListener('input', function(e) {
+            // Remove any non-numeric characters
+            this.value = this.value.replace(/[^0-9]/g, '');
+        });
+        
+        phoneNumberField.addEventListener('keypress', function(e) {
+            // Prevent non-numeric characters from being typed
+            const allowedKeys = ['Backspace', 'Delete', 'Tab', 'ArrowLeft', 'ArrowRight', 'Home', 'End'];
+            if (!/[0-9]/.test(e.key) && !allowedKeys.includes(e.key)) {
+                e.preventDefault();
+            }
+        });
+
+        // Initialize country code with + on focus
+        countryCodeField.addEventListener('focus', function() {
+            if (!this.value) {
+                this.value = '+';
             }
         });
 
@@ -698,13 +1093,24 @@
         });
 
         document.addEventListener('click', (e) => {
-            if (!searchInput.contains(e.target) && !searchResults.contains(e.target)) {
+            // Don't close if clicking on search input, search results, or any search result item
+            const isSearchInput = searchInput.contains(e.target);
+            const isSearchResults = searchResults.contains(e.target);
+            const isSearchResultItem = e.target.closest('.search-result-item');
+            
+            if (!isSearchInput && !isSearchResults && !isSearchResultItem) {
                 searchResults.classList.remove('active');
             }
         });
 
-        document.getElementById('orderForm').addEventListener('submit', (e) => {
+        document.getElementById('orderForm').addEventListener('submit', async (e) => {
             e.preventDefault();
+            
+            if (!supabaseClient) {
+                alert('❌ Database connection not available. Please refresh the page.');
+                return;
+            }
+
             if (!selectedProduct) {
                 alert('Please select an item');
                 return;
@@ -720,10 +1126,54 @@
                 return;
             }
 
-            const customSize = bodyMeasurements === 'custom' ? document.getElementById('customSize').value : '';
-            if (bodyMeasurements === 'custom' && !customSize) {
-                alert('Please enter your custom measurements');
-                return;
+            // Parse measurements into object
+            let measurements = {};
+            if (bodyMeasurements === 'custom') {
+                const customSize = document.getElementById('customSize').value.trim();
+                const customBust = document.getElementById('customBust').value.trim();
+                const customWaist = document.getElementById('customWaist').value.trim();
+                const customHips = document.getElementById('customHips').value.trim();
+                
+                if (!customSize || !customBust || !customWaist || !customHips) {
+                    alert('Please fill in all custom measurement fields (Size, Bust, Waist, Hips)');
+                    return;
+                }
+                
+                measurements = {
+                    size: customSize,
+                    bust: customBust,
+                    waist: customWaist,
+                    hips: customHips
+                };
+            } else {
+                // Map standard size codes to their measurements from the size chart
+                // These match the dropdown options: SS 6, 32, 25, 36 etc.
+                const sizeChart = {
+                    'SS': { size: 'SS 6', bust: '32', waist: '25', hips: '36' },
+                    'S': { size: 'S 8', bust: '34', waist: '27', hips: '39' },
+                    'SM': { size: 'SM 10', bust: '36', waist: '30', hips: '41' },
+                    'M': { size: 'M 12', bust: '38', waist: '32', hips: '43' },
+                    'SL': { size: 'SL 14', bust: '40', waist: '34', hips: '45' },
+                    'L': { size: 'L 16', bust: '44', waist: '36', hips: '48' }
+                };
+                
+                // Get measurements from size chart
+                if (sizeChart[bodyMeasurements]) {
+                    measurements = sizeChart[bodyMeasurements];
+                } else {
+                    // Fallback: try to parse if format is different
+                    const parts = bodyMeasurements.split(',');
+                    if (parts.length >= 4) {
+                        measurements = {
+                            size: parts[0].trim(),
+                            bust: parts[1].trim(),
+                            waist: parts[2].trim(),
+                            hips: parts[3].trim()
+                        };
+                    } else {
+                        measurements = { size: bodyMeasurements };
+                    }
+                }
             }
 
             const deliveryOption = document.getElementById('deliveryOption').value;
@@ -735,31 +1185,145 @@
                 return;
             }
 
-            const orderData = {
-                name: document.getElementById('name').value,
-                phone: document.getElementById('phone').value,
-                product: selectedProduct.name,
-                productId: selectedProduct.id,
-                color: selectedColor,
-                price: selectedProduct.price,
-                bodyMeasurements: bodyMeasurements === 'custom' ? customSize : bodyMeasurements,
-                deliveryOption: deliveryOption,
-                deliveryLocation: deliveryLocation || null,
-                paymentOption: paymentOption,
-                comments: document.getElementById('comments').value,
-                timestamp: new Date().toISOString()
-            };
+            // Disable submit button and show loading
+            const submitBtn = document.querySelector('.submit-btn');
+            const originalBtnText = submitBtn.textContent;
+            submitBtn.disabled = true;
+            submitBtn.textContent = 'Submitting...';
 
-            console.log('Order submitted:', orderData);
-            alert('✓ Order submitted successfully! We\'ll contact you on WhatsApp shortly.');
-            document.getElementById('orderForm').reset();
-            selectedProductDiv.classList.remove('active');
-            colorOptionsDiv.classList.remove('active');
-            document.getElementById('customSizeInput').style.display = 'none';
-            document.getElementById('deliveryLocationInput').style.display = 'none';
-            document.getElementById('storeLocationMessage').style.display = 'none';
-            selectedProduct = null;
-            selectedColor = null;
+            try {
+                const customerName = document.getElementById('name').value.trim();
+                
+                // Get and validate country code and phone number
+                let countryCode = document.getElementById('countryCode').value.trim();
+                let phoneNumber = document.getElementById('phoneNumber').value.trim();
+                
+                // Validate country code
+                if (!countryCode || countryCode === '+') {
+                    alert('Please enter your country code (e.g., 254 for Kenya)');
+                    return;
+                }
+                
+                // Validate phone number
+                if (!phoneNumber) {
+                    alert('Please enter your phone number');
+                    return;
+                }
+                
+                // Remove + from country code if present (we'll add it back)
+                countryCode = countryCode.replace(/^\+/, '');
+                
+                // Validate country code is numeric
+                if (!/^\d+$/.test(countryCode)) {
+                    alert('Country code must contain only numbers');
+                    return;
+                }
+                
+                // Remove leading 0 from phone number if present
+                if (phoneNumber.startsWith('0')) {
+                    phoneNumber = phoneNumber.substring(1);
+                }
+                
+                // Validate phone number is numeric
+                if (!/^\d+$/.test(phoneNumber)) {
+                    alert('Phone number must contain only numbers');
+                    return;
+                }
+                
+                // Combine: +countryCode + phoneNumber
+                const customerPhone = '+' + countryCode + phoneNumber;
+                
+                const comments = document.getElementById('comments').value.trim();
+
+                // Step 1: Find or create customer
+                let customerId;
+                const { data: existingCustomer } = await supabaseClient
+                    .from('customers')
+                    .select('id')
+                    .eq('phone', customerPhone)
+                    .single();
+
+                if (existingCustomer) {
+                    customerId = existingCustomer.id;
+                    // Update customer name if it changed
+                    await supabaseClient
+                        .from('customers')
+                        .update({ name: customerName })
+                        .eq('id', customerId);
+                } else {
+                    // Create new customer
+                    const { data: newCustomer, error: customerError } = await supabaseClient
+                        .from('customers')
+                        .insert({
+                            name: customerName,
+                            phone: customerPhone
+                        })
+                        .select()
+                        .single();
+
+                    if (customerError) {
+                        throw new Error(`Failed to create customer: ${customerError.message}`);
+                    }
+                    customerId = newCustomer.id;
+                }
+
+                // Step 2: Create order
+                // Store measurements in comments since measurements column doesn't exist in schema
+                let finalComments = comments || '';
+                if (measurements && Object.keys(measurements).length > 0) {
+                    const measurementsText = `Measurements: Size=${measurements.size || 'N/A'}, Bust=${measurements.bust || 'N/A'}, Waist=${measurements.waist || 'N/A'}, Hips=${measurements.hips || 'N/A'}`;
+                    finalComments = finalComments ? `${finalComments}\n${measurementsText}` : measurementsText;
+                    console.log('📝 Saving measurements:', measurements);
+                    console.log('📝 Final comments with measurements:', finalComments);
+                }
+
+                const { data: newOrder, error: orderError } = await supabaseClient
+                    .from('orders')
+                    .insert({
+                        customer_id: customerId,
+                        customer_phone: customerPhone, // Required field
+                        product_id: selectedProduct.id,
+                        status: 'pending',
+                        color: selectedColor,
+                        price: selectedProduct.price,
+                        delivery_option: deliveryOption,
+                        delivery_location: deliveryLocation || null,
+                        payment_option: paymentOption,
+                        comments: finalComments || null
+                    })
+                    .select()
+                    .single();
+
+                if (orderError) {
+                    throw new Error(`Failed to create order: ${orderError.message}`);
+                }
+
+                console.log('✅ Order submitted successfully:', newOrder);
+                alert('✓ Order submitted successfully! You can freely exit.');
+                
+                // Reset form
+                document.getElementById('orderForm').reset();
+                // Reset country code to just +
+                document.getElementById('countryCode').value = '+';
+                selectedProductDiv.classList.remove('active');
+                colorOptionsDiv.classList.remove('active');
+                document.getElementById('customSizeInput').style.display = 'none';
+                document.getElementById('customSize').value = '';
+                document.getElementById('customBust').value = '';
+                document.getElementById('customWaist').value = '';
+                document.getElementById('customHips').value = '';
+                document.getElementById('deliveryLocationInput').style.display = 'none';
+                document.getElementById('storeLocationMessage').style.display = 'none';
+                selectedProduct = null;
+                selectedColor = null;
+            } catch (error) {
+                console.error('Error submitting order:', error);
+                alert(`❌ Failed to submit order: ${error.message}. Please try again.`);
+            } finally {
+                // Re-enable submit button
+                submitBtn.disabled = false;
+                submitBtn.textContent = originalBtnText;
+            }
         });
     </script>
 </body>

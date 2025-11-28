@@ -1,0 +1,43 @@
+[build]
+  # No build command needed for static HTML files
+  publish = "."
+  
+  # Omit these environment variable names from secrets scanning
+  # These are public keys (anon keys) and variable names used in code, not actual secret values
+  # Note: CLOUDINARY_API_SECRET and SUPABASE_SERVICE_ROLE_KEY are not exposed in the function
+  [build.environment]
+    SECRETS_SCAN_OMIT_KEYS = "SUPABASE_URL,SUPABASE_ANON_KEY,SUPABASE_SERVICE_ROLE_KEY,CLOUDINARY_API_KEY,CLOUDINARY_API_SECRET,CLOUDINARY_ID,CLOUDINARY_UPLOAD_PRESET,EMAILJS_SERVICE_ID,EMAILJS_TEMPLATE_ID,EMAILJS_PUBLIC_KEY,EMAILJS_WELCOME_TEMPLATE_ID,API_keys_Public_Key,Welcome_Template_ID,One_Time_Password_Template_ID"
+
+[[redirects]]
+  # Route /customer-form to fashion_order_form.html
+  from = "/customer-form"
+  to = "/fashion_order_form.html"
+  status = 200
+
+# Note: index.html is automatically served at root (/)
+
+# Security headers
+[[headers]]
+  for = "/*"
+  [headers.values]
+    X-Frame-Options = "DENY"
+    X-XSS-Protection = "1; mode=block"
+    X-Content-Type-Options = "nosniff"
+    Referrer-Policy = "strict-origin-when-cross-origin"
+
+# Cache static assets
+[[headers]]
+  for = "/config/*"
+  [headers.values]
+    Cache-Control = "public, max-age=3600"
+
+[[headers]]
+  for = "/*.js"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000, immutable"
+
+[[headers]]
+  for = "/*.css"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000, immutable"
+
