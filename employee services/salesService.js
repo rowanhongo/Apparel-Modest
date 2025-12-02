@@ -165,12 +165,27 @@ class SalesService {
     render() {
         if (!this.container) return;
 
-        this.container.innerHTML = '';
+        // Create layout structure: orders list on left, details panel on right
+        this.container.innerHTML = `
+            <div class="orders-list"></div>
+            <div class="order-details-panel" id="sales-details-panel">
+                <div class="order-details-panel-header">Order Details</div>
+                <div id="sales-details-content"></div>
+            </div>
+        `;
+
+        const ordersList = this.container.querySelector('.orders-list');
+        const detailsPanel = this.container.querySelector('#sales-details-panel');
+        const detailsContent = this.container.querySelector('#sales-details-content');
 
         this.orders.forEach(order => {
             const orderBubble = this.createOrderBubble(order);
-            this.container.appendChild(orderBubble);
+            ordersList.appendChild(orderBubble);
         });
+
+        // Store references for click handlers
+        this.detailsPanel = detailsPanel;
+        this.detailsContent = detailsContent;
     }
 
     /**
@@ -187,7 +202,7 @@ class SalesService {
                 <div class="order-info">
                     <div class="customer-name">${order.customerName}</div>
                     <div class="product-name">${order.productName}</div>
-                    <span class="product-color">${order.color}</span>
+                    <span class="product-color">Colour: ${order.color}</span>
                 </div>
                 <div class="order-actions">
                     <button class="btn btn-accept" data-action="accept" data-id="${order.id}">Accept</button>
@@ -201,15 +216,24 @@ class SalesService {
 
         // Add click handler for order header (show details in right panel)
         bubble.querySelector('.order-header').addEventListener('click', (e) => {
-            if (!e.target.classList.contains('btn')) {
+            if (!e.target.classList.contains('btn') && !e.target.closest('.btn')) {
+                // Get the orders list container (parent of all bubbles)
+                const ordersList = bubble.parentElement;
+                if (!ordersList) return;
+                
                 // Remove active class from all bubbles
-                this.container.querySelectorAll('.order-bubble').forEach(b => b.classList.remove('active'));
+                ordersList.querySelectorAll('.order-bubble').forEach(b => b.classList.remove('active'));
                 // Add active class to clicked bubble
                 bubble.classList.add('active');
+                
+                // Get the details panel and content from the main container
+                const detailsPanel = this.container.querySelector('#sales-details-panel');
+                const detailsContent = this.container.querySelector('#sales-details-content');
+                
                 // Show details in right panel
-                if (this.detailsPanel && this.detailsContent) {
-                    this.detailsContent.innerHTML = this.renderOrderDetails(order);
-                    this.detailsPanel.classList.add('active');
+                if (detailsPanel && detailsContent) {
+                    detailsContent.innerHTML = this.renderOrderDetails(order);
+                    detailsPanel.classList.add('active');
                 }
             }
         });
