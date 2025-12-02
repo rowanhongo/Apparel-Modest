@@ -205,10 +205,47 @@
             margin-top: 16px;
             align-items: center;
             border: 1px solid rgba(253, 160, 133, 0.2);
+            position: relative;
         }
 
         .selected-product.active {
             display: flex;
+        }
+
+        .selected-product-close {
+            position: absolute;
+            top: 12px;
+            right: 12px;
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.9);
+            border: 1.5px solid rgba(0, 0, 0, 0.1);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s ease;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        .selected-product-close:hover {
+            background: rgba(253, 160, 133, 0.2);
+            border-color: #fda085;
+            transform: scale(1.1);
+            box-shadow: 0 4px 12px rgba(253, 160, 133, 0.3);
+        }
+
+        .selected-product-close svg {
+            width: 18px;
+            height: 18px;
+            stroke: #2d3748;
+            stroke-width: 2.5;
+            stroke-linecap: round;
+        }
+
+        .selected-product-close:hover svg {
+            stroke: #fda085;
         }
 
         .selected-product-image {
@@ -624,6 +661,11 @@
                 </div>
                 
                 <div class="selected-product" id="selectedProduct">
+                    <button type="button" class="selected-product-close" id="clearProductBtn" aria-label="Clear selection">
+                        <svg viewBox="0 0 24 24" fill="none">
+                            <path d="M18 6L6 18M6 6l12 12"/>
+                        </svg>
+                    </button>
                     <img src="" alt="" class="selected-product-image" id="selectedImage">
                     <div class="selected-product-info">
                         <h3 id="selectedName"></h3>
@@ -947,8 +989,29 @@
             }
         });
 
+        // Function to clear selected product
+        function clearSelectedProduct() {
+            selectedProduct = null;
+            selectedColor = null;
+            searchInput.value = '';
+            selectedProductDiv.classList.remove('active');
+            colorOptionsDiv.classList.remove('active');
+            document.getElementById('selectedColorDisplay').textContent = '';
+            document.querySelectorAll('.color-option').forEach(o => o.classList.remove('selected'));
+        }
+
         // Initialize on page load
         document.addEventListener('DOMContentLoaded', async () => {
+            // Set up clear button event listener
+            const clearBtn = document.getElementById('clearProductBtn');
+            if (clearBtn) {
+                clearBtn.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    clearSelectedProduct();
+                });
+            }
+
             // Wait for Supabase library and environment variables to be fully loaded
             await waitForSupabase(() => {
                 initializeSupabase();
