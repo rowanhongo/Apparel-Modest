@@ -691,56 +691,6 @@
             gap: 12px;
         }
 
-        /* Sales, Production, Logistics - Side-by-side layout */
-        #newRequestsContainer,
-        #inProgressContainer,
-        #toDeliverContainer {
-            display: flex;
-            gap: 20px;
-            align-items: flex-start;
-        }
-
-        .orders-list {
-            flex: 0 0 400px;
-            display: flex;
-            flex-direction: column;
-            gap: 12px;
-            max-height: calc(100vh - 200px);
-            overflow-y: auto;
-        }
-
-        .order-details-panel {
-            flex: 1;
-            min-width: 0;
-            background: rgba(224, 216, 201, 0.1);
-            backdrop-filter: blur(20px);
-            border-radius: 10px;
-            padding: 20px;
-            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
-            border: 1px solid rgba(224, 216, 201, 0.2);
-            display: block;
-            position: sticky;
-            top: 20px;
-            max-height: calc(100vh - 200px);
-            overflow-y: auto;
-        }
-
-        .order-details-panel-header {
-            font-size: 18px;
-            font-weight: 700;
-            color: rgba(65, 70, 63, 0.9);
-            margin-bottom: 16px;
-            padding-bottom: 12px;
-            border-bottom: 1px solid rgba(224, 216, 201, 0.2);
-        }
-
-        /* Hide order-details inside cards for sales/production/logistics */
-        #newRequestsContainer .order-details,
-        #inProgressContainer .order-details,
-        #toDeliverContainer .order-details {
-            display: none !important;
-        }
-
         .order-bubble {
             background: rgba(224, 216, 201, 0.1);
             backdrop-filter: blur(20px);
@@ -1021,14 +971,6 @@
 
         .order-details.expanded {
             display: block;
-        }
-
-        /* Order bubble active state for sales/production/logistics */
-        #newRequestsContainer .order-bubble.active,
-        #inProgressContainer .order-bubble.active,
-        #toDeliverContainer .order-bubble.active {
-            border: 2px solid rgba(224, 216, 201, 0.5);
-            background: rgba(224, 216, 201, 0.15);
         }
 
         .detail-row {
@@ -1705,26 +1647,6 @@
                 gap: 10px;
             }
 
-            /* Mobile: Stack cards vertically for sales/production/logistics */
-            #newRequestsContainer,
-            #inProgressContainer,
-            #toDeliverContainer {
-                flex-direction: column;
-            }
-
-            .orders-list {
-                flex: 1;
-                width: 100%;
-                max-height: none;
-            }
-
-            .order-details-panel {
-                width: 100%;
-                position: static;
-                max-height: none;
-                margin-top: 16px;
-            }
-
             .order-bubble {
                 padding: 10px;
             }
@@ -1802,6 +1724,62 @@
 
             .order-actions .btn {
                 padding: 5px 8px;
+                font-size: 11px;
+            }
+
+            /* Mobile layout for Sales, Production, and Logistics - details on right side */
+            #newRequestsContainer .order-bubble,
+            #inProgressContainer .order-bubble,
+            #toDeliverContainer .order-bubble {
+                display: flex;
+                flex-direction: row;
+                gap: 12px;
+                align-items: flex-start;
+                padding: 10px;
+            }
+
+            #newRequestsContainer .order-header,
+            #inProgressContainer .order-header,
+            #toDeliverContainer .order-header {
+                flex: 0 0 48%;
+                min-width: 0;
+                display: flex;
+                flex-direction: column;
+                gap: 8px;
+            }
+
+            #newRequestsContainer .order-header .order-info,
+            #inProgressContainer .order-header .order-info,
+            #toDeliverContainer .order-header .order-info {
+                flex: 1;
+            }
+
+            #newRequestsContainer .order-details,
+            #inProgressContainer .order-details,
+            #toDeliverContainer .order-details {
+                flex: 1;
+                display: block !important;
+                margin-top: 0;
+                padding-top: 0;
+                border-top: none;
+                border-left: 1px solid rgba(224, 216, 201, 0.2);
+                padding-left: 12px;
+                min-width: 0;
+            }
+
+            #newRequestsContainer .order-actions,
+            #inProgressContainer .order-actions,
+            #toDeliverContainer .order-actions {
+                flex-direction: column;
+                width: 100%;
+                gap: 6px;
+            }
+
+            #newRequestsContainer .order-actions .btn,
+            #inProgressContainer .order-actions .btn,
+            #toDeliverContainer .order-actions .btn {
+                width: 100%;
+                padding: 6px 10px;
                 font-size: 11px;
             }
 

@@ -405,24 +405,24 @@ class ReturnsService {
             }
         } else {
             // Unmarking as resolved - just update the status (though this shouldn't happen if we delete on resolve)
-            try {
-                const { error } = await this.supabase
-                    .from('returns')
-                    .update({ resolved: newResolvedStatus })
-                    .eq('id', returnId);
+        try {
+            const { error } = await this.supabase
+                .from('returns')
+                .update({ resolved: newResolvedStatus })
+                .eq('id', returnId);
 
-                if (error) {
-                    console.error('Error updating return:', error);
-                    alert('Failed to update return status. Please try again.');
-                    return;
-                }
-
-                // Update local data
-                returnItem.resolved = newResolvedStatus;
-                this.render();
-            } catch (error) {
-                console.error('Error toggling return resolved status:', error);
+            if (error) {
+                console.error('Error updating return:', error);
                 alert('Failed to update return status. Please try again.');
+                return;
+            }
+
+            // Update local data
+            returnItem.resolved = newResolvedStatus;
+            this.render();
+        } catch (error) {
+            console.error('Error toggling return resolved status:', error);
+            alert('Failed to update return status. Please try again.');
             }
         }
     }

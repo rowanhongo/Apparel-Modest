@@ -150,31 +150,12 @@ class ProductionService {
     render() {
         if (!this.container) return;
 
-        // Create layout structure: orders list on left, details panel on right
-        this.container.innerHTML = `
-            <div class="orders-list"></div>
-            <div class="order-details-panel" id="production-details-panel">
-                <div class="order-details-panel-header">Order Details</div>
-                <div id="production-details-content">
-                    <p style="color: rgba(65, 70, 63, 0.6); font-size: 14px; text-align: center; padding: 20px;">
-                        Click on an order card to view details
-                    </p>
-                </div>
-            </div>
-        `;
-
-        const ordersList = this.container.querySelector('.orders-list');
-        const detailsPanel = this.container.querySelector('#production-details-panel');
-        const detailsContent = this.container.querySelector('#production-details-content');
+        this.container.innerHTML = '';
 
         this.orders.forEach(order => {
             const orderBubble = this.createOrderBubble(order);
-            ordersList.appendChild(orderBubble);
+            this.container.appendChild(orderBubble);
         });
-
-        // Store references for click handlers
-        this.detailsPanel = detailsPanel;
-        this.detailsContent = detailsContent;
     }
 
     /**
@@ -191,7 +172,7 @@ class ProductionService {
                 <div class="order-info">
                     <div class="customer-name">${order.customerName}</div>
                     <div class="product-name">${order.productName}</div>
-                    <span class="product-color">Colour: ${order.color}</span>
+                    <span class="product-color">${order.color}</span>
                 </div>
                 <div class="order-actions">
                     <button class="btn btn-done" data-action="done" data-id="${order.id}">Mark as Done</button>
@@ -202,35 +183,11 @@ class ProductionService {
             </div>
         `;
 
-        // Add click handler for order header (show details in right panel)
+        // Add click handler for order header (toggle details)
         bubble.querySelector('.order-header').addEventListener('click', (e) => {
-            if (!e.target.classList.contains('btn') && !e.target.closest('.btn')) {
-                e.preventDefault();
-                e.stopPropagation();
-                
-                // Get the orders list container (parent of all bubbles)
-                const ordersList = bubble.parentElement;
-                if (!ordersList) {
-                    console.error('Orders list not found');
-                    return;
-                }
-                
-                // Remove active class from all bubbles
-                ordersList.querySelectorAll('.order-bubble').forEach(b => b.classList.remove('active'));
-                // Add active class to clicked bubble
-                bubble.classList.add('active');
-                
-                // Get the details panel and content from the main container
-                const detailsPanel = this.container.querySelector('#production-details-panel');
-                const detailsContent = this.container.querySelector('#production-details-content');
-                
-                // Show details in right panel
-                if (detailsPanel && detailsContent) {
-                    detailsContent.innerHTML = this.renderOrderDetails(order);
-                    detailsPanel.classList.add('active');
-                } else {
-                    console.error('Details panel or content not found');
-                }
+            if (!e.target.classList.contains('btn')) {
+                const details = document.getElementById(`details-${order.id}`);
+                details.classList.toggle('expanded');
             }
         });
 
