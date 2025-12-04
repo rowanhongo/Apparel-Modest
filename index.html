@@ -11,10 +11,26 @@
             box-sizing: border-box;
         }
 
+        html {
+            overflow-x: hidden;
+            width: 100%;
+            max-width: 100%;
+        }
+
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', sans-serif;
             background: #3C3F3E;
             min-height: 100vh;
+            overflow-x: hidden;
+            width: 100%;
+            max-width: 100%;
+            position: relative;
+        }
+
+        /* Prevent horizontal overflow for all elements */
+        img, video, iframe, embed, object {
+            max-width: 100%;
+            height: auto;
         }
 
         /* Login Page Styles */
@@ -2419,6 +2435,47 @@
             }
             .lg\:grid-cols-4 {
                 grid-template-columns: repeat(4, minmax(0, 1fr));
+            }
+        }
+
+        /* Global mobile overflow prevention */
+        @media (max-width: 768px) {
+            * {
+                max-width: 100vw;
+            }
+
+            body, html {
+                overflow-x: hidden !important;
+                width: 100% !important;
+                max-width: 100% !important;
+                position: relative;
+            }
+
+            /* Ensure all containers respect viewport */
+            .container, .main-content, .login-container, .login-card,
+            .glass-card, .table-container, .kanban-container,
+            section, div[class*="container"], div[class*="wrapper"] {
+                max-width: 100% !important;
+                width: 100% !important;
+                overflow-x: hidden;
+            }
+
+            /* Prevent tables from causing horizontal scroll */
+            table {
+                width: 100% !important;
+                max-width: 100% !important;
+                table-layout: fixed;
+            }
+
+            /* Ensure inputs and form elements don't overflow */
+            input, textarea, select, button {
+                max-width: 100% !important;
+                box-sizing: border-box;
+            }
+
+            /* Fix any elements with fixed positioning */
+            [style*="position: fixed"], [style*="position:absolute"] {
+                max-width: 100vw !important;
             }
         }
     </style>
