@@ -744,7 +744,6 @@
                     <div class="selected-product-info">
                         <h3 id="selectedName"></h3>
                         <p id="selectedPrice"></p>
-                        <p id="selectedDescription" class="selected-product-description"></p>
                     </div>
                 </div>
             </div>
@@ -1073,8 +1072,6 @@
             selectedProductDiv.classList.remove('active');
             colorOptionsDiv.classList.remove('active');
             document.getElementById('selectedColorDisplay').textContent = '';
-            document.getElementById('selectedDescription').textContent = '';
-            document.getElementById('selectedDescription').style.display = 'none';
             document.querySelectorAll('.color-option').forEach(o => o.classList.remove('selected'));
         }
 
@@ -1148,16 +1145,6 @@
             document.getElementById('selectedImage').src = selectedProduct.image;
             document.getElementById('selectedName').textContent = selectedProduct.name;
             document.getElementById('selectedPrice').textContent = `KES ${selectedProduct.price.toLocaleString()}`;
-            
-            // Display description if available
-            const descriptionElement = document.getElementById('selectedDescription');
-            if (selectedProduct.description && selectedProduct.description.trim()) {
-                descriptionElement.textContent = selectedProduct.description;
-                descriptionElement.style.display = 'block';
-            } else {
-                descriptionElement.textContent = '';
-                descriptionElement.style.display = 'none';
-            }
             
             selectedProductDiv.classList.add('active');
             
@@ -1576,8 +1563,6 @@
                 selectedProductDiv.classList.remove('active');
                 colorOptionsDiv.classList.remove('active');
                 document.getElementById('selectedColorDisplay').textContent = '';
-                document.getElementById('selectedDescription').textContent = '';
-                document.getElementById('selectedDescription').style.display = 'none';
                 document.querySelectorAll('.color-option').forEach(o => o.classList.remove('selected'));
                 document.getElementById('customSizeInput').style.display = 'none';
                 document.getElementById('customSize').value = '';

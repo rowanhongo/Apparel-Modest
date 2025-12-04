@@ -44,9 +44,6 @@ class OTPService {
             return false;
         }
         
-        // Debug: Log that public key was found (without exposing the full key)
-        console.log('✅ EmailJS public key found:', config.publicKey.substring(0, 10) + '...');
-
         // Initialize EmailJS with public key
         emailjs.init(config.publicKey);
         console.log('✅ EmailJS initialized');
