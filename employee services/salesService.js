@@ -189,33 +189,33 @@ class SalesService {
                     <div class="product-name">${order.productName}</div>
                     <span class="product-color">Colour: ${order.color}</span>
                 </div>
-                <div class="order-actions">
-                    <button class="btn btn-accept" data-action="accept" data-id="${order.id}">Accept</button>
-                    <button class="btn btn-deny" data-action="delete" data-id="${order.id}">Delete</button>
-                </div>
             </div>
             <div class="order-details" id="details-${order.id}">
                 ${this.renderOrderDetails(order)}
             </div>
+            <div class="order-actions">
+                <button class="btn btn-accept" data-action="accept" data-id="${order.id}">Accept</button>
+                <button class="btn btn-deny" data-action="delete" data-id="${order.id}">Delete</button>
+            </div>
         `;
 
-        // Add click handler for order header (toggle details)
-        bubble.querySelector('.order-header').addEventListener('click', (e) => {
+        // Add click handler for order bubble (toggle expanded state)
+        bubble.addEventListener('click', (e) => {
             if (!e.target.classList.contains('btn')) {
-                const details = document.getElementById(`details-${order.id}`);
-                details.classList.toggle('expanded');
+                bubble.classList.toggle('expanded');
             }
         });
 
-        // Add button click handlers
-        bubble.querySelector('[data-action="accept"]').addEventListener('click', () => {
+        // Add button click handlers (stop propagation to prevent toggle)
+        bubble.querySelector('[data-action="accept"]').addEventListener('click', (e) => {
+            e.stopPropagation();
             this.acceptOrder(order.id);
         });
 
-        bubble.querySelector('[data-action="delete"]').addEventListener('click', () => {
+        bubble.querySelector('[data-action="delete"]').addEventListener('click', (e) => {
+            e.stopPropagation();
             this.deleteOrder(order.id);
         });
-
 
         return bubble;
     }

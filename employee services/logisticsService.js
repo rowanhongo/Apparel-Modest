@@ -174,25 +174,25 @@ class LogisticsService {
                     <div class="product-name">${order.productName}</div>
                     <span class="product-color">Colour: ${order.color}</span>
                 </div>
-                <div class="order-actions">
-                    <button class="btn btn-delivered" data-action="delivered" data-id="${order.id}">Delivered</button>
-                </div>
             </div>
             <div class="order-details" id="details-${order.id}">
                 ${this.renderOrderDetails(order)}
             </div>
+            <div class="order-actions">
+                <button class="btn btn-delivered" data-action="delivered" data-id="${order.id}">Delivered</button>
+            </div>
         `;
 
-        // Add click handler for order header (toggle details)
-        bubble.querySelector('.order-header').addEventListener('click', (e) => {
+        // Add click handler for order bubble (toggle expanded state)
+        bubble.addEventListener('click', (e) => {
             if (!e.target.classList.contains('btn')) {
-                const details = document.getElementById(`details-${order.id}`);
-                details.classList.toggle('expanded');
+                bubble.classList.toggle('expanded');
             }
         });
 
-        // Add button click handler
-        bubble.querySelector('[data-action="delivered"]').addEventListener('click', () => {
+        // Add button click handler (stop propagation to prevent toggle)
+        bubble.querySelector('[data-action="delivered"]').addEventListener('click', (e) => {
+            e.stopPropagation();
             this.markAsDelivered(order.id);
         });
 

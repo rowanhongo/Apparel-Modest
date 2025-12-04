@@ -289,6 +289,24 @@
             font-weight: 700;
         }
 
+        .selected-product-description {
+            font-size: 14px !important;
+            color: rgba(45, 55, 72, 0.75) !important;
+            font-weight: 400 !important;
+            line-height: 1.6 !important;
+            margin-top: 10px !important;
+            padding-top: 10px !important;
+            border-top: 1px solid rgba(0, 0, 0, 0.08) !important;
+            -webkit-background-clip: unset !important;
+            -webkit-text-fill-color: rgba(45, 55, 72, 0.75) !important;
+            background-clip: unset !important;
+            background: none !important;
+        }
+
+        .selected-product-description:empty {
+            display: none;
+        }
+
         .color-options {
             display: none;
             margin-top: 16px;
@@ -726,6 +744,7 @@
                     <div class="selected-product-info">
                         <h3 id="selectedName"></h3>
                         <p id="selectedPrice"></p>
+                        <p id="selectedDescription" class="selected-product-description"></p>
                     </div>
                 </div>
             </div>
@@ -1019,6 +1038,7 @@
                         name: product.name || 'Unknown Product',
                         price: product.price || 0,
                         image: product.image_url || 'https://via.placeholder.com/400',
+                        description: product.description || '',
                         colors: colors
                     };
                 });
@@ -1053,6 +1073,8 @@
             selectedProductDiv.classList.remove('active');
             colorOptionsDiv.classList.remove('active');
             document.getElementById('selectedColorDisplay').textContent = '';
+            document.getElementById('selectedDescription').textContent = '';
+            document.getElementById('selectedDescription').style.display = 'none';
             document.querySelectorAll('.color-option').forEach(o => o.classList.remove('selected'));
         }
 
@@ -1126,6 +1148,17 @@
             document.getElementById('selectedImage').src = selectedProduct.image;
             document.getElementById('selectedName').textContent = selectedProduct.name;
             document.getElementById('selectedPrice').textContent = `KES ${selectedProduct.price.toLocaleString()}`;
+            
+            // Display description if available
+            const descriptionElement = document.getElementById('selectedDescription');
+            if (selectedProduct.description && selectedProduct.description.trim()) {
+                descriptionElement.textContent = selectedProduct.description;
+                descriptionElement.style.display = 'block';
+            } else {
+                descriptionElement.textContent = '';
+                descriptionElement.style.display = 'none';
+            }
+            
             selectedProductDiv.classList.add('active');
             
             // Always show all color options when a product is selected
@@ -1543,6 +1576,8 @@
                 selectedProductDiv.classList.remove('active');
                 colorOptionsDiv.classList.remove('active');
                 document.getElementById('selectedColorDisplay').textContent = '';
+                document.getElementById('selectedDescription').textContent = '';
+                document.getElementById('selectedDescription').style.display = 'none';
                 document.querySelectorAll('.color-option').forEach(o => o.classList.remove('selected'));
                 document.getElementById('customSizeInput').style.display = 'none';
                 document.getElementById('customSize').value = '';
