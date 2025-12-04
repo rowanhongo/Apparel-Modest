@@ -201,21 +201,30 @@ class SalesService {
 
         // Add click handler for order bubble (toggle expanded state)
         bubble.addEventListener('click', (e) => {
-            if (!e.target.classList.contains('btn')) {
+            // Check if click is on or inside a button
+            if (!e.target.closest('.btn')) {
                 bubble.classList.toggle('expanded');
+                console.log('Card toggled, expanded:', bubble.classList.contains('expanded'));
             }
         });
 
         // Add button click handlers (stop propagation to prevent toggle)
-        bubble.querySelector('[data-action="accept"]').addEventListener('click', (e) => {
-            e.stopPropagation();
-            this.acceptOrder(order.id);
-        });
+        const acceptBtn = bubble.querySelector('[data-action="accept"]');
+        const deleteBtn = bubble.querySelector('[data-action="delete"]');
+        
+        if (acceptBtn) {
+            acceptBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                this.acceptOrder(order.id);
+            });
+        }
 
-        bubble.querySelector('[data-action="delete"]').addEventListener('click', (e) => {
-            e.stopPropagation();
-            this.deleteOrder(order.id);
-        });
+        if (deleteBtn) {
+            deleteBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                this.deleteOrder(order.id);
+            });
+        }
 
         return bubble;
     }

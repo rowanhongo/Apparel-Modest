@@ -1015,13 +1015,12 @@
         }
 
         /* Show color and actions when expanded */
-        .order-bubble.expanded .product-color,
-        .order-bubble.expanded .order-actions {
-            display: block;
+        .order-bubble.expanded .product-color {
+            display: inline-block;
         }
 
         .order-bubble.expanded .order-actions {
-            display: flex;
+            display: flex !important;
             margin-top: 12px;
         }
 
@@ -4792,7 +4791,8 @@
             `;
 
             bubble.addEventListener('click', (e) => {
-                if (!e.target.classList.contains('btn')) {
+                // Check if click is on or inside a button
+                if (!e.target.closest('.btn')) {
                     bubble.classList.toggle('expanded');
                 }
             });

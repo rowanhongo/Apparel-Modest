@@ -185,16 +185,21 @@ class ProductionService {
 
         // Add click handler for order bubble (toggle expanded state)
         bubble.addEventListener('click', (e) => {
-            if (!e.target.classList.contains('btn')) {
+            // Check if click is on or inside a button
+            if (!e.target.closest('.btn')) {
                 bubble.classList.toggle('expanded');
+                console.log('Card toggled, expanded:', bubble.classList.contains('expanded'));
             }
         });
 
         // Add button click handler (stop propagation to prevent toggle)
-        bubble.querySelector('[data-action="done"]').addEventListener('click', (e) => {
-            e.stopPropagation();
-            this.markAsDone(order.id);
-        });
+        const doneBtn = bubble.querySelector('[data-action="done"]');
+        if (doneBtn) {
+            doneBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                this.markAsDone(order.id);
+            });
+        }
 
         return bubble;
     }
