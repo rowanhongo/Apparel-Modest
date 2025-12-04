@@ -705,6 +705,7 @@
             display: grid;
             grid-template-columns: repeat(2, 1fr);
             gap: 12px;
+            align-items: start;
         }
 
         .order-bubble {
@@ -718,6 +719,8 @@
             transition: all 0.2s ease;
             display: flex;
             flex-direction: column;
+            align-self: start;
+            height: fit-content;
         }
 
         .order-bubble:hover {
