@@ -57,7 +57,7 @@ class AuthService {
     /**
      * Request OTP for login
      * @param {string} email - User email
-     * @returns {Promise<Object>} { success: boolean, message: string }
+     * @returns {Promise<Object>} { success: boolean, message: string, hasValidOTP: boolean, remainingTime: string }
      */
     async requestOTP(email) {
         try {
@@ -66,11 +66,26 @@ class AuthService {
             if (!user) {
                 return {
                     success: false,
-                    message: 'No account found with this email. Please contact admin.'
+                    message: 'No account found with this email. Please contact admin.',
+                    hasValidOTP: false,
+                    remainingTime: ''
                 };
             }
 
-            // Generate and send OTP
+            // Check if there's already a valid OTP
+            const existingOTP = await otpService.getValidOTP(email, 'login');
+            if (existingOTP) {
+                const remainingTime = otpService.formatRemainingTime(existingOTP);
+                return {
+                    success: true,
+                    message: `You already have a valid OTP. It expires in ${remainingTime}.`,
+                    hasValidOTP: true,
+                    remainingTime: remainingTime,
+                    otpRecord: existingOTP
+                };
+            }
+
+            // Generate and send new OTP
             const result = await otpService.generateAndSendOTP(
                 user.id,
                 user.email,
@@ -79,30 +94,41 @@ class AuthService {
             );
 
             if (result.success) {
+                // Get the newly created OTP to get expiration info
+                const newOTP = await otpService.getValidOTP(email, 'login');
+                const remainingTime = newOTP ? otpService.formatRemainingTime(newOTP) : '30 days';
+                
                 return {
                     success: true,
-                    message: 'OTP sent to your email. Please check your inbox.'
+                    message: `OTP sent to your email. It will be valid for 1 month.`,
+                    hasValidOTP: true,
+                    remainingTime: remainingTime,
+                    otpRecord: newOTP
                 };
             } else {
                 return {
                     success: false,
-                    message: result.message || 'Failed to send OTP'
+                    message: result.message || 'Failed to send OTP',
+                    hasValidOTP: false,
+                    remainingTime: ''
                 };
             }
         } catch (error) {
             console.error('Error requesting OTP:', error);
             return {
                 success: false,
-                message: 'An error occurred. Please try again.'
+                message: 'An error occurred. Please try again.',
+                hasValidOTP: false,
+                remainingTime: ''
             };
         }
     }
 
     /**
-     * Verify OTP and login
+     * Verify OTP and login (OTP required, must be renewed if expired)
      * @param {string} email - User email
-     * @param {string} otpCode - OTP code
-     * @returns {Promise<Object>} { success: boolean, user: Object|null, token: string|null, message: string }
+     * @param {string} otpCode - OTP code (required)
+     * @returns {Promise<Object>} { success: boolean, user: Object|null, token: string|null, message: string, remainingTime: string }
      */
     async verifyOTPAndLogin(email, otpCode) {
         try {
@@ -113,7 +139,35 @@ class AuthService {
                     success: false,
                     user: null,
                     token: null,
-                    message: 'User not found'
+                    message: 'User not found',
+                    remainingTime: ''
+                };
+            }
+
+            // Check if there's a valid OTP
+            const validOTP = await otpService.getValidOTP(email, 'login');
+            const remainingTime = validOTP ? otpService.formatRemainingTime(validOTP) : '';
+
+            // If no valid OTP exists, user must renew
+            if (!validOTP) {
+                return {
+                    success: false,
+                    user: null,
+                    token: null,
+                    message: 'Your OTP has expired. Please click "Send OTP Code" to renew it.',
+                    remainingTime: '',
+                    needsRenewal: true
+                };
+            }
+
+            // OTP code is required
+            if (!otpCode) {
+                return {
+                    success: false,
+                    user: null,
+                    token: null,
+                    message: `Please enter your OTP code. Your OTP is valid for ${remainingTime}.`,
+                    remainingTime: remainingTime
                 };
             }
 
@@ -124,24 +178,29 @@ class AuthService {
                     success: false,
                     user: null,
                     token: null,
-                    message: verification.message
+                    message: verification.message,
+                    remainingTime: remainingTime
                 };
             }
 
             // Update last login
             await this.updateLastLogin(user.id);
 
-            // Create JWT token (we'll implement this next)
+            // Create JWT token
             const token = this.createJWTToken(user);
 
             // Save user and token
             this.saveUserToStorage(user, token);
 
+            // Show remaining time
+            const message = `Login successful! Your OTP is still valid for ${remainingTime}.`;
+
             return {
                 success: true,
                 user: user,
                 token: token,
-                message: 'Login successful'
+                message: message,
+                remainingTime: remainingTime
             };
         } catch (error) {
             console.error('Error verifying OTP and logging in:', error);
@@ -149,8 +208,43 @@ class AuthService {
                 success: false,
                 user: null,
                 token: null,
-                message: 'An error occurred during login'
+                message: 'An error occurred during login',
+                remainingTime: ''
             };
+        }
+    }
+
+    /**
+     * Check if current user's OTP is still valid
+     * @returns {Promise<Object>} { valid: boolean, remainingTime: string, needsRenewal: boolean }
+     */
+    async checkOTPValidity() {
+        try {
+            const user = this.getCurrentUser();
+            if (!user) {
+                return { valid: false, remainingTime: '', needsRenewal: false };
+            }
+
+            const validOTP = await otpService.getValidOTP(user.email, 'login');
+            if (!validOTP) {
+                // OTP expired, log out user
+                this.logout();
+                return {
+                    valid: false,
+                    remainingTime: '',
+                    needsRenewal: true
+                };
+            }
+
+            const remainingTime = otpService.formatRemainingTime(validOTP);
+            return {
+                valid: true,
+                remainingTime: remainingTime,
+                needsRenewal: false
+            };
+        } catch (error) {
+            console.error('Error checking OTP validity:', error);
+            return { valid: false, remainingTime: '', needsRenewal: false };
         }
     }
 
@@ -235,7 +329,7 @@ class AuthService {
      * Load user from localStorage
      * @returns {Object|null} User object or null
      */
-    loadUserFromStorage() {
+    async loadUserFromStorage() {
         try {
             const token = localStorage.getItem(this.tokenKey);
             const userStr = localStorage.getItem(this.userKey);
@@ -254,6 +348,14 @@ class AuthService {
 
             const user = JSON.parse(userStr);
             this.currentUser = user;
+
+            // Check if OTP is still valid
+            const otpCheck = await this.checkOTPValidity();
+            if (!otpCheck.valid) {
+                // OTP expired, user was logged out by checkOTPValidity
+                return null;
+            }
+
             return user;
         } catch (error) {
             console.error('Error loading user from storage:', error);
@@ -264,10 +366,10 @@ class AuthService {
 
     /**
      * Check if user is logged in
-     * @returns {boolean}
+     * @returns {Promise<boolean>}
      */
-    isLoggedIn() {
-        const user = this.loadUserFromStorage();
+    async isLoggedIn() {
+        const user = await this.loadUserFromStorage();
         return user !== null;
     }
 

@@ -2551,6 +2551,7 @@
             <div class="login-header">
                 <h1>Apparel Modest</h1>
                 <p>Enter your email to login</p>
+                <p style="font-size: 13px; margin-top: 8px; opacity: 0.9;">Your OTP will be valid for 1 month. After expiration, you must renew it to continue.</p>
             </div>
             
             <form id="login-form">
@@ -2563,6 +2564,8 @@
                     <label class="form-label" for="otp">Enter OTP Code</label>
                     <input type="text" id="otp" class="form-input" placeholder="123456" maxlength="6" pattern="[0-9]{6}" required>
                     <p style="color: rgba(224, 216, 201, 0.7); font-size: 12px; margin-top: 5px;">Check your email for the 6-digit code</p>
+                    <div id="otp-remaining-time" style="color: rgba(16, 185, 129, 0.9); font-size: 12px; margin-top: 5px; font-weight: 500;"></div>
+                    <div id="otp-expired-warning" style="color: rgba(239, 68, 68, 0.9); font-size: 12px; margin-top: 5px; font-weight: 500; display: none;"></div>
                     
                     <!-- OTP Sent Indicator -->
                     <div id="otp-sent-indicator" class="otp-sent-indicator hidden">
@@ -2573,7 +2576,7 @@
                     </div>
                 </div>
                 
-                <button type="submit" class="btn-login" id="login-btn">Verify OTP & Login</button>
+                <button type="submit" class="btn-login" id="login-btn">Login</button>
                 <button type="button" class="btn-otp" id="send-otp-btn">Send OTP Code</button>
             </form>
             
@@ -4055,6 +4058,59 @@
             }, 5000);
         }
 
+        // Check for existing valid OTP when email is entered
+        let emailCheckTimeout;
+        function setupEmailCheck() {
+            const emailInput = document.getElementById('email');
+            if (!emailInput) return;
+            
+            emailInput.addEventListener('input', async (e) => {
+                const email = e.target.value.trim();
+                
+                // Clear previous timeout
+                clearTimeout(emailCheckTimeout);
+                
+                // Wait for user to stop typing (500ms delay)
+                emailCheckTimeout = setTimeout(async () => {
+                    if (!email) {
+                        document.getElementById('otp-remaining-time').textContent = '';
+                        document.getElementById('otp-expired-warning').style.display = 'none';
+                        return;
+                    }
+
+                    // Validate email format
+                    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+                    if (!emailRegex.test(email)) {
+                        return;
+                    }
+
+                    try {
+                        // Check for existing valid OTP
+                        const validOTP = await otpService.getValidOTP(email, 'login');
+                        const remainingTimeDiv = document.getElementById('otp-remaining-time');
+                        const warningDiv = document.getElementById('otp-expired-warning');
+                        
+                        if (validOTP) {
+                            const remainingTime = otpService.formatRemainingTime(validOTP);
+                            remainingTimeDiv.textContent = `⏰ You have a valid OTP. Time remaining: ${remainingTime}`;
+                            remainingTimeDiv.style.display = 'block';
+                            remainingTimeDiv.style.color = 'rgba(16, 185, 129, 0.9)';
+                            warningDiv.style.display = 'none';
+                            
+                            // Show OTP field if not already visible
+                            document.getElementById('otp-group').classList.remove('hidden');
+                        } else {
+                            remainingTimeDiv.textContent = '';
+                            warningDiv.textContent = '⚠️ No valid OTP found. Please click "Send OTP Code" to get a new one.';
+                            warningDiv.style.display = 'block';
+                        }
+                    } catch (error) {
+                        console.error('Error checking for valid OTP:', error);
+                    }
+                }, 500);
+            });
+        }
+
         // Send OTP code
         async function sendOTP() {
             const email = document.getElementById('email').value.trim();
@@ -4082,7 +4138,7 @@
 
                 if (result.success) {
                     // Show OTP input field
-                document.getElementById('otp-group').classList.remove('hidden');
+                    document.getElementById('otp-group').classList.remove('hidden');
                     otpSent = true;
                     
                     // Show visual indicator
@@ -4091,17 +4147,32 @@
                     emailText.textContent = email;
                     indicator.classList.remove('hidden');
                     
+                    // Show remaining time if OTP already exists
+                    const remainingTimeDiv = document.getElementById('otp-remaining-time');
+                    const warningDiv = document.getElementById('otp-expired-warning');
+                    warningDiv.style.display = 'none';
+                    
+                    if (result.hasValidOTP && result.remainingTime) {
+                        remainingTimeDiv.textContent = `⏰ Your OTP is valid for: ${result.remainingTime}`;
+                        remainingTimeDiv.style.display = 'block';
+                    } else {
+                        remainingTimeDiv.textContent = '⏰ Your OTP will be valid for 30 days';
+                        remainingTimeDiv.style.display = 'block';
+                    }
+                    
                     // Show success message
                     showMessage(result.message, 'success');
-            } else {
+                } else {
                     // Hide indicator on error
                     document.getElementById('otp-sent-indicator').classList.add('hidden');
+                    document.getElementById('otp-remaining-time').textContent = '';
                     showMessage(result.message, 'error');
                 }
             } catch (error) {
                 console.error('Error sending OTP:', error);
                 // Hide indicator on error
                 document.getElementById('otp-sent-indicator').classList.add('hidden');
+                document.getElementById('otp-remaining-time').textContent = '';
                 showMessage('An error occurred. Please try again.', 'error');
             } finally {
                 btn.disabled = false;
@@ -4152,20 +4223,43 @@
                     // Login successful
                     currentUser = result.user;
                     loginUser(result.user);
-            } else {
+                    
+                    // Show remaining time
+                    if (result.remainingTime) {
+                        showMessage(result.message, 'success');
+                    } else {
+                        showMessage(result.message, 'success');
+                    }
+                } else {
                     showMessage(result.message, 'error');
+                    
+                    // If OTP needs renewal, show warning
+                    if (result.needsRenewal) {
+                        const warningDiv = document.getElementById('otp-expired-warning');
+                        warningDiv.textContent = '⚠️ Your OTP has expired. Please click "Send OTP Code" to renew it.';
+                        warningDiv.style.display = 'block';
+                        document.getElementById('otp-remaining-time').textContent = '';
+                    } else {
+                        // Update remaining time display
+                        const remainingTimeDiv = document.getElementById('otp-remaining-time');
+                        if (result.remainingTime) {
+                            remainingTimeDiv.textContent = `⏰ OTP remaining: ${result.remainingTime}`;
+                        }
+                    }
                 }
             } catch (error) {
                 console.error('Error during login:', error);
                 showMessage('An error occurred during login. Please try again.', 'error');
             } finally {
                 btn.disabled = false;
-                btn.textContent = 'Verify OTP & Login';
+                btn.textContent = 'Login';
             }
         }
 
         // Login user and show dashboard
         function loginUser(user) {
+            // Start periodic OTP validation check
+            startOTPValidationCheck();
             currentUser = user;
             
             // Hide login page, show employee dashboard
@@ -4241,8 +4335,9 @@
         }
 
         // Check if user is already logged in
-        function checkExistingSession() {
-            if (authService.isLoggedIn()) {
+        async function checkExistingSession() {
+            const loggedIn = await authService.isLoggedIn();
+            if (loggedIn) {
                 const user = authService.getCurrentUser();
                 if (user) {
                     currentUser = user;
@@ -4264,12 +4359,61 @@
 
                     // Update date in welcome section
                     updateWelcomeDate();
+
+                    // Start periodic OTP validation check (check every 5 minutes)
+                    startOTPValidationCheck();
                 }
+            }
+        }
+
+        // Periodic OTP validation check
+        let otpCheckInterval = null;
+        async function startOTPValidationCheck() {
+            // Clear any existing interval
+            if (otpCheckInterval) {
+                clearInterval(otpCheckInterval);
+            }
+
+            // Check immediately
+            await checkOTPAndLogoutIfExpired();
+
+            // Then check every 5 minutes
+            otpCheckInterval = setInterval(async () => {
+                await checkOTPAndLogoutIfExpired();
+            }, 5 * 60 * 1000); // 5 minutes
+        }
+
+        async function checkOTPAndLogoutIfExpired() {
+            try {
+                const otpCheck = await authService.checkOTPValidity();
+                if (!otpCheck.valid && otpCheck.needsRenewal) {
+                    // OTP expired, log out user
+                    authService.logout();
+                    currentUser = null;
+                    document.getElementById('login-page').classList.remove('hidden');
+                    document.getElementById('dashboard-page').classList.add('hidden');
+                    document.getElementById('admin-dashboard-page').classList.add('hidden');
+                    
+                    // Clear form
+                    document.getElementById('email').value = '';
+                    document.getElementById('otp').value = '';
+                    document.getElementById('otp-group').classList.add('hidden');
+                    document.getElementById('otp-sent-indicator').classList.add('hidden');
+                    
+                    showMessage('Your OTP has expired. Please click "Send OTP Code" to renew it and login again.', 'error');
+                }
+            } catch (error) {
+                console.error('Error checking OTP validity:', error);
             }
         }
 
         // Logout function
         function logout() {
+            // Clear OTP check interval
+            if (otpCheckInterval) {
+                clearInterval(otpCheckInterval);
+                otpCheckInterval = null;
+            }
             authService.logout();
             currentUser = null;
             document.getElementById('login-page').classList.remove('hidden');
@@ -4313,6 +4457,9 @@
         // Event listeners
         document.getElementById('login-form').addEventListener('submit', handleLogin);
         document.getElementById('send-otp-btn').addEventListener('click', sendOTP);
+        
+        // Setup email check for existing valid OTP
+        setupEmailCheck();
 
         // Check if user is already logged in on page load
         // (This is handled in DOMContentLoaded above)

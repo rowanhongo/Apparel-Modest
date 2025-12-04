@@ -7,7 +7,7 @@
 class OTPService {
     constructor() {
         // OTP Configuration
-        this.otpExpirationMinutes = 10;
+        this.otpExpirationDays = 30; // OTP valid for 1 month
         this.otpLength = 6;
     }
 
@@ -76,9 +76,9 @@ class OTPService {
                 throw new Error('Supabase client not initialized');
             }
 
-            // Calculate expiration time (10 minutes from now)
+            // Calculate expiration time (1 month from now)
             const expiresAt = new Date();
-            expiresAt.setMinutes(expiresAt.getMinutes() + this.otpExpirationMinutes);
+            expiresAt.setDate(expiresAt.getDate() + this.otpExpirationDays);
 
             // Insert OTP into database
             const { data, error } = await supabase
@@ -304,6 +304,75 @@ class OTPService {
                 message: error.message || 'Error verifying OTP',
                 otpRecord: null
             };
+        }
+    }
+
+    /**
+     * Check if there's a valid OTP for an email
+     * @param {string} email - User email
+     * @param {string} purpose - Purpose to check
+     * @returns {Promise<Object|null>} OTP record with remaining time or null
+     */
+    async getValidOTP(email, purpose = 'login') {
+        try {
+            const supabase = getSupabaseClient();
+            if (!supabase) {
+                return null;
+            }
+
+            // Find valid, unused OTP
+            const { data, error } = await supabase
+                .from('otps')
+                .select('*')
+                .eq('email', email)
+                .eq('purpose', purpose)
+                .eq('used', false)
+                .gt('expires_at', new Date().toISOString())
+                .order('created_at', { ascending: false })
+                .limit(1)
+                .single();
+
+            if (error || !data) {
+                return null;
+            }
+
+            // Calculate remaining time
+            const expiresAt = new Date(data.expires_at);
+            const now = new Date();
+            const remainingMs = expiresAt - now;
+            const remainingDays = Math.floor(remainingMs / (1000 * 60 * 60 * 24));
+            const remainingHours = Math.floor((remainingMs % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+            const remainingMinutes = Math.floor((remainingMs % (1000 * 60 * 60)) / (1000 * 60));
+
+            return {
+                ...data,
+                remainingDays,
+                remainingHours,
+                remainingMinutes,
+                remainingMs
+            };
+        } catch (error) {
+            console.error('Error getting valid OTP:', error);
+            return null;
+        }
+    }
+
+    /**
+     * Format remaining time as human-readable string
+     * @param {Object} otpRecord - OTP record with remaining time
+     * @returns {string} Formatted time string
+     */
+    formatRemainingTime(otpRecord) {
+        if (!otpRecord) return '';
+        
+        const { remainingDays, remainingHours, remainingMinutes } = otpRecord;
+        
+        if (remainingDays > 0) {
+            return `${remainingDays} day${remainingDays !== 1 ? 's' : ''} and ${remainingHours} hour${remainingHours !== 1 ? 's' : ''}`;
+        } else if (remainingHours > 0) {
+            return `${remainingHours} hour${remainingHours !== 1 ? 's' : ''} and ${remainingMinutes} minute${remainingMinutes !== 1 ? 's' : ''}`;
+        } else {
+            return `${remainingMinutes} minute${remainingMinutes !== 1 ? 's' : ''}`;
         }
     }
 
