@@ -27,6 +27,17 @@ class ProductionService {
             return;
         }
 
+        // Set up event delegation for card clicks
+        if (this.container) {
+            this.container.addEventListener('click', (e) => {
+                const bubble = e.target.closest('.order-bubble');
+                if (bubble && !e.target.closest('.btn')) {
+                    bubble.classList.toggle('expanded');
+                    console.log('Card toggled via delegation, expanded:', bubble.classList.contains('expanded'));
+                }
+            });
+        }
+
         // Load orders from database
         await this.loadOrdersFromDatabase();
     }
@@ -183,15 +194,7 @@ class ProductionService {
             </div>
         `;
 
-        // Add click handler for order bubble (toggle expanded state)
-        bubble.addEventListener('click', (e) => {
-            // Check if click is on or inside a button
-            if (!e.target.closest('.btn')) {
-                bubble.classList.toggle('expanded');
-                console.log('Card toggled, expanded:', bubble.classList.contains('expanded'));
-            }
-        });
-
+        // Note: Click handler for expanding is now handled via event delegation in init()
         // Add button click handler (stop propagation to prevent toggle)
         const doneBtn = bubble.querySelector('[data-action="done"]');
         if (doneBtn) {
