@@ -2887,11 +2887,13 @@
                                 <label style="display: block; font-size: 14px; font-weight: 600; color: rgba(65, 70, 63, 0.9); margin-bottom: 8px;">Category</label>
                                 <select id="product-category" required style="width: 100%; padding: 10px 16px; border: 1px solid rgba(65, 70, 63, 0.3); border-radius: 8px; background: rgba(65, 70, 63, 0.1); color: #41463F; font-size: 14px; cursor: pointer;">
                                     <option value="">Category</option>
-                                    <option value="dress">Dress</option>
-                                    <option value="blazer">Blazer</option>
-                                    <option value="gown">Gown</option>
-                                    <option value="romper">Romper</option>
-                                    <option value="jacket">Jacket</option>
+                                    <option value="jumpsuits">Jumpsuits</option>
+                                    <option value="dresses">Dresses</option>
+                                    <option value="skirts">Skirts</option>
+                                    <option value="coats">Coats</option>
+                                    <option value="trousers">Trousers</option>
+                                    <option value="tops">Tops</option>
+                                    <option value="accessories">Accessories</option>
                                 </select>
                             </div>
 
@@ -2940,11 +2942,13 @@
                             </div>
                             <select id="catalogue-category" class="filter-select" style="min-width: 120px;">
                                 <option value="">Category</option>
-                                <option value="dress">Dress</option>
-                                <option value="blazer">Blazer</option>
-                                <option value="gown">Gown</option>
-                                <option value="romper">Romper</option>
-                                <option value="jacket">Jacket</option>
+                                <option value="jumpsuits">Jumpsuits</option>
+                                <option value="dresses">Dresses</option>
+                                <option value="skirts">Skirts</option>
+                                <option value="coats">Coats</option>
+                                <option value="trousers">Trousers</option>
+                                <option value="tops">Tops</option>
+                                <option value="accessories">Accessories</option>
                             </select>
                             <select id="catalogue-sort" class="filter-select" style="min-width: 120px;">
                                 <option value="">Sort</option>
@@ -4655,7 +4659,7 @@
                     <div class="order-info">
                         <div class="customer-name">${order.customerName}</div>
                         <div class="product-name">${order.productName}</div>
-                        <span class="product-color">${order.color}</span>
+                        <span class="product-color">Colour: ${order.color}</span>
                     </div>
                     <div class="order-actions">
                         ${type === 'new' ? `

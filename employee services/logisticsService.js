@@ -172,7 +172,7 @@ class LogisticsService {
                 <div class="order-info">
                     <div class="customer-name">${order.customerName}</div>
                     <div class="product-name">${order.productName}</div>
-                    <span class="product-color">${order.color}</span>
+                    <span class="product-color">Colour: ${order.color}</span>
                 </div>
                 <div class="order-actions">
                     <button class="btn btn-delivered" data-action="delivered" data-id="${order.id}">Delivered</button>
