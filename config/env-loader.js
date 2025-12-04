@@ -75,23 +75,13 @@ async function loadEnvConfig() {
             // Mark as loaded
             window.ENV_CONFIG_LOADED = true;
             
-            // Safe logging - only show status and previews, never full values
+            // Safe logging - only show status, never show values
             console.log('✅ Environment configuration loaded from Netlify');
-            console.log('📍 Supabase URL:', sanitizedConfig.supabaseUrl ? `Set ✓ (${sanitizedConfig.supabaseUrl.substring(0, 30)}...)` : 'Missing ❌');
-            console.log('🔑 Supabase Key:', sanitizedConfig.supabaseAnonKey ? `Set ✓ (${sanitizedConfig.supabaseAnonKey.substring(0, 20)}...)` : 'Missing ❌');
-            console.log('☁️ Cloudinary:', sanitizedConfig.cloudinaryCloudName ? `Set ✓ (${sanitizedConfig.cloudinaryCloudName.substring(0, 15)}...)` : 'Missing ❌');
-            console.log('📧 EmailJS Service:', sanitizedConfig.emailjsServiceId ? `Set ✓ (${sanitizedConfig.emailjsServiceId})` : 'Missing ❌');
-            
-            // Debug logging for EmailJS Public Key
-            if (sanitizedConfig.emailjsPublicKey) {
-                const keyPreview = sanitizedConfig.emailjsPublicKey.substring(0, 10) + '...';
-                console.log('📧 EmailJS Public Key: Set ✓', keyPreview);
-            } else {
-                console.error('📧 EmailJS Public Key: Missing ❌');
-                console.error('   ⚠️ Check Netlify environment variables for either:');
-                console.error('      - EMAILJS_PUBLIC_KEY');
-                console.error('      - API_keys_Public_Key');
-            }
+            console.log('📍 Supabase URL:', sanitizedConfig.supabaseUrl ? 'Set ✓' : 'Missing ❌');
+            console.log('🔑 Supabase Key:', sanitizedConfig.supabaseAnonKey ? 'Set ✓' : 'Missing ❌');
+            console.log('☁️ Cloudinary:', sanitizedConfig.cloudinaryCloudName ? 'Set ✓' : 'Missing ❌');
+            console.log('📧 EmailJS Service:', sanitizedConfig.emailjsServiceId ? 'Set ✓' : 'Missing ❌');
+            console.log('📧 EmailJS Public Key:', sanitizedConfig.emailjsPublicKey ? 'Set ✓' : 'Missing ❌');
             
             // Dispatch event to notify other scripts (using sanitized config)
             window.dispatchEvent(new CustomEvent('envConfigLoaded', { detail: sanitizedConfig }));

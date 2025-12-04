@@ -29,13 +29,23 @@ class LogisticsService {
 
         // Set up event delegation for card clicks
         if (this.container) {
-            this.container.addEventListener('click', (e) => {
+            console.log('Setting up event delegation for container:', containerId);
+            // Remove any existing listener to avoid duplicates
+            this.container.removeEventListener('click', this.handleCardClick);
+            // Create bound handler
+            this.handleCardClick = (e) => {
                 const bubble = e.target.closest('.order-bubble');
                 if (bubble && !e.target.closest('.btn')) {
+                    e.preventDefault();
+                    e.stopPropagation();
                     bubble.classList.toggle('expanded');
                     console.log('Card toggled via delegation, expanded:', bubble.classList.contains('expanded'));
                 }
-            });
+            };
+            this.container.addEventListener('click', this.handleCardClick);
+            console.log('Event delegation set up successfully');
+        } else {
+            console.error('Container not found:', containerId);
         }
 
         // Load orders from database
