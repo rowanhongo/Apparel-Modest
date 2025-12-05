@@ -1707,7 +1707,7 @@
             selectedLocationText.textContent = displayName;
         }
 
-        // Search for locations using Nominatim with improved accuracy
+        // Search for locations using Photon API (better POI coverage) with Nominatim fallback
         function searchLocation(query) {
             if (!query || query.length < 2) {
                 document.getElementById('locationSuggestions').style.display = 'none';
@@ -1723,73 +1723,120 @@
             locationSearchTimeout = setTimeout(() => {
                 const encodedQuery = encodeURIComponent(query);
                 
-                // Use multiple search strategies for better results
-                // Strategy 1: Standard search with better parameters for POIs
-                const url1 = `https://nominatim.openstreetmap.org/search?format=json&q=${encodedQuery}&countrycodes=ke&limit=10&addressdetails=1&extratags=1&namedetails=1&dedupe=1`;
+                // Use Photon API - better for POIs like apartments, buildings, etc.
+                // Photon is free, no API key needed, and has better indexing than Nominatim
+                const photonUrl = `https://photon.komoot.io/api/?q=${encodedQuery}&limit=15&lang=en`;
                 
-                // Strategy 2: Search with "Nairobi" context for better results in Nairobi area
-                const url2 = `https://nominatim.openstreetmap.org/search?format=json&q=${encodedQuery}+Nairobi&countrycodes=ke&limit=5&addressdetails=1&extratags=1&namedetails=1&dedupe=1`;
+                // Also try with Nairobi context for better results
+                const photonNairobiUrl = `https://photon.komoot.io/api/?q=${encodedQuery}+Nairobi&limit=10&lang=en`;
                 
-                // Run both searches in parallel
+                // Run both Photon searches in parallel
                 Promise.all([
-                    fetch(url1).then(r => r.json()),
-                    fetch(url2).then(r => r.json())
+                    fetch(photonUrl).then(r => r.json()),
+                    fetch(photonNairobiUrl).then(r => r.json())
                 ])
-                .then(([results1, results2]) => {
-                    // Combine and deduplicate results
-                    const allResults = [...results1, ...results2];
-                    const uniqueResults = [];
-                    const seenIds = new Set();
+                .then(([photonResults1, photonResults2]) => {
+                    // Combine Photon results
+                    const allPhotonResults = [...(photonResults1.features || []), ...(photonResults2.features || [])];
                     
-                    // Deduplicate by OSM ID and prioritize better matches
-                    allResults.forEach(result => {
-                        const id = result.osm_id || result.place_id;
-                        if (!seenIds.has(id)) {
-                            seenIds.add(id);
-                            uniqueResults.push(result);
+                    // Filter for Kenya (bounding box: lat 5.5 to -4.5, lon 33.5 to 42.0)
+                    const kenyaResults = allPhotonResults.filter(feature => {
+                        const coords = feature.geometry.coordinates;
+                        const lng = coords[0];
+                        const lat = coords[1];
+                        // Kenya bounding box
+                        return lat >= -4.5 && lat <= 5.5 && lng >= 33.5 && lng <= 42.0;
+                    });
+                    
+                    // Deduplicate by coordinates (within 100m)
+                    const uniqueResults = [];
+                    const seenCoords = new Set();
+                    
+                    kenyaResults.forEach(feature => {
+                        const coords = feature.geometry.coordinates;
+                        const lat = coords[1].toFixed(4);
+                        const lng = coords[0].toFixed(4);
+                        const coordKey = `${lat},${lng}`;
+                        
+                        if (!seenCoords.has(coordKey)) {
+                            seenCoords.add(coordKey);
+                            uniqueResults.push(feature);
                         }
                     });
                     
-                    // Sort by relevance (importance, then by how well query matches)
+                    // Sort by relevance
                     uniqueResults.sort((a, b) => {
-                        // Prioritize results with higher importance
-                        const importanceA = a.importance || 0;
-                        const importanceB = b.importance || 0;
-                        
-                        // Boost results where query appears in name
                         const queryLower = query.toLowerCase();
-                        const nameA = (a.name || a.display_name || '').toLowerCase();
-                        const nameB = (b.name || b.display_name || '').toLowerCase();
-                        const nameMatchA = nameA.includes(queryLower) ? 1 : 0;
-                        const nameMatchB = nameB.includes(queryLower) ? 1 : 0;
+                        const nameA = (a.properties.name || '').toLowerCase();
+                        const nameB = (b.properties.name || '').toLowerCase();
                         
-                        // Prioritize buildings, places, amenities (POIs)
-                        const typeA = (a.type || a.class || '').toLowerCase();
-                        const typeB = (b.type || b.class || '').toLowerCase();
-                        const isPOIA = ['building', 'place', 'amenity', 'shop', 'leisure'].some(t => typeA.includes(t));
-                        const isPOIB = ['building', 'place', 'amenity', 'shop', 'leisure'].some(t => typeB.includes(t));
-                        const poiBoostA = isPOIA ? 0.2 : 0;
-                        const poiBoostB = isPOIB ? 0.2 : 0;
+                        // Exact name match gets highest priority
+                        const exactMatchA = nameA === queryLower ? 2 : (nameA.includes(queryLower) ? 1 : 0);
+                        const exactMatchB = nameB === queryLower ? 2 : (nameB.includes(queryLower) ? 1 : 0);
                         
-                        return (importanceB + nameMatchB + poiBoostB) - (importanceA + nameMatchA + poiBoostA);
+                        // Prioritize buildings, places, amenities
+                        const typeA = (a.properties.osm_value || '').toLowerCase();
+                        const typeB = (b.properties.osm_value || '').toLowerCase();
+                        const isPOIA = ['building', 'place', 'amenity', 'shop', 'leisure', 'residential'].some(t => typeA.includes(t));
+                        const isPOIB = ['building', 'place', 'amenity', 'shop', 'leisure', 'residential'].some(t => typeB.includes(t));
+                        const poiBoostA = isPOIA ? 1 : 0;
+                        const poiBoostB = isPOIB ? 1 : 0;
+                        
+                        return (exactMatchB + poiBoostB) - (exactMatchA + poiBoostA);
                     });
                     
-                    // Take top 8 results
-                    displayLocationSuggestions(uniqueResults.slice(0, 8));
+                    // Convert Photon format to display format
+                    const formattedResults = uniqueResults.slice(0, 10).map(feature => {
+                        const props = feature.properties;
+                        const coords = feature.geometry.coordinates;
+                        
+                        return {
+                            lat: coords[1],
+                            lon: coords[0],
+                            name: props.name || 'Unnamed Location',
+                            display_name: props.name || props.street || props.city || 'Location',
+                            type: props.osm_value || props.osm_key || '',
+                            address: {
+                                road: props.street,
+                                suburb: props.district,
+                                neighbourhood: props.locality,
+                                city: props.city || props.county,
+                                town: props.town
+                            },
+                            importance: props.importance || 0.5
+                        };
+                    });
+                    
+                    if (formattedResults.length > 0) {
+                        displayLocationSuggestions(formattedResults);
+                    } else {
+                        // Fallback to Nominatim if Photon returns no results
+                        fallbackToNominatim(query, encodedQuery);
+                    }
                 })
                 .catch(error => {
-                    console.error('Geocoding error:', error);
-                    // Fallback to single search
-                    fetch(url1)
-                        .then(response => response.json())
-                        .then(data => {
-                            displayLocationSuggestions(data);
-                        })
-                        .catch(err => {
-                            console.error('Fallback geocoding error:', err);
-                        });
+                    console.error('Photon geocoding error:', error);
+                    // Fallback to Nominatim
+                    fallbackToNominatim(query, encodedQuery);
                 });
-            }, 250); // Reduced debounce for faster response
+            }, 250);
+        }
+        
+        // Fallback to Nominatim if Photon fails
+        function fallbackToNominatim(query, encodedQuery) {
+            const nominatimUrl = `https://nominatim.openstreetmap.org/search?format=json&q=${encodedQuery}&countrycodes=ke&limit=8&addressdetails=1&extratags=1&namedetails=1`;
+            
+            fetch(nominatimUrl)
+                .then(response => response.json())
+                .then(data => {
+                    displayLocationSuggestions(data);
+                })
+                .catch(err => {
+                    console.error('Nominatim fallback error:', err);
+                    document.getElementById('locationSuggestions').innerHTML = 
+                        '<div style="padding: 12px; color: #718096; font-size: 13px;">Unable to search locations. Please try again.</div>';
+                    document.getElementById('locationSuggestions').style.display = 'block';
+                });
         }
 
         // Display location suggestions with better formatting
