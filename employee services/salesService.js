@@ -231,26 +231,17 @@ class SalesService {
             </div>
             <div class="order-actions">
                 <button class="btn btn-accept" data-action="accept" data-id="${order.id}">Accept</button>
-                <button class="btn btn-deny" data-action="delete" data-id="${order.id}">Delete</button>
             </div>
         `;
 
         // Note: Click handler for expanding is now handled via event delegation in init()
         // Add button click handlers (stop propagation to prevent toggle)
         const acceptBtn = bubble.querySelector('[data-action="accept"]');
-        const deleteBtn = bubble.querySelector('[data-action="delete"]');
         
         if (acceptBtn) {
             acceptBtn.addEventListener('click', (e) => {
                 e.stopPropagation();
                 this.acceptOrder(order.id);
-            });
-        }
-
-        if (deleteBtn) {
-            deleteBtn.addEventListener('click', (e) => {
-                e.stopPropagation();
-                this.deleteOrder(order.id);
             });
         }
 
@@ -476,7 +467,8 @@ class SalesService {
             'stk-push': 'STK Push',
             'card': 'Card',
             'paypal': 'Paypal',
-            'apple-pay': 'Apple Pay'
+            'apple-pay': 'Apple Pay',
+            'paystack': 'Paystack'
         };
         return options[option] || option;
     }
