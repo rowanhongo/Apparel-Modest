@@ -29,7 +29,6 @@ class SalesService {
 
         // Set up event delegation for card clicks
         if (this.container) {
-            console.log('Setting up event delegation for container:', containerId, this.container);
             // Remove any existing listener to avoid duplicates
             this.container.removeEventListener('click', this.handleCardClick);
             // Create bound handler
@@ -39,11 +38,9 @@ class SalesService {
                     e.preventDefault();
                     e.stopPropagation();
                     bubble.classList.toggle('expanded');
-                    console.log('Card toggled via delegation, expanded:', bubble.classList.contains('expanded'));
                 }
             };
             this.container.addEventListener('click', this.handleCardClick);
-            console.log('Event delegation set up successfully');
         } else {
             console.error('Container not found:', containerId);
         }
@@ -137,18 +134,10 @@ class SalesService {
                 measurements.waist = measurementsMatch[3].trim();
                 measurements.hips = measurementsMatch[4].trim();
                 
-                console.log('✅ Extracted measurements from comments:', measurements);
-                console.log('📝 Original comments:', comments);
-                
                 // Remove measurements line from comments (handle both single line and multi-line)
                 comments = comments.replace(/\n?Measurements:.*$/m, '').trim();
                 // Also remove if it's at the end of a line
                 comments = comments.replace(/Measurements:.*$/m, '').trim();
-                
-                console.log('📝 Cleaned comments:', comments);
-            } else {
-                console.warn('⚠️ Could not parse measurements from comments. Comments:', comments);
-                console.warn('⚠️ Attempted patterns but no match found');
             }
         }
 
@@ -167,7 +156,8 @@ class SalesService {
             comments: comments,
             date: orderDate,
             deliveryOption: order.delivery_option || order.deliveryOption || '',
-            paymentOption: order.payment_option || order.paymentOption || ''
+            paymentOption: order.payment_option || order.paymentOption || '',
+            deliveryLocation: order.delivery_display_name || order.delivery_location || order.deliveryLocation || ''
         };
     }
 
@@ -294,6 +284,12 @@ class SalesService {
                 <div class="detail-row">
                     <div class="detail-label">Preferred Choice of Delivery:</div>
                     <div class="detail-value">${this.formatDeliveryOption(order.deliveryOption)}</div>
+                </div>
+            ` : ''}
+            ${order.deliveryLocation ? `
+                <div class="detail-row">
+                    <div class="detail-label">Delivery Location:</div>
+                    <div class="detail-value">${order.deliveryLocation}</div>
                 </div>
             ` : ''}
             ${order.paymentOption ? `

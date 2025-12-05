@@ -47,7 +47,6 @@ function initSupabase(supabaseUrl, supabaseAnonKey) {
     // Create and return Supabase client
     try {
         const supabaseClient = supabase.createClient(supabaseUrl, supabaseAnonKey);
-        console.log('✅ Supabase client initialized successfully!');
         return supabaseClient;
     } catch (error) {
         console.error('❌ Error initializing Supabase:', error);

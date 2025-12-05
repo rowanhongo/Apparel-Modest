@@ -152,7 +152,8 @@ class LogisticsService {
             comments: comments,
             date: orderDate,
             deliveryOption: order.delivery_option || order.deliveryOption || '',
-            paymentOption: order.payment_option || order.paymentOption || ''
+            paymentOption: order.payment_option || order.paymentOption || '',
+            deliveryLocation: order.delivery_display_name || order.delivery_location || order.deliveryLocation || ''
         };
     }
 
@@ -272,6 +273,12 @@ class LogisticsService {
                 <div class="detail-row">
                     <div class="detail-label">Preferred Choice of Delivery:</div>
                     <div class="detail-value">${this.formatDeliveryOption(order.deliveryOption)}</div>
+                </div>
+            ` : ''}
+            ${order.deliveryLocation ? `
+                <div class="detail-row">
+                    <div class="detail-label">Delivery Location:</div>
+                    <div class="detail-value">${order.deliveryLocation}</div>
                 </div>
             ` : ''}
             ${order.paymentOption ? `

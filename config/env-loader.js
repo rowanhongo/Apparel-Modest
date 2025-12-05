@@ -26,7 +26,6 @@ async function loadEnvConfig() {
         try {
             // Fetch environment variables from Netlify function
             const functionUrl = '/.netlify/functions/get-env-config';
-            console.log('🔍 Fetching config from:', functionUrl);
             
             const response = await fetch(functionUrl);
             
@@ -82,16 +81,6 @@ async function loadEnvConfig() {
             
             // Mark as loaded
             window.ENV_CONFIG_LOADED = true;
-            
-            // Safe logging - only show status, never show values
-            console.log('✅ Environment configuration loaded from Netlify');
-            console.log('📍 Supabase URL:', sanitizedConfig.supabaseUrl ? 'Set ✓' : 'Missing ❌');
-            console.log('🔑 Supabase Key:', sanitizedConfig.supabaseAnonKey ? 'Set ✓' : 'Missing ❌');
-            console.log('☁️ Cloudinary:', sanitizedConfig.cloudinaryCloudName ? 'Set ✓' : 'Missing ❌');
-            console.log('📧 EmailJS Service:', sanitizedConfig.emailjsServiceId ? 'Set ✓' : 'Missing ❌');
-            console.log('📧 EmailJS Public Key:', sanitizedConfig.emailjsPublicKey ? 'Set ✓' : 'Missing ❌');
-            console.log('🗺️ Mapbox Token:', sanitizedConfig.mapboxAccessToken ? 'Set ✓' : 'Missing ❌');
-            console.log('💳 Paystack Public Key:', sanitizedConfig.paystackPublicKey ? 'Set ✓' : 'Missing ❌');
             
             // Dispatch event to notify other scripts (using sanitized config)
             window.dispatchEvent(new CustomEvent('envConfigLoaded', { detail: sanitizedConfig }));

@@ -1136,7 +1136,6 @@
         (async function() {
             try {
                 await loadEnvConfig();
-                console.log('✅ All environment variables loaded');
             } catch (error) {
                 console.error('❌ Failed to load environment variables:', error);
                 alert('⚠️ Configuration error. Please check your Netlify environment variables.');
@@ -1163,8 +1162,6 @@
                 PAYSTACK_PUBLIC_KEY = window.PAYSTACK_PUBLIC_KEY || '';
                 if (!PAYSTACK_PUBLIC_KEY) {
                     console.error('❌ Paystack Public Key not found. Please set LIVE_PUBLIC_KEY in Netlify environment variables.');
-                } else {
-                    console.log('💳 Paystack Public Key loaded ✓');
                 }
             });
         }
@@ -1180,7 +1177,6 @@
             // Wait for config to load
             window.addEventListener('envConfigLoaded', function() {
                 MAPBOX_ACCESS_TOKEN = window.MAPBOX_ACCESS_TOKEN || '';
-                console.log('🗺️ Mapbox token:', MAPBOX_ACCESS_TOKEN ? 'Loaded ✓' : 'Not set (will use free alternatives)');
             });
         }
         
@@ -1194,19 +1190,14 @@
             try {
                 if (typeof window.waitForEnvConfig === 'function') {
                     await window.waitForEnvConfig();
-                    console.log('✅ Environment config loaded, checking Supabase...');
                 } else if (typeof window.loadEnvConfig === 'function') {
                     await window.loadEnvConfig();
-                    console.log('✅ Environment config loaded via loadEnvConfig, checking Supabase...');
                 } else {
                     // Fallback: wait for env config to be available
                     let envAttempts = 0;
                     while (!window.ENV_CONFIG_LOADED && envAttempts < 50) {
                         await new Promise(resolve => setTimeout(resolve, 100));
                         envAttempts++;
-                    }
-                    if (window.ENV_CONFIG_LOADED) {
-                        console.log('✅ Environment config loaded (via flag), checking Supabase...');
                     }
                 }
             } catch (error) {
@@ -1263,7 +1254,6 @@
                     return;
                 }
 
-                console.log('✅ Supabase initialized');
                 await loadProductsFromDatabase();
             } catch (error) {
                 console.error('Error initializing Supabase:', error);
@@ -1320,10 +1310,6 @@
                     };
                 });
                 
-                // Log products with their IDs for debugging
-                console.log('Products loaded with IDs:', products.map(p => ({ id: p.id, name: p.name, idType: typeof p.id })));
-
-                console.log(`✅ Loaded ${products.length} products from database`);
             } catch (error) {
                 console.error('Error loading products:', error);
                 products = [];
@@ -1337,7 +1323,6 @@
                 e.preventDefault();
                 e.stopPropagation();
                 const productId = String(item.dataset.id); // Keep as string (UUID)
-                console.log('Product clicked:', productId, 'Type:', typeof productId);
                 selectProduct(productId);
             }
         });
@@ -1400,9 +1385,6 @@
         }
 
         function selectProduct(productId) {
-            console.log('selectProduct called with ID:', productId, 'Type:', typeof productId);
-            console.log('Available products:', products.map(p => ({ id: p.id, name: p.name, idType: typeof p.id })));
-            
             // Keep productId as string (UUID) - don't convert to number
             const idString = String(productId);
             
@@ -1410,13 +1392,9 @@
             selectedProduct = products.find(p => String(p.id) === idString);
             
             if (!selectedProduct) {
-                console.error('Product not found with ID:', idString);
-                console.error('Available product IDs:', products.map(p => p.id));
                 alert('Product not found. Please try searching again.');
                 return;
             }
-            
-            console.log('Selected product:', selectedProduct);
             
             searchInput.value = selectedProduct.name;
             searchResults.classList.remove('active');
@@ -1691,7 +1669,6 @@
                         });
                 });
 
-                console.log('✅ Map pre-initialized in background');
             } catch (error) {
                 console.error('Error pre-initializing map:', error);
             }
@@ -2330,14 +2307,12 @@
                     channels: ['card', 'bank', 'ussd', 'qr', 'mobile_money', 'bank_transfer'],
                     callback: function(response) {
                         // Payment successful
-                        console.log('✅ Payment successful:', response);
                         paymentReference = response.reference;
                         paymentCompleted = true;
                         resolve(response);
                     },
                     onClose: function() {
                         // User closed the payment window
-                        console.log('❌ Payment window closed by user');
                         paymentCompleted = false;
                         paymentReference = null;
                         reject(new Error('Payment window closed. Payment not completed.'));
@@ -2550,8 +2525,6 @@
                 if (measurements && Object.keys(measurements).length > 0) {
                     const measurementsText = `Measurements: Size=${measurements.size || 'N/A'}, Bust=${measurements.bust || 'N/A'}, Waist=${measurements.waist || 'N/A'}, Hips=${measurements.hips || 'N/A'}`;
                     finalComments = finalComments ? `${finalComments}\n${measurementsText}` : measurementsText;
-                    console.log('📝 Saving measurements:', measurements);
-                    console.log('📝 Final comments with measurements:', finalComments);
                 }
 
                 // Get delivery location data if applicable
@@ -2594,9 +2567,6 @@
                     throw new Error(`Failed to create order: ${orderError.message}`);
                 }
 
-                console.log('✅ Order submitted successfully:', newOrder);
-                console.log('✅ Payment Reference:', paymentReference);
-                
                 alert(`✓ Payment successful!\n✓ Order submitted successfully!\n\nPayment Reference: ${paymentReference}\n\nYou can freely exit.`);
                 
                 // Reset form
