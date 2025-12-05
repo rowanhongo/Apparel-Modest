@@ -1606,13 +1606,16 @@
                         preferCanvas: false // Use DOM renderer for better compatibility
                     }).setView([-1.2921, 36.8219], 6); // Center on Kenya
 
-                    // Add OpenStreetMap tiles with error handling
-                    const tileLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{s}/{z}/{x}/{y}.png', {
-                        attribution: '© OpenStreetMap contributors',
+                    // Add OpenStreetMap tiles - using CartoDB which is CORS-friendly
+                    // Alternative: If you prefer standard OSM style, you can use:
+                    // 'https://{s}.tile.openstreetmap.org/{s}/{z}/{x}/{y}.png' (but may have CORS issues)
+                    // CartoDB Positron provides a clean, light style that works well
+                    const tileLayer = L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+                        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
+                        subdomains: 'abcd',
                         maxZoom: 19,
                         minZoom: 3,
-                        errorTileUrl: 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7',
-                        crossOrigin: true
+                        errorTileUrl: 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7'
                     });
 
                     tileLayer.addTo(map);
