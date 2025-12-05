@@ -61,12 +61,12 @@ class AuthService {
      */
     async requestOTP(email) {
         try {
-            // Find user
+            // Find user - only admin-added users (status='active') are allowed
             const user = await this.findUserByEmail(email);
             if (!user) {
                 return {
                     success: false,
-                    message: 'No account found with this email. Please contact admin.',
+                    message: 'No account found with this email or account not authorized. Only emails added by admin can login. Please contact admin.',
                     hasValidOTP: false,
                     remainingTime: ''
                 };
@@ -125,34 +125,36 @@ class AuthService {
     }
 
     /**
-     * Login with existing valid OTP (no OTP code required if valid OTP exists)
+     * Login with existing valid OTP (no OTP code required if valid OTP exists and has been verified before)
      * @param {string} email - User email
      * @returns {Promise<Object>} { success: boolean, user: Object|null, token: string|null, message: string, remainingTime: string }
      */
     async loginWithValidOTP(email) {
         try {
-            // Find user
+            // Find user - only allow admin-added users (status='active')
             const user = await this.findUserByEmail(email);
             if (!user) {
                 return {
                     success: false,
                     user: null,
                     token: null,
-                    message: 'User not found',
+                    message: 'User not found or not authorized. Please contact admin.',
                     remainingTime: ''
                 };
             }
 
-            // Check if there's a valid OTP
-            const validOTP = await otpService.getValidOTP(email, 'login');
+            // Check if there's a valid OTP that has been verified at least once (requireVerified=true)
+            // This ensures newly sent OTPs must be entered first time
+            const validOTP = await otpService.getValidOTP(email, 'login', true);
             if (!validOTP) {
                 return {
                     success: false,
                     user: null,
                     token: null,
-                    message: 'No valid OTP found. Please click "Send OTP Code" to get a new one.',
+                    message: 'No verified OTP found. Please enter the OTP code sent to your email.',
                     remainingTime: '',
-                    needsRenewal: true
+                    needsRenewal: false,
+                    needsOTPEntry: true
                 };
             }
 

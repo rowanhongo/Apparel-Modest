@@ -4079,13 +4079,14 @@
             }
 
             try {
-                // Check for existing valid OTP
-                const validOTP = await otpService.getValidOTP(email, 'login');
+                // Check for existing valid OTP that has been verified before (can auto-login)
+                const verifiedOTP = await otpService.getValidOTP(email, 'login', true);
                 const remainingTimeDiv = document.getElementById('otp-remaining-time');
                 const warningDiv = document.getElementById('otp-expired-warning');
                 
-                if (validOTP) {
-                    const remainingTime = otpService.formatRemainingTime(validOTP);
+                if (verifiedOTP) {
+                    // Valid OTP exists and has been verified before - user can login directly
+                    const remainingTime = otpService.formatRemainingTime(verifiedOTP);
                     remainingTimeDiv.textContent = `✅ Valid OTP found! Time remaining: ${remainingTime}. Click "Login" to continue.`;
                     remainingTimeDiv.style.display = 'block';
                     remainingTimeDiv.style.color = 'rgba(16, 185, 129, 0.9)';
@@ -4184,8 +4185,11 @@
                     const warningDiv = document.getElementById('otp-expired-warning');
                     warningDiv.style.display = 'none';
                     
-                    if (result.hasValidOTP && result.remainingTime) {
-                        // Valid OTP already exists - user can login directly
+                    // Check if OTP has been verified before (can auto-login)
+                    const verifiedOTP = await otpService.getValidOTP(email, 'login', true);
+                    
+                    if (result.hasValidOTP && result.remainingTime && verifiedOTP) {
+                        // Valid OTP exists and has been verified before - user can login directly
                         remainingTimeDiv.textContent = `✅ Valid OTP found! Time remaining: ${result.remainingTime}. Click "Login" to continue.`;
                         remainingTimeDiv.style.display = 'block';
                         remainingTimeDiv.style.color = 'rgba(16, 185, 129, 0.9)';
@@ -4282,20 +4286,31 @@
                 // First, check if there's a valid OTP in the database
                 const validOTPCheck = await otpService.getValidOTP(email, 'login');
                 
-                // If OTP field is hidden or OTP is empty, try to login with existing valid OTP
+                // If OTP field is hidden or OTP is empty, try to login with existing verified OTP
                 if (otpGroup.classList.contains('hidden') || !otp) {
-                    if (validOTPCheck) {
-                        // Valid OTP exists, login immediately
+                    // Check for verified OTP (has been used at least once)
+                    const verifiedOTPCheck = await otpService.getValidOTP(email, 'login', true);
+                    
+                    if (verifiedOTPCheck) {
+                        // Verified OTP exists, login immediately
                         const result = await authService.loginWithValidOTP(email);
                         
                         if (result.success) {
-                            // Login successful with existing valid OTP
+                            // Login successful with existing verified OTP
                             currentUser = result.user;
                             loginUser(result.user);
                             showMessage(result.message, 'success');
                             return;
                         } else {
-                            showMessage(result.message, 'error');
+                            if (result.needsOTPEntry) {
+                                // New OTP was sent, must enter it first time
+                                showMessage('Please enter the OTP code sent to your email.', 'error');
+                                document.getElementById('otp-group').classList.remove('hidden');
+                                document.getElementById('otp').setAttribute('required', 'required');
+                                document.getElementById('otp').focus();
+                            } else {
+                                showMessage(result.message, 'error');
+                            }
                             return;
                         }
                     } else {

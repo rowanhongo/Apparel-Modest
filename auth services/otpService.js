@@ -295,8 +295,21 @@ class OTPService {
                 };
             }
 
-            // Only mark non-login OTPs as used (login OTPs can be reused until expiration)
-            if (!isLoginOTP) {
+            // For login OTPs: mark as used after first verification (but still allow reuse)
+            // This tracks that the OTP has been verified at least once
+            // For other OTPs: mark as used (single use)
+            if (isLoginOTP) {
+                // Mark as used to track first verification, but OTP can still be reused
+                if (!data.used) {
+                    await supabase
+                        .from('otps')
+                        .update({ used: true })
+                        .eq('id', data.id);
+                    // Update the data object to reflect the change
+                    data.used = true;
+                }
+            } else {
+                // Non-login OTPs: mark as used (single use)
                 await supabase
                     .from('otps')
                     .update({ used: true })
@@ -322,9 +335,10 @@ class OTPService {
      * Check if there's a valid OTP for an email
      * @param {string} email - User email
      * @param {string} purpose - Purpose to check
+     * @param {boolean} requireVerified - If true, only return OTPs that have been verified at least once (for auto-login)
      * @returns {Promise<Object|null>} OTP record with remaining time or null
      */
-    async getValidOTP(email, purpose = 'login') {
+    async getValidOTP(email, purpose = 'login', requireVerified = false) {
         try {
             const supabase = getSupabaseClient();
             if (!supabase) {
@@ -344,8 +358,12 @@ class OTPService {
                 .order('created_at', { ascending: false })
                 .limit(1);
 
-            // Only filter by used=false for non-login OTPs
-            if (!isLoginOTP) {
+            // For login OTPs: if requireVerified is true, only return OTPs that have been verified (used=true)
+            // This ensures newly sent OTPs must be entered first time
+            if (isLoginOTP && requireVerified) {
+                query = query.eq('used', true);
+            } else if (!isLoginOTP) {
+                // Non-login OTPs: only allow unused
                 query = query.eq('used', false);
             }
 
