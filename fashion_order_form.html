@@ -910,7 +910,7 @@
                     <option value="in-store-pickup">In Store Pick Up</option>
                 </select>
                 <div class="custom-size-input" id="deliveryLocationInput" style="display: none;">
-                    <input type="text" id="deliveryLocation" placeholder="Enter delivery location" required>
+                    <input type="text" id="deliveryLocation" placeholder="Enter delivery location">
                 </div>
                 <div class="custom-size-input" id="storeLocationMessage" style="display: none;">
                     <p style="margin-top: 12px; padding: 14px 18px; background: rgba(246, 211, 101, 0.1); border-radius: 12px; border: 1px solid rgba(253, 160, 133, 0.2); color: #2d3748; font-size: 14px;">The store is opposite Jevanjee, Muindi Mbingu street, next to delight college.</p>
@@ -918,15 +918,16 @@
             </div>
 
             <div class="form-group">
-                <label for="paymentOption">Payment Method <span class="required">*</span></label>
-                <select id="paymentOption" required>
-                    <option value="">Select payment method</option>
-                    <option value="paystack">Paystack - Multiple Payment Options</option>
-                </select>
-                <p style="margin-top: 8px; font-size: 13px; color: #718096; line-height: 1.6;">
-                    <strong>Available payment methods:</strong> M-Pesa, Airtel Money, Visa/Mastercard, Bank Transfer, Apple Pay, and more.<br>
-                    You'll see all available options when you click "Submit Order".
-                </p>
+                <label>Payment Method</label>
+                <div style="padding: 14px 18px; background: rgba(246, 211, 101, 0.1); border-radius: 12px; border: 1px solid rgba(253, 160, 133, 0.2);">
+                    <p style="margin: 0; font-size: 15px; font-weight: 600; color: #2d3748; margin-bottom: 8px;">
+                        💳 Payment Facilitated by Paystack
+                    </p>
+                    <p style="margin: 0; font-size: 13px; color: #718096; line-height: 1.6;">
+                        <strong>Available payment methods:</strong> M-Pesa, Airtel Money, Visa/Mastercard, Bank Transfer, Apple Pay, and more.<br>
+                        You'll see all available options when you click "Submit Order".
+                    </p>
+                </div>
             </div>
 
             <div class="form-group">
@@ -1395,16 +1396,16 @@
             const storeLocationMessage = document.getElementById('storeLocationMessage');
             if (this.value === 'uber' || this.value === 'pickup-mtaani' || this.value === 'courier') {
                 deliveryLocationInput.style.display = 'block';
-                deliveryLocation.required = true;
+                deliveryLocation.setAttribute('required', 'required');
                 storeLocationMessage.style.display = 'none';
             } else if (this.value === 'in-store-pickup') {
                 deliveryLocationInput.style.display = 'none';
-                deliveryLocation.required = false;
+                deliveryLocation.removeAttribute('required');
                 deliveryLocation.value = '';
                 storeLocationMessage.style.display = 'block';
             } else {
                 deliveryLocationInput.style.display = 'none';
-                deliveryLocation.required = false;
+                deliveryLocation.removeAttribute('required');
                 deliveryLocation.value = '';
                 storeLocationMessage.style.display = 'none';
             }
@@ -1560,18 +1561,16 @@
             }
 
             const deliveryOption = document.getElementById('deliveryOption').value;
-            const paymentOption = document.getElementById('paymentOption').value;
             const deliveryLocation = document.getElementById('deliveryLocation').value;
 
+            // Validate delivery location if required
             if ((deliveryOption === 'uber' || deliveryOption === 'pickup-mtaani' || deliveryOption === 'courier') && !deliveryLocation) {
                 alert('Please enter delivery location');
                 return;
             }
             
-            if (!paymentOption || paymentOption !== 'paystack') {
-                alert('Please select Paystack as your payment method');
-                return;
-            }
+            // Payment is always facilitated by Paystack
+            const paymentOption = 'paystack';
 
             // Disable submit button and show loading
             const submitBtn = document.querySelector('.submit-btn');
@@ -1687,7 +1686,7 @@
                         price: selectedProduct.price,
                         delivery_option: deliveryOption,
                         delivery_location: deliveryLocation || null,
-                        payment_option: paymentOption,
+                        payment_option: paymentOption, // 'paystack' - now allowed in database constraint
                         payment_reference: paymentReference, // Store payment reference in dedicated column
                         payment_status: 'completed', // Payment status
                         comments: finalComments || null
