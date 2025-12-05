@@ -4195,17 +4195,20 @@
                         loginBtn.style.background = 'rgba(16, 185, 129, 0.2)';
                         loginBtn.style.borderColor = 'rgba(16, 185, 129, 0.5)';
                     } else {
-                        // New OTP was sent - show OTP input field
+                        // New OTP was sent - show OTP input field and require entry
                         document.getElementById('otp-group').classList.remove('hidden');
-                        remainingTimeDiv.textContent = '⏰ Your OTP will be valid for 30 days. Enter the code below or click "Login" to use it directly.';
+                        remainingTimeDiv.textContent = '⏰ OTP sent! Please check your email and enter the 6-digit code below.';
                         remainingTimeDiv.style.display = 'block';
                         remainingTimeDiv.style.color = 'rgba(16, 185, 129, 0.9)';
                         
-                        // Update login button to show OTP is ready
+                        // Reset login button - user must enter OTP first
                         const loginBtn = document.getElementById('login-btn');
-                        loginBtn.textContent = 'Login (OTP Ready)';
-                        loginBtn.style.background = 'rgba(16, 185, 129, 0.2)';
-                        loginBtn.style.borderColor = 'rgba(16, 185, 129, 0.5)';
+                        loginBtn.textContent = 'Login';
+                        loginBtn.style.background = '';
+                        loginBtn.style.borderColor = '';
+                        
+                        // Focus on OTP input field
+                        document.getElementById('otp').focus();
                     }
                     
                     // Show success message
@@ -4247,29 +4250,34 @@
             btn.textContent = 'Logging in...';
 
             try {
+                // First, check if there's a valid OTP in the database
+                const validOTPCheck = await otpService.getValidOTP(email, 'login');
+                
                 // If OTP field is hidden or OTP is empty, try to login with existing valid OTP
                 if (otpGroup.classList.contains('hidden') || !otp) {
-                    // Check if there's a valid OTP in the database
-                    const result = await authService.loginWithValidOTP(email);
-                    
-                    if (result.success) {
-                        // Login successful with existing valid OTP
-                        currentUser = result.user;
-                        loginUser(result.user);
-                        showMessage(result.message, 'success');
-                        return;
-                    } else {
-                        // No valid OTP found, user needs to request one
-                        if (result.needsRenewal) {
-                            showMessage('No valid OTP found. Please click "Send OTP Code" to get a new one.', 'error');
-                            const warningDiv = document.getElementById('otp-expired-warning');
-                            warningDiv.textContent = '⚠️ No valid OTP found. Please click "Send OTP Code" to get a new one.';
-                            warningDiv.style.display = 'block';
+                    if (validOTPCheck) {
+                        // Valid OTP exists, login immediately
+                        const result = await authService.loginWithValidOTP(email);
+                        
+                        if (result.success) {
+                            // Login successful with existing valid OTP
+                            currentUser = result.user;
+                            loginUser(result.user);
+                            showMessage(result.message, 'success');
                             return;
                         } else {
                             showMessage(result.message, 'error');
                             return;
                         }
+                    } else {
+                        // No valid OTP found, user needs to request one
+                        showMessage('No valid OTP found. Please click "Send OTP Code" to get a new one.', 'error');
+                        const warningDiv = document.getElementById('otp-expired-warning');
+                        warningDiv.textContent = '⚠️ No valid OTP found. Please click "Send OTP Code" to get a new one.';
+                        warningDiv.style.display = 'block';
+                        // Show OTP field so they can request OTP
+                        document.getElementById('otp-group').classList.remove('hidden');
+                        return;
                     }
                 }
 
