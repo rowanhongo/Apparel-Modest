@@ -2562,7 +2562,7 @@
                 
                 <div id="otp-group" class="form-group hidden">
                     <label class="form-label" for="otp">Enter OTP Code</label>
-                    <input type="text" id="otp" class="form-input" placeholder="123456" maxlength="6" pattern="[0-9]{6}" required>
+                    <input type="text" id="otp" class="form-input" placeholder="123456" maxlength="6" pattern="[0-9]{6}">
                     <p style="color: rgba(224, 216, 201, 0.7); font-size: 12px; margin-top: 5px;">Check your email for the 6-digit code</p>
                     <div id="otp-remaining-time" style="color: rgba(16, 185, 129, 0.9); font-size: 12px; margin-top: 5px; font-weight: 500;"></div>
                     <div id="otp-expired-warning" style="color: rgba(239, 68, 68, 0.9); font-size: 12px; margin-top: 5px; font-weight: 500; display: none;"></div>
@@ -4099,7 +4099,10 @@
                     
                     // OTP field is optional - user can login without it if valid OTP exists
                     // Keep it hidden to make it clear they don't need it
-                    document.getElementById('otp-group').classList.add('hidden');
+                    const otpGroupEl = document.getElementById('otp-group');
+                    otpGroupEl.classList.add('hidden');
+                    // Remove required attribute when hidden
+                    document.getElementById('otp').removeAttribute('required');
                 } else {
                     remainingTimeDiv.textContent = '';
                     warningDiv.textContent = '⚠️ No valid OTP found. Please click "Send OTP Code" to get a new one.';
@@ -4187,7 +4190,10 @@
                         remainingTimeDiv.style.display = 'block';
                         remainingTimeDiv.style.color = 'rgba(16, 185, 129, 0.9)';
                         // Keep OTP field hidden since they don't need it
-                        document.getElementById('otp-group').classList.add('hidden');
+                        const otpGroup = document.getElementById('otp-group');
+                        otpGroup.classList.add('hidden');
+                        // Remove required attribute when hidden
+                        document.getElementById('otp').removeAttribute('required');
                         
                         // Update login button to show OTP is ready
                         const loginBtn = document.getElementById('login-btn');
@@ -4196,7 +4202,10 @@
                         loginBtn.style.borderColor = 'rgba(16, 185, 129, 0.5)';
                     } else {
                         // New OTP was sent - show OTP input field and require entry
-                        document.getElementById('otp-group').classList.remove('hidden');
+                        const otpGroup = document.getElementById('otp-group');
+                        otpGroup.classList.remove('hidden');
+                        // Add required attribute when visible
+                        document.getElementById('otp').setAttribute('required', 'required');
                         remainingTimeDiv.textContent = '⏰ OTP sent! Please check your email and enter the 6-digit code below.';
                         remainingTimeDiv.style.display = 'block';
                         remainingTimeDiv.style.color = 'rgba(16, 185, 129, 0.9)';
@@ -4238,10 +4247,16 @@
             const email = document.getElementById('email').value.trim();
             const otp = document.getElementById('otp').value.trim();
             const otpGroup = document.getElementById('otp-group');
+            const otpInput = document.getElementById('otp');
 
             if (!email) {
                 showMessage('Please enter your email address', 'error');
                 return;
+            }
+
+            // Ensure OTP field is not required if it's hidden
+            if (otpGroup.classList.contains('hidden')) {
+                otpInput.removeAttribute('required');
             }
 
             // Disable button and show loading
@@ -4275,8 +4290,11 @@
                         const warningDiv = document.getElementById('otp-expired-warning');
                         warningDiv.textContent = '⚠️ No valid OTP found. Please click "Send OTP Code" to get a new one.';
                         warningDiv.style.display = 'block';
-                        // Show OTP field so they can request OTP
-                        document.getElementById('otp-group').classList.remove('hidden');
+                        // Show OTP field so they can request OTP (but don't require it yet)
+                        const otpGroup = document.getElementById('otp-group');
+                        otpGroup.classList.remove('hidden');
+                        // Don't add required yet - wait until OTP is sent
+                        document.getElementById('otp').removeAttribute('required');
                         return;
                     }
                 }
@@ -4492,7 +4510,10 @@
                     // Clear form
                     document.getElementById('email').value = '';
                     document.getElementById('otp').value = '';
-                    document.getElementById('otp-group').classList.add('hidden');
+                    const otpGroupEl2 = document.getElementById('otp-group');
+                    otpGroupEl2.classList.add('hidden');
+                    // Remove required attribute when hidden
+                    document.getElementById('otp').removeAttribute('required');
                     document.getElementById('otp-sent-indicator').classList.add('hidden');
                     
                     showMessage('Your OTP has expired. Please click "Send OTP Code" to renew it and login again.', 'error');
@@ -4513,7 +4534,10 @@
             currentUser = null;
             document.getElementById('login-page').classList.remove('hidden');
             document.getElementById('dashboard-page').classList.add('hidden');
-            document.getElementById('otp-group').classList.add('hidden');
+            const otpGroupEl3 = document.getElementById('otp-group');
+            otpGroupEl3.classList.add('hidden');
+            // Remove required attribute when hidden
+            document.getElementById('otp').removeAttribute('required');
             document.getElementById('otp-sent-indicator').classList.add('hidden');
             document.getElementById('email').value = '';
             document.getElementById('otp').value = '';
