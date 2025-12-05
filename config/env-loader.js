@@ -54,7 +54,8 @@ async function loadEnvConfig() {
                 emailjsServiceId: sanitizeValue(config.emailjsServiceId),
                 emailjsTemplateId: sanitizeValue(config.emailjsTemplateId),
                 emailjsPublicKey: sanitizeValue(config.emailjsPublicKey),
-                emailjsWelcomeTemplateId: sanitizeValue(config.emailjsWelcomeTemplateId)
+                emailjsWelcomeTemplateId: sanitizeValue(config.emailjsWelcomeTemplateId),
+                mapboxAccessToken: sanitizeValue(config.mapboxAccessToken)
             };
             
             // Set Supabase configuration
@@ -72,6 +73,9 @@ async function loadEnvConfig() {
             window.EMAILJS_PUBLIC_KEY = sanitizedConfig.emailjsPublicKey;
             window.EMAILJS_WELCOME_TEMPLATE_ID = sanitizedConfig.emailjsWelcomeTemplateId;
             
+            // Set Mapbox configuration
+            window.MAPBOX_ACCESS_TOKEN = sanitizedConfig.mapboxAccessToken;
+            
             // Mark as loaded
             window.ENV_CONFIG_LOADED = true;
             
@@ -82,6 +86,7 @@ async function loadEnvConfig() {
             console.log('☁️ Cloudinary:', sanitizedConfig.cloudinaryCloudName ? 'Set ✓' : 'Missing ❌');
             console.log('📧 EmailJS Service:', sanitizedConfig.emailjsServiceId ? 'Set ✓' : 'Missing ❌');
             console.log('📧 EmailJS Public Key:', sanitizedConfig.emailjsPublicKey ? 'Set ✓' : 'Missing ❌');
+            console.log('🗺️ Mapbox Token:', sanitizedConfig.mapboxAccessToken ? 'Set ✓' : 'Missing ❌');
             
             // Dispatch event to notify other scripts (using sanitized config)
             window.dispatchEvent(new CustomEvent('envConfigLoaded', { detail: sanitizedConfig }));

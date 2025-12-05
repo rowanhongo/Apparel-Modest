@@ -1037,6 +1037,31 @@
                         <div style="font-size: 13px; color: #2d3748; font-weight: 400; margin-bottom: 4px;">Selected Location:</div>
                         <div id="selectedLocationText" style="font-size: 13px; color: #4a5568; font-weight: 400;"></div>
                     </div>
+                    <!-- Manual entry option -->
+                    <div style="margin-top: 12px; padding: 12px; background: rgba(255, 255, 255, 0.9); border-radius: 10px; border: 1px solid rgba(0, 0, 0, 0.08);">
+                        <button type="button" id="toggleManualEntry" style="width: 100%; padding: 10px; background: transparent; border: 1px dashed rgba(27, 77, 62, 0.3); border-radius: 8px; color: #1B4D3E; font-size: 13px; font-weight: 500; cursor: pointer; transition: all 0.2s;">
+                            📍 Can't find your location? Enter manually
+                        </button>
+                        <div id="manualEntryFields" style="display: none; margin-top: 12px;">
+                            <div style="margin-bottom: 10px;">
+                                <label style="display: block; font-size: 13px; font-weight: 600; color: #2d3748; margin-bottom: 6px;">Address/Description</label>
+                                <input type="text" id="manualAddress" placeholder="e.g., Averina Apartments, Block A, Room 5" style="width: 100%; padding: 10px 12px; border: 1.5px solid rgba(0, 0, 0, 0.08); background: rgba(255, 255, 255, 0.9); border-radius: 8px; font-size: 14px;">
+                            </div>
+                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                                <div>
+                                    <label style="display: block; font-size: 13px; font-weight: 600; color: #2d3748; margin-bottom: 6px;">Latitude (optional)</label>
+                                    <input type="number" id="manualLatitude" step="any" placeholder="e.g., -1.2921" style="width: 100%; padding: 10px 12px; border: 1.5px solid rgba(0, 0, 0, 0.08); background: rgba(255, 255, 255, 0.9); border-radius: 8px; font-size: 14px;">
+                                </div>
+                                <div>
+                                    <label style="display: block; font-size: 13px; font-weight: 600; color: #2d3748; margin-bottom: 6px;">Longitude (optional)</label>
+                                    <input type="number" id="manualLongitude" step="any" placeholder="e.g., 36.8219" style="width: 100%; padding: 10px 12px; border: 1.5px solid rgba(0, 0, 0, 0.08); background: rgba(255, 255, 255, 0.9); border-radius: 8px; font-size: 14px;">
+                                </div>
+                            </div>
+                            <button type="button" id="saveManualLocation" style="width: 100%; margin-top: 10px; padding: 10px; background: #1B4D3E; color: white; border: none; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer;">
+                                Save Location
+                            </button>
+                        </div>
+                    </div>
                     <!-- Hidden inputs to store location data -->
                     <input type="hidden" id="deliveryLatitude">
                     <input type="hidden" id="deliveryLongitude">
@@ -1109,6 +1134,21 @@
         
         // Paystack configuration
         const PAYSTACK_PUBLIC_KEY = 'pk_test_115cbba775975d9fe966d516d1dea9ea0bfa91be';
+        
+        // Mapbox configuration (loaded from environment)
+        // Will be set after env-loader.js loads
+        let MAPBOX_ACCESS_TOKEN = '';
+        
+        // Wait for environment config to load Mapbox token
+        if (window.ENV_CONFIG_LOADED) {
+            MAPBOX_ACCESS_TOKEN = window.MAPBOX_ACCESS_TOKEN || '';
+        } else {
+            // Wait for config to load
+            window.addEventListener('envConfigLoaded', function() {
+                MAPBOX_ACCESS_TOKEN = window.MAPBOX_ACCESS_TOKEN || '';
+                console.log('🗺️ Mapbox token:', MAPBOX_ACCESS_TOKEN ? 'Loaded ✓' : 'Not set (will use free alternatives)');
+            });
+        }
         
         // Payment state
         let paymentCompleted = false;
@@ -1559,16 +1599,30 @@
                     zoomAnimation: false // Disable zoom animation for faster response
                 }).setView([-1.2921, 36.8219], 6);
 
-                // Use lighter, faster tile set
-                const tileLayer = L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
-                    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
-                    subdomains: 'abcd',
-                    maxZoom: 19,
-                    minZoom: 3,
-                    errorTileUrl: 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7',
-                    tileSize: 256,
-                    zoomOffset: 0
-                });
+                // Use Mapbox tiles if available, otherwise use CartoDB
+                let tileLayer;
+                const mapboxToken = window.MAPBOX_ACCESS_TOKEN || MAPBOX_ACCESS_TOKEN || '';
+                if (mapboxToken) {
+                    // Mapbox tiles - more colorful and detailed
+                    tileLayer = L.tileLayer(`https://api.mapbox.com/styles/v1/mapbox/streets-v12/tiles/{z}/{x}/{y}?access_token=${mapboxToken}`, {
+                        attribution: '&copy; <a href="https://www.mapbox.com/about/maps/">Mapbox</a> &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
+                        maxZoom: 22,
+                        minZoom: 3,
+                        tileSize: 512,
+                        zoomOffset: -1
+                    });
+                } else {
+                    // CartoDB tiles - free fallback
+                    tileLayer = L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+                        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
+                        subdomains: 'abcd',
+                        maxZoom: 19,
+                        minZoom: 3,
+                        errorTileUrl: 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7',
+                        tileSize: 256,
+                        zoomOffset: 0
+                    });
+                }
 
                 tileLayer.addTo(map);
                 mapInitialized = true;
@@ -1632,15 +1686,21 @@
                             }).addTo(map);
                         }
                         
+                        // Force map to recalculate size
                         map.invalidateSize();
-                        // Re-center on Kenya if needed
-                        if (!marker) {
-                            map.setView([-1.2921, 36.8219], 6);
-                        }
+                        
+                        // Use whenReady to ensure tiles are loaded
+                        map.whenReady(() => {
+                            map.invalidateSize();
+                            // Re-center on Kenya if needed
+                            if (!marker) {
+                                map.setView([-1.2921, 36.8219], 6);
+                            }
+                        });
                     } catch (error) {
                         console.error('Error invalidating map size:', error);
                     }
-                }, 50); // Reduced delay for faster response
+                }, 100); // Slightly longer delay to ensure container is visible
                 return;
             }
 
@@ -1649,7 +1709,7 @@
                 preInitializeMap();
             }
             
-            // Show map quickly
+            // Show map and wait for it to be ready
             setTimeout(() => {
                 try {
                     if (map) {
@@ -1663,27 +1723,54 @@
                             }).addTo(map);
                         }
                         
-                        map.invalidateSize();
-                        if (!marker) {
-                            map.setView([-1.2921, 36.8219], 6);
-                        }
+                        // Wait for map to be ready before invalidating
+                        map.whenReady(() => {
+                            map.invalidateSize();
+                            if (!marker) {
+                                map.setView([-1.2921, 36.8219], 6);
+                            }
+                        });
                     }
                 } catch (error) {
                     console.error('Error showing map:', error);
                 }
-            }, 50);
+            }, 100);
         }
 
-        // Set location marker on map
-        function setLocationMarker(lat, lng, displayName) {
+        // Create custom colored marker icon
+        function createColoredMarkerIcon(color = '#1B4D3E') {
+            return L.divIcon({
+                className: 'custom-marker',
+                html: `<div style="background-color: ${color}; width: 24px; height: 24px; border-radius: 50% 50% 50% 0; transform: rotate(-45deg); border: 3px solid white; box-shadow: 0 2px 8px rgba(0,0,0,0.3);"></div>`,
+                iconSize: [24, 24],
+                iconAnchor: [12, 24],
+                popupAnchor: [0, -24]
+            });
+        }
+
+        // Set location marker on map with colored icon
+        function setLocationMarker(lat, lng, displayName, isManual = false) {
             // Remove existing marker
             if (marker) {
                 map.removeLayer(marker);
             }
 
-            // Add new marker
-            marker = L.marker([lat, lng]).addTo(map);
-            marker.bindPopup(displayName).openPopup();
+            // Use different colors for different location types
+            let markerColor = '#1B4D3E'; // Default company green
+            if (isManual) {
+                markerColor = '#fda085'; // Orange for manual entries
+            } else if (displayName.toLowerCase().includes('apartment') || displayName.toLowerCase().includes('building')) {
+                markerColor = '#4169E1'; // Blue for buildings
+            } else if (displayName.toLowerCase().includes('street') || displayName.toLowerCase().includes('road')) {
+                markerColor = '#50C878'; // Green for streets
+            }
+
+            // Add new marker with colored icon
+            marker = L.marker([lat, lng], {
+                icon: createColoredMarkerIcon(markerColor)
+            }).addTo(map);
+            
+            marker.bindPopup(`<div style="font-weight: 600; color: #2d3748;">${displayName}</div>`).openPopup();
 
             // Center map on marker
             map.setView([lat, lng], 15);
@@ -1707,7 +1794,7 @@
             selectedLocationText.textContent = displayName;
         }
 
-        // Search for locations using Photon API (better POI coverage) with Nominatim fallback
+        // Search for locations using Mapbox (best), Photon (good), or Nominatim (fallback)
         function searchLocation(query) {
             if (!query || query.length < 2) {
                 document.getElementById('locationSuggestions').style.display = 'none';
@@ -1723,106 +1810,152 @@
             locationSearchTimeout = setTimeout(() => {
                 const encodedQuery = encodeURIComponent(query);
                 
-                // Use Photon API - better for POIs like apartments, buildings, etc.
-                // Photon is free, no API key needed, and has better indexing than Nominatim
-                const photonUrl = `https://photon.komoot.io/api/?q=${encodedQuery}&limit=15&lang=en`;
-                
-                // Also try with Nairobi context for better results
-                const photonNairobiUrl = `https://photon.komoot.io/api/?q=${encodedQuery}+Nairobi&limit=10&lang=en`;
-                
-                // Run both Photon searches in parallel
-                Promise.all([
-                    fetch(photonUrl).then(r => r.json()),
-                    fetch(photonNairobiUrl).then(r => r.json())
-                ])
-                .then(([photonResults1, photonResults2]) => {
-                    // Combine Photon results
-                    const allPhotonResults = [...(photonResults1.features || []), ...(photonResults2.features || [])];
+                // Strategy 1: Try Mapbox first (best POI coverage)
+                const mapboxToken = window.MAPBOX_ACCESS_TOKEN || MAPBOX_ACCESS_TOKEN || '';
+                if (mapboxToken) {
+                    const mapboxUrl = `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodedQuery}.json?access_token=${MAPBOX_ACCESS_TOKEN}&country=ke&limit=10&types=address,poi,place`;
+                    const mapboxNairobiUrl = `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodedQuery}%20Nairobi.json?access_token=${MAPBOX_ACCESS_TOKEN}&country=ke&limit=8&types=address,poi,place`;
                     
-                    // Filter for Kenya (bounding box: lat 5.5 to -4.5, lon 33.5 to 42.0)
-                    const kenyaResults = allPhotonResults.filter(feature => {
-                        const coords = feature.geometry.coordinates;
-                        const lng = coords[0];
-                        const lat = coords[1];
-                        // Kenya bounding box
-                        return lat >= -4.5 && lat <= 5.5 && lng >= 33.5 && lng <= 42.0;
-                    });
-                    
-                    // Deduplicate by coordinates (within 100m)
-                    const uniqueResults = [];
-                    const seenCoords = new Set();
-                    
-                    kenyaResults.forEach(feature => {
-                        const coords = feature.geometry.coordinates;
-                        const lat = coords[1].toFixed(4);
-                        const lng = coords[0].toFixed(4);
-                        const coordKey = `${lat},${lng}`;
+                    Promise.all([
+                        fetch(mapboxUrl).then(r => r.json()),
+                        fetch(mapboxNairobiUrl).then(r => r.json())
+                    ])
+                    .then(([results1, results2]) => {
+                        const allResults = [...(results1.features || []), ...(results2.features || [])];
                         
-                        if (!seenCoords.has(coordKey)) {
-                            seenCoords.add(coordKey);
-                            uniqueResults.push(feature);
+                        // Deduplicate
+                        const uniqueResults = [];
+                        const seenIds = new Set();
+                        
+                        allResults.forEach(feature => {
+                            const id = feature.id;
+                            if (!seenIds.has(id)) {
+                                seenIds.add(id);
+                                uniqueResults.push(feature);
+                            }
+                        });
+                        
+                        // Sort by relevance
+                        uniqueResults.sort((a, b) => {
+                            const relevanceA = a.relevance || 0;
+                            const relevanceB = b.relevance || 0;
+                            return relevanceB - relevanceA;
+                        });
+                        
+                        // Convert Mapbox format to display format
+                        const formattedResults = uniqueResults.slice(0, 10).map(feature => {
+                            const coords = feature.center || feature.geometry.coordinates;
+                            return {
+                                lat: coords[1],
+                                lon: coords[0],
+                                name: feature.text || feature.place_name || 'Location',
+                                display_name: feature.place_name || feature.text || 'Location',
+                                type: feature.properties?.category || feature.place_type?.[0] || '',
+                                address: {
+                                    road: feature.properties?.address || '',
+                                    city: feature.context?.find(c => c.id.startsWith('place'))?.text || '',
+                                    suburb: feature.context?.find(c => c.id.startsWith('neighborhood'))?.text || ''
+                                },
+                                importance: feature.relevance || 0.5
+                            };
+                        });
+                        
+                        if (formattedResults.length > 0) {
+                            displayLocationSuggestions(formattedResults);
+                        } else {
+                            // Fallback to Photon
+                            searchWithPhoton(query, encodedQuery);
                         }
+                    })
+                    .catch(error => {
+                        console.error('Mapbox geocoding error:', error);
+                        // Fallback to Photon
+                        searchWithPhoton(query, encodedQuery);
                     });
-                    
-                    // Sort by relevance
-                    uniqueResults.sort((a, b) => {
-                        const queryLower = query.toLowerCase();
-                        const nameA = (a.properties.name || '').toLowerCase();
-                        const nameB = (b.properties.name || '').toLowerCase();
-                        
-                        // Exact name match gets highest priority
-                        const exactMatchA = nameA === queryLower ? 2 : (nameA.includes(queryLower) ? 1 : 0);
-                        const exactMatchB = nameB === queryLower ? 2 : (nameB.includes(queryLower) ? 1 : 0);
-                        
-                        // Prioritize buildings, places, amenities
-                        const typeA = (a.properties.osm_value || '').toLowerCase();
-                        const typeB = (b.properties.osm_value || '').toLowerCase();
-                        const isPOIA = ['building', 'place', 'amenity', 'shop', 'leisure', 'residential'].some(t => typeA.includes(t));
-                        const isPOIB = ['building', 'place', 'amenity', 'shop', 'leisure', 'residential'].some(t => typeB.includes(t));
-                        const poiBoostA = isPOIA ? 1 : 0;
-                        const poiBoostB = isPOIB ? 1 : 0;
-                        
-                        return (exactMatchB + poiBoostB) - (exactMatchA + poiBoostA);
-                    });
-                    
-                    // Convert Photon format to display format
-                    const formattedResults = uniqueResults.slice(0, 10).map(feature => {
-                        const props = feature.properties;
-                        const coords = feature.geometry.coordinates;
-                        
-                        return {
-                            lat: coords[1],
-                            lon: coords[0],
-                            name: props.name || 'Unnamed Location',
-                            display_name: props.name || props.street || props.city || 'Location',
-                            type: props.osm_value || props.osm_key || '',
-                            address: {
-                                road: props.street,
-                                suburb: props.district,
-                                neighbourhood: props.locality,
-                                city: props.city || props.county,
-                                town: props.town
-                            },
-                            importance: props.importance || 0.5
-                        };
-                    });
-                    
-                    if (formattedResults.length > 0) {
-                        displayLocationSuggestions(formattedResults);
-                    } else {
-                        // Fallback to Nominatim if Photon returns no results
-                        fallbackToNominatim(query, encodedQuery);
-                    }
-                })
-                .catch(error => {
-                    console.error('Photon geocoding error:', error);
-                    // Fallback to Nominatim
-                    fallbackToNominatim(query, encodedQuery);
-                });
+                } else {
+                    // No Mapbox token, use Photon
+                    searchWithPhoton(query, encodedQuery);
+                }
             }, 250);
         }
         
-        // Fallback to Nominatim if Photon fails
+        // Search using Photon API
+        function searchWithPhoton(query, encodedQuery) {
+            const photonUrl = `https://photon.komoot.io/api/?q=${encodedQuery}&limit=15&lang=en`;
+            const photonNairobiUrl = `https://photon.komoot.io/api/?q=${encodedQuery}+Nairobi&limit=10&lang=en`;
+            
+            Promise.all([
+                fetch(photonUrl).then(r => r.json()),
+                fetch(photonNairobiUrl).then(r => r.json())
+            ])
+            .then(([photonResults1, photonResults2]) => {
+                const allPhotonResults = [...(photonResults1.features || []), ...(photonResults2.features || [])];
+                
+                // Filter for Kenya
+                const kenyaResults = allPhotonResults.filter(feature => {
+                    const coords = feature.geometry.coordinates;
+                    const lng = coords[0];
+                    const lat = coords[1];
+                    return lat >= -4.5 && lat <= 5.5 && lng >= 33.5 && lng <= 42.0;
+                });
+                
+                // Deduplicate and sort
+                const uniqueResults = [];
+                const seenCoords = new Set();
+                
+                kenyaResults.forEach(feature => {
+                    const coords = feature.geometry.coordinates;
+                    const lat = coords[1].toFixed(4);
+                    const lng = coords[0].toFixed(4);
+                    const coordKey = `${lat},${lng}`;
+                    
+                    if (!seenCoords.has(coordKey)) {
+                        seenCoords.add(coordKey);
+                        uniqueResults.push(feature);
+                    }
+                });
+                
+                uniqueResults.sort((a, b) => {
+                    const queryLower = query.toLowerCase();
+                    const nameA = (a.properties.name || '').toLowerCase();
+                    const nameB = (b.properties.name || '').toLowerCase();
+                    const exactMatchA = nameA === queryLower ? 2 : (nameA.includes(queryLower) ? 1 : 0);
+                    const exactMatchB = nameB === queryLower ? 2 : (nameB.includes(queryLower) ? 1 : 0);
+                    return exactMatchB - exactMatchA;
+                });
+                
+                const formattedResults = uniqueResults.slice(0, 10).map(feature => {
+                    const props = feature.properties;
+                    const coords = feature.geometry.coordinates;
+                    
+                    return {
+                        lat: coords[1],
+                        lon: coords[0],
+                        name: props.name || 'Unnamed Location',
+                        display_name: props.name || props.street || props.city || 'Location',
+                        type: props.osm_value || props.osm_key || '',
+                        address: {
+                            road: props.street,
+                            suburb: props.district,
+                            city: props.city || props.county
+                        },
+                        importance: 0.5
+                    };
+                });
+                
+                if (formattedResults.length > 0) {
+                    displayLocationSuggestions(formattedResults);
+                } else {
+                    fallbackToNominatim(query, encodedQuery);
+                }
+            })
+            .catch(error => {
+                console.error('Photon geocoding error:', error);
+                fallbackToNominatim(query, encodedQuery);
+            });
+        }
+        
+        // Fallback to Nominatim
         function fallbackToNominatim(query, encodedQuery) {
             const nominatimUrl = `https://nominatim.openstreetmap.org/search?format=json&q=${encodedQuery}&countrycodes=ke&limit=8&addressdetails=1&extratags=1&namedetails=1`;
             
@@ -1834,7 +1967,7 @@
                 .catch(err => {
                     console.error('Nominatim fallback error:', err);
                     document.getElementById('locationSuggestions').innerHTML = 
-                        '<div style="padding: 12px; color: #718096; font-size: 13px;">Unable to search locations. Please try again.</div>';
+                        '<div style="padding: 12px; color: #718096; font-size: 13px;">Unable to search locations. Please use manual entry or click on the map.</div>';
                     document.getElementById('locationSuggestions').style.display = 'block';
                 });
         }
@@ -1916,6 +2049,62 @@
                 });
             }
             
+            // Manual entry toggle
+            const toggleManualEntry = document.getElementById('toggleManualEntry');
+            const manualEntryFields = document.getElementById('manualEntryFields');
+            const saveManualLocation = document.getElementById('saveManualLocation');
+            
+            if (toggleManualEntry) {
+                toggleManualEntry.addEventListener('click', function() {
+                    const isVisible = manualEntryFields.style.display !== 'none';
+                    manualEntryFields.style.display = isVisible ? 'none' : 'block';
+                    toggleManualEntry.textContent = isVisible 
+                        ? '📍 Can\'t find your location? Enter manually' 
+                        : '✖️ Cancel manual entry';
+                });
+            }
+            
+            if (saveManualLocation) {
+                saveManualLocation.addEventListener('click', function() {
+                    const manualAddress = document.getElementById('manualAddress').value.trim();
+                    const manualLat = document.getElementById('manualLatitude').value;
+                    const manualLng = document.getElementById('manualLongitude').value;
+                    
+                    if (!manualAddress && !manualLat && !manualLng) {
+                        alert('Please enter an address or coordinates');
+                        return;
+                    }
+                    
+                    // If coordinates provided, use them; otherwise use address
+                    if (manualLat && manualLng) {
+                        const lat = parseFloat(manualLat);
+                        const lng = parseFloat(manualLng);
+                        if (isNaN(lat) || isNaN(lng)) {
+                            alert('Invalid coordinates. Please enter valid numbers.');
+                            return;
+                        }
+                        setLocationMarker(lat, lng, manualAddress || `${lat}, ${lng}`, true);
+                    } else if (manualAddress) {
+                        // Try to geocode the address
+                        searchLocation(manualAddress);
+                        // After a moment, if no results, just save the address
+                        setTimeout(() => {
+                            if (!selectedLocation.lat || !selectedLocation.lng) {
+                                // No coordinates found, save address only
+                                document.getElementById('deliveryDisplayName').value = manualAddress;
+                                document.getElementById('selectedLocationInfo').style.display = 'block';
+                                document.getElementById('selectedLocationText').textContent = manualAddress;
+                                alert('Address saved. You can also click on the map to set coordinates.');
+                            }
+                        }, 2000);
+                    }
+                    
+                    // Hide manual entry fields
+                    manualEntryFields.style.display = 'none';
+                    toggleManualEntry.textContent = '📍 Can\'t find your location? Enter manually';
+                });
+            }
+            
             // Pre-initialize map in background for faster loading
             // Wait for Leaflet to load
             let leafletCheckAttempts = 0;
@@ -1926,7 +2115,7 @@
                     // Pre-initialize map (hidden) for faster loading when user selects delivery option
                     setTimeout(() => {
                         preInitializeMap();
-                    }, 500); // Wait a bit after page load
+                    }, 300); // Reduced delay
                 } else if (leafletCheckAttempts > 50) {
                     clearInterval(checkLeaflet);
                     console.warn('Leaflet.js not loaded after 5 seconds');

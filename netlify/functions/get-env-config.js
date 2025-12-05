@@ -18,6 +18,7 @@ exports.handler = async (event, context) => {
     key.includes('SUPABASE') || 
     key.includes('CLOUDINARY') || 
     key.includes('EMAILJS') || 
+    key.includes('MAPBOX') ||
     key.includes('API_keys') ||
     key.includes('Welcome') ||
     key.includes('One_Time')
@@ -54,7 +55,10 @@ exports.handler = async (event, context) => {
         return '';
       }
     })(),
-    emailjsWelcomeTemplateId: process.env.EMAILJS_WELCOME_TEMPLATE_ID || process.env.Welcome_Template_ID || ''
+    emailjsWelcomeTemplateId: process.env.EMAILJS_WELCOME_TEMPLATE_ID || process.env.Welcome_Template_ID || '',
+    
+    // Mapbox - for geocoding and map tiles
+    mapboxAccessToken: process.env.MAPBOX_ACCESS_TOKEN || ''
   };
 
   // Log which values are set (for debugging in Netlify logs)
