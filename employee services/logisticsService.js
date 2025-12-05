@@ -173,10 +173,19 @@ class LogisticsService {
 
         this.container.innerHTML = '';
 
-        this.orders.forEach(order => {
-            const orderBubble = this.createOrderBubble(order);
-            this.container.appendChild(orderBubble);
-        });
+        if (this.orders.length === 0) {
+            // Show empty state message
+            const emptyMessage = document.createElement('div');
+            emptyMessage.className = 'empty-state-message';
+            emptyMessage.style.cssText = 'text-align: center; padding: 60px 20px; color: rgba(65, 70, 63, 0.6); font-size: 18px; font-weight: 500;';
+            emptyMessage.textContent = 'No logistics requests yet';
+            this.container.appendChild(emptyMessage);
+        } else {
+            this.orders.forEach(order => {
+                const orderBubble = this.createOrderBubble(order);
+                this.container.appendChild(orderBubble);
+            });
+        }
     }
 
     /**
