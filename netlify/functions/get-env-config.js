@@ -19,6 +19,8 @@ exports.handler = async (event, context) => {
     key.includes('CLOUDINARY') || 
     key.includes('EMAILJS') || 
     key.includes('MAPBOX') ||
+    key.includes('PAYSTACK') ||
+    key.includes('LIVE_') ||
     key.includes('API_keys') ||
     key.includes('Welcome') ||
     key.includes('One_Time')
@@ -58,7 +60,11 @@ exports.handler = async (event, context) => {
     emailjsWelcomeTemplateId: process.env.EMAILJS_WELCOME_TEMPLATE_ID || process.env.Welcome_Template_ID || '',
     
     // Mapbox - for geocoding and map tiles
-    mapboxAccessToken: process.env.MAPBOX_ACCESS_TOKEN || ''
+    mapboxAccessToken: process.env.MAPBOX_ACCESS_TOKEN || '',
+    
+    // Paystack - live public key (public key is safe to expose in frontend)
+    // Note: LIVE_SECRET_KEY should NEVER be exposed in frontend - only use on backend
+    paystackPublicKey: process.env.LIVE_PUBLIC_KEY || ''
   };
 
   // Log which values are set (for debugging in Netlify logs)

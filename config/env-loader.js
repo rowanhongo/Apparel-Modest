@@ -55,7 +55,8 @@ async function loadEnvConfig() {
                 emailjsTemplateId: sanitizeValue(config.emailjsTemplateId),
                 emailjsPublicKey: sanitizeValue(config.emailjsPublicKey),
                 emailjsWelcomeTemplateId: sanitizeValue(config.emailjsWelcomeTemplateId),
-                mapboxAccessToken: sanitizeValue(config.mapboxAccessToken)
+                mapboxAccessToken: sanitizeValue(config.mapboxAccessToken),
+                paystackPublicKey: sanitizeValue(config.paystackPublicKey)
             };
             
             // Set Supabase configuration
@@ -76,6 +77,9 @@ async function loadEnvConfig() {
             // Set Mapbox configuration
             window.MAPBOX_ACCESS_TOKEN = sanitizedConfig.mapboxAccessToken;
             
+            // Set Paystack configuration (public key only - safe to expose)
+            window.PAYSTACK_PUBLIC_KEY = sanitizedConfig.paystackPublicKey;
+            
             // Mark as loaded
             window.ENV_CONFIG_LOADED = true;
             
@@ -87,6 +91,7 @@ async function loadEnvConfig() {
             console.log('📧 EmailJS Service:', sanitizedConfig.emailjsServiceId ? 'Set ✓' : 'Missing ❌');
             console.log('📧 EmailJS Public Key:', sanitizedConfig.emailjsPublicKey ? 'Set ✓' : 'Missing ❌');
             console.log('🗺️ Mapbox Token:', sanitizedConfig.mapboxAccessToken ? 'Set ✓' : 'Missing ❌');
+            console.log('💳 Paystack Public Key:', sanitizedConfig.paystackPublicKey ? 'Set ✓' : 'Missing ❌');
             
             // Dispatch event to notify other scripts (using sanitized config)
             window.dispatchEvent(new CustomEvent('envConfigLoaded', { detail: sanitizedConfig }));

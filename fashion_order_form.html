@@ -1038,7 +1038,13 @@
                         </label>
                         <div style="position: relative;">
                             <input type="text" id="locationSearch" placeholder="Type a place name (e.g., Nairobi, Mombasa, Westlands...)" 
-                                   style="width: 100%; padding: 12px 16px; border: 1.5px solid rgba(0, 0, 0, 0.08); background: rgba(255, 255, 255, 0.9); border-radius: 10px; font-size: 14px;">
+                                   style="width: 100%; padding: 12px 40px 12px 16px; border: 1.5px solid rgba(0, 0, 0, 0.08); background: rgba(255, 255, 255, 0.9); border-radius: 10px; font-size: 14px;">
+                            <button type="button" id="clearLocationSearch" style="position: absolute; right: 8px; top: 50%; transform: translateY(-50%); background: transparent; border: none; color: #718096; cursor: pointer; padding: 0; display: none; align-items: center; justify-content: center; font-size: 20px; line-height: 1; width: 24px; height: 24px; border-radius: 50%; transition: all 0.2s;" 
+                                    onmouseover="this.style.background='rgba(0,0,0,0.05)'; this.style.color='#2d3748';" 
+                                    onmouseout="this.style.background='transparent'; this.style.color='#718096';"
+                                    aria-label="Clear search">
+                                ×
+                            </button>
                             <div id="locationSuggestions" style="position: absolute; top: 100%; left: 0; right: 0; background: white; border: 1.5px solid rgba(0, 0, 0, 0.08); border-radius: 10px; margin-top: 4px; max-height: 200px; overflow-y: auto; z-index: 1000; display: none; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);"></div>
                         </div>
                     </div>
@@ -1052,19 +1058,16 @@
                                 <label style="display: block; font-size: 13px; font-weight: 600; color: #2d3748; margin-bottom: 6px;">Address/Description</label>
                                 <input type="text" id="manualAddress" placeholder="e.g., Averina Apartments, Block A, Room 5" style="width: 100%; padding: 10px 12px; border: 1.5px solid rgba(0, 0, 0, 0.08); background: rgba(255, 255, 255, 0.9); border-radius: 8px; font-size: 14px;">
                             </div>
-                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
-                                <div>
-                                    <label style="display: block; font-size: 13px; font-weight: 600; color: #2d3748; margin-bottom: 6px;">Latitude (optional)</label>
-                                    <input type="number" id="manualLatitude" step="any" placeholder="e.g., -1.2921" style="width: 100%; padding: 10px 12px; border: 1.5px solid rgba(0, 0, 0, 0.08); background: rgba(255, 255, 255, 0.9); border-radius: 8px; font-size: 14px;">
-                                </div>
-                                <div>
-                                    <label style="display: block; font-size: 13px; font-weight: 600; color: #2d3748; margin-bottom: 6px;">Longitude (optional)</label>
-                                    <input type="number" id="manualLongitude" step="any" placeholder="e.g., 36.8219" style="width: 100%; padding: 10px 12px; border: 1.5px solid rgba(0, 0, 0, 0.08); background: rgba(255, 255, 255, 0.9); border-radius: 8px; font-size: 14px;">
-                                </div>
+                            <div style="display: flex; gap: 10px;">
+                                <button type="button" id="saveManualLocation" style="flex: 1; padding: 10px; background: #1B4D3E; color: white; border: none; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer;">
+                                    Save Location
+                                </button>
+                                <button type="button" id="cancelManualEntry" style="flex: 1; padding: 10px; background: #c53030; color: white; border: none; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; transition: all 0.2s;"
+                                        onmouseover="this.style.background='#b91c1c';" 
+                                        onmouseout="this.style.background='#c53030';">
+                                    Cancel
+                                </button>
                             </div>
-                            <button type="button" id="saveManualLocation" style="width: 100%; margin-top: 10px; padding: 10px; background: #1B4D3E; color: white; border: none; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer;">
-                                Save Location
-                            </button>
                         </div>
                     </div>
                     <div id="mapContainer" style="width: 100%; height: 300px; border-radius: 12px; border: 1.5px solid rgba(0, 0, 0, 0.08); margin-top: 12px; position: relative; overflow: hidden; background: #f0f0f0;">
@@ -1147,8 +1150,24 @@
         let products = [];
         let supabaseClient = null;
         
-        // Paystack configuration
-        const PAYSTACK_PUBLIC_KEY = 'pk_test_115cbba775975d9fe966d516d1dea9ea0bfa91be';
+        // Paystack configuration (loaded from environment variables)
+        // Will be set after env-loader.js loads
+        let PAYSTACK_PUBLIC_KEY = '';
+        
+        // Wait for environment config to load Paystack key
+        if (window.ENV_CONFIG_LOADED) {
+            PAYSTACK_PUBLIC_KEY = window.PAYSTACK_PUBLIC_KEY || '';
+        } else {
+            // Wait for config to load
+            window.addEventListener('envConfigLoaded', function() {
+                PAYSTACK_PUBLIC_KEY = window.PAYSTACK_PUBLIC_KEY || '';
+                if (!PAYSTACK_PUBLIC_KEY) {
+                    console.error('❌ Paystack Public Key not found. Please set LIVE_PUBLIC_KEY in Netlify environment variables.');
+                } else {
+                    console.log('💳 Paystack Public Key loaded ✓');
+                }
+            });
+        }
         
         // Mapbox configuration (loaded from environment)
         // Will be set after env-loader.js loads
@@ -1811,11 +1830,17 @@
             
             marker.bindPopup(`<div style="font-weight: 600; color: #2d3748;">${displayName}</div>`).openPopup();
 
-            // Center map on marker (but keep within Kenya bounds)
+            // Center map on marker (but keep within Kenya bounds) - optimized for speed
             const kenyaBounds = L.latLngBounds([-4.7, 33.9], [5.5, 41.9]);
             const validLat = Math.max(-4.7, Math.min(5.5, lat));
             const validLng = Math.max(33.9, Math.min(41.9, lng));
-            map.setView([validLat, validLng], Math.min(15, map.getMaxZoom()));
+            
+            // Use flyTo for smooth, fast animation instead of setView
+            // Duration is shorter for faster response
+            map.flyTo([validLat, validLng], Math.min(15, map.getMaxZoom()), {
+                duration: 0.8, // Faster animation (default is 1.25)
+                easeLinearity: 0.25 // Smoother easing
+            });
 
             // Update selected location
             selectedLocation = {
@@ -2067,7 +2092,15 @@
                     setLocationMarker(lat, lng, name);
                     // Show primary name in search box, not full address
                     const primaryName = name.split(',')[0];
-                    document.getElementById('locationSearch').value = primaryName;
+                    const locationSearch = document.getElementById('locationSearch');
+                    locationSearch.value = primaryName;
+                    
+                    // Show clear button
+                    const clearBtn = document.getElementById('clearLocationSearch');
+                    if (clearBtn) {
+                        clearBtn.style.display = 'flex';
+                    }
+                    
                     suggestionsDiv.style.display = 'none';
                 });
             });
@@ -2078,16 +2111,53 @@
         // Location search input handler
         document.addEventListener('DOMContentLoaded', function() {
             const locationSearch = document.getElementById('locationSearch');
+            const clearLocationSearch = document.getElementById('clearLocationSearch');
+            
             if (locationSearch) {
+                // Show/hide clear button based on input value
                 locationSearch.addEventListener('input', function(e) {
                     searchLocation(e.target.value);
+                    // Show clear button if there's text
+                    if (clearLocationSearch) {
+                        clearLocationSearch.style.display = e.target.value.length > 0 ? 'flex' : 'none';
+                    }
+                });
+                
+                // Show clear button on focus if there's text
+                locationSearch.addEventListener('focus', function() {
+                    if (clearLocationSearch && this.value.length > 0) {
+                        clearLocationSearch.style.display = 'flex';
+                    }
                 });
 
                 // Hide suggestions when clicking outside
                 document.addEventListener('click', function(e) {
-                    if (!e.target.closest('#locationSearch') && !e.target.closest('#locationSuggestions')) {
+                    if (!e.target.closest('#locationSearch') && !e.target.closest('#locationSuggestions') && !e.target.closest('#clearLocationSearch')) {
                         document.getElementById('locationSuggestions').style.display = 'none';
                     }
+                });
+            }
+            
+            // Clear location search button
+            if (clearLocationSearch) {
+                clearLocationSearch.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    locationSearch.value = '';
+                    locationSearch.focus();
+                    clearLocationSearch.style.display = 'none';
+                    document.getElementById('locationSuggestions').style.display = 'none';
+                    
+                    // Clear selected location
+                    if (marker && map) {
+                        map.removeLayer(marker);
+                        marker = null;
+                    }
+                    selectedLocation = { lat: null, lng: null, displayName: null };
+                    document.getElementById('deliveryLatitude').value = '';
+                    document.getElementById('deliveryLongitude').value = '';
+                    document.getElementById('deliveryDisplayName').value = '';
+                    document.getElementById('selectedLocationInfo').style.display = 'none';
                 });
             }
             
@@ -2095,55 +2165,54 @@
             const toggleManualEntry = document.getElementById('toggleManualEntry');
             const manualEntryFields = document.getElementById('manualEntryFields');
             const saveManualLocation = document.getElementById('saveManualLocation');
+            const cancelManualEntry = document.getElementById('cancelManualEntry');
             
             if (toggleManualEntry) {
                 toggleManualEntry.addEventListener('click', function() {
                     const isVisible = manualEntryFields.style.display !== 'none';
-                    manualEntryFields.style.display = isVisible ? 'none' : 'block';
-                    toggleManualEntry.textContent = isVisible 
-                        ? '📍 Can\'t find your location? Enter manually' 
-                        : '✖️ Cancel manual entry';
+                    if (!isVisible) {
+                        manualEntryFields.style.display = 'block';
+                        toggleManualEntry.textContent = '📍 Can\'t find your location? Enter manually';
+                    }
+                });
+            }
+            
+            // Cancel manual entry button
+            if (cancelManualEntry) {
+                cancelManualEntry.addEventListener('click', function() {
+                    manualEntryFields.style.display = 'none';
+                    document.getElementById('manualAddress').value = '';
+                    toggleManualEntry.textContent = '📍 Can\'t find your location? Enter manually';
                 });
             }
             
             if (saveManualLocation) {
                 saveManualLocation.addEventListener('click', function() {
                     const manualAddress = document.getElementById('manualAddress').value.trim();
-                    const manualLat = document.getElementById('manualLatitude').value;
-                    const manualLng = document.getElementById('manualLongitude').value;
                     
-                    if (!manualAddress && !manualLat && !manualLng) {
-                        alert('Please enter an address or coordinates');
+                    if (!manualAddress) {
+                        alert('Please enter an address or description');
                         return;
                     }
                     
-                    // If coordinates provided, use them; otherwise use address
-                    if (manualLat && manualLng) {
-                        const lat = parseFloat(manualLat);
-                        const lng = parseFloat(manualLng);
-                        if (isNaN(lat) || isNaN(lng)) {
-                            alert('Invalid coordinates. Please enter valid numbers.');
-                            return;
-                        }
-                        setLocationMarker(lat, lng, manualAddress || `${lat}, ${lng}`, true);
-                    } else if (manualAddress) {
-                        // Try to geocode the address
-                        searchLocation(manualAddress);
-                        // After a moment, if no results, just save the address
-                        setTimeout(() => {
-                            if (!selectedLocation.lat || !selectedLocation.lng) {
-                                // No coordinates found, save address only
-                                document.getElementById('deliveryDisplayName').value = manualAddress;
-                                document.getElementById('selectedLocationInfo').style.display = 'block';
-                                document.getElementById('selectedLocationText').textContent = manualAddress;
-                                alert('Address saved. You can also click on the map to set coordinates.');
-                            }
-                        }, 2000);
-                    }
+                    // Try to geocode the address first
+                    searchLocation(manualAddress);
                     
-                    // Hide manual entry fields
-                    manualEntryFields.style.display = 'none';
-                    toggleManualEntry.textContent = '📍 Can\'t find your location? Enter manually';
+                    // After a moment, if no results, just save the address
+                    setTimeout(() => {
+                        if (!selectedLocation.lat || !selectedLocation.lng) {
+                            // No coordinates found, save address only
+                            document.getElementById('deliveryDisplayName').value = manualAddress;
+                            document.getElementById('selectedLocationInfo').style.display = 'block';
+                            document.getElementById('selectedLocationText').textContent = manualAddress;
+                            alert('Address saved. You can also click on the map to set coordinates.');
+                        }
+                        
+                        // Hide manual entry fields
+                        manualEntryFields.style.display = 'none';
+                        document.getElementById('manualAddress').value = '';
+                        toggleManualEntry.textContent = '📍 Can\'t find your location? Enter manually';
+                    }, 2000);
                 });
             }
             
@@ -2223,12 +2292,20 @@
         // Function to launch Paystack payment
         function launchPaystackPayment(email, name, phone, amount) {
             return new Promise((resolve, reject) => {
+                // Get Paystack key from window (loaded from environment)
+                const paystackKey = window.PAYSTACK_PUBLIC_KEY || PAYSTACK_PUBLIC_KEY;
+                
+                if (!paystackKey) {
+                    reject(new Error('Paystack Public Key not configured. Please set LIVE_PUBLIC_KEY in Netlify environment variables.'));
+                    return;
+                }
+                
                 // Format phone number for Paystack (remove + and ensure it's in the right format)
                 // Paystack expects phone number in format: 254712345678 (country code + number, no +)
                 let formattedPhone = phone.replace(/^\+/, ''); // Remove leading +
                 
                 const handler = PaystackPop.setup({
-                    key: PAYSTACK_PUBLIC_KEY,
+                    key: paystackKey,
                     email: email,
                     amount: amount, // Amount in cents (KES * 100)
                     currency: 'KES', // Kenyan Shilling
