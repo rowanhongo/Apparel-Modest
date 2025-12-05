@@ -1943,11 +1943,46 @@
                 padding: 10px !important;
             }
 
+            /* Sidebar navigation icons - reduce size */
+            #admin-sidebar .nav-link svg,
+            #admin-sidebar .h-5.w-5 {
+                width: 1rem !important;
+                height: 1rem !important;
+            }
+
+            /* Reduce gap between icon and text in sidebar */
+            #admin-sidebar .nav-link.gap-3 {
+                gap: 0.5rem !important;
+            }
+
             /* Mobile menu button */
             #admin-mobile-menu-btn {
                 padding: 8px !important;
                 min-width: 40px;
                 min-height: 40px;
+            }
+
+            #admin-mobile-menu-btn svg,
+            #admin-menu-icon,
+            #admin-close-icon {
+                width: 1.125rem !important;
+                height: 1.125rem !important;
+            }
+
+            /* Card/metric icons - reduce size */
+            #admin-dashboard-page .glass-card svg,
+            #admin-dashboard-page .h-4.w-4,
+            #admin-dashboard-page svg.h-4,
+            #admin-dashboard-page svg.w-4 {
+                width: 0.875rem !important;
+                height: 0.875rem !important;
+            }
+
+            /* Button icons */
+            #admin-dashboard-page .btn svg,
+            #admin-dashboard-page button svg {
+                width: 0.875rem !important;
+                height: 0.875rem !important;
             }
 
             /* Revenue page specific */
@@ -2556,6 +2591,84 @@
 
         .h-5 {
             height: 1.25rem;
+        }
+
+        /* Icon size adjustments for admin dashboard - general */
+        /* Sidebar navigation icons - make smaller */
+        #admin-sidebar .nav-link svg.h-5.w-5,
+        #admin-sidebar .nav-link .h-5,
+        #admin-sidebar .nav-link .w-5,
+        #admin-sidebar .nav-link svg {
+            width: 1rem !important;
+            height: 1rem !important;
+        }
+
+        /* Reduce gap between icon and text in sidebar */
+        #admin-sidebar .nav-link.gap-3 {
+            gap: 0.625rem !important;
+        }
+
+        /* Card/metric icons in admin dashboard - make smaller */
+        #admin-dashboard-page .glass-card svg.h-4.w-4,
+        #admin-dashboard-page .glass-card .h-4,
+        #admin-dashboard-page .glass-card .w-4 {
+            width: 0.875rem !important;
+            height: 0.875rem !important;
+        }
+
+        /* Button icons in admin dashboard */
+        #admin-dashboard-page .btn svg,
+        #admin-dashboard-page button svg:not(.chart-bars):not(.chart-labels),
+        #admin-sidebar .btn svg,
+        #admin-sidebar button svg {
+            width: 0.875rem !important;
+            height: 0.875rem !important;
+        }
+
+        /* Sidebar button gap reduction */
+        #admin-sidebar .btn.gap-2 {
+            gap: 0.5rem !important;
+        }
+
+        /* Mobile menu button icons */
+        #admin-mobile-menu-btn svg,
+        #admin-menu-icon,
+        #admin-close-icon {
+            width: 1.125rem !important;
+            height: 1.125rem !important;
+        }
+
+        /* Icon size adjustments for admin dashboard - mobile */
+        @media (max-width: 768px) {
+            /* Sidebar icons - even smaller on mobile */
+            #admin-sidebar .nav-link svg,
+            #admin-sidebar .h-5.w-5 {
+                width: 0.875rem !important;
+                height: 0.875rem !important;
+            }
+
+            /* Card icons in admin dashboard - smaller on mobile */
+            #admin-dashboard-page .glass-card svg,
+            #admin-dashboard-page .h-4.w-4,
+            #admin-dashboard-page svg.h-4,
+            #admin-dashboard-page svg.w-4 {
+                width: 0.75rem !important;
+                height: 0.75rem !important;
+            }
+
+            /* All SVG icons in admin dashboard - except charts */
+            #admin-dashboard-page svg:not(.chart-bars):not(.chart-labels):not([viewBox*="800"]):not([viewBox*="200"]) {
+                max-width: 0.875rem !important;
+                max-height: 0.875rem !important;
+            }
+
+            /* Mobile menu button icons */
+            #admin-mobile-menu-btn svg,
+            #admin-menu-icon,
+            #admin-close-icon {
+                width: 1rem !important;
+                height: 1rem !important;
+            }
         }
 
         .w-64 {
