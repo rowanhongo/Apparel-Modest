@@ -2397,7 +2397,127 @@
             }
         }
 
-        /* Admin Dashboard Styles */
+        /* Admin Dashboard Styles - General Fixes */
+        /* Make admin dashboard more compact and presentable like employee dashboard */
+        #admin-dashboard-page .text-4xl {
+            font-size: 1.75rem !important;
+            line-height: 1.2 !important;
+        }
+
+        #admin-dashboard-page .text-3xl {
+            font-size: 1.5rem !important;
+            line-height: 1.2 !important;
+        }
+
+        #admin-dashboard-page .text-2xl {
+            font-size: 1.25rem !important;
+            line-height: 1.2 !important;
+        }
+
+        #admin-dashboard-page .p-6 {
+            padding: 1rem !important;
+        }
+
+        #admin-dashboard-page .p-8 {
+            padding: 1.25rem !important;
+        }
+
+        #admin-dashboard-page main {
+            padding: 1rem !important;
+        }
+
+        #admin-dashboard-page .glass-card {
+            padding: 1rem !important;
+        }
+
+        #admin-dashboard-page .gap-4 {
+            gap: 0.75rem !important;
+        }
+
+        #admin-dashboard-page .gap-6 {
+            gap: 1rem !important;
+        }
+
+        #admin-dashboard-page .space-y-6 > * + * {
+            margin-top: 1rem !important;
+        }
+
+        /* Ensure text doesn't overflow */
+        #admin-dashboard-page * {
+            word-wrap: break-word;
+            overflow-wrap: break-word;
+            max-width: 100%;
+        }
+
+        /* Revenue values */
+        #total-revenue,
+        #revenue-total,
+        #revenue-avg-order-value,
+        #revenue-growth-rate,
+        #revenue-gross-income {
+            font-size: 1.25rem !important;
+            word-wrap: break-word;
+            white-space: normal;
+        }
+
+        /* Table improvements */
+        #admin-dashboard-page table {
+            width: 100%;
+            table-layout: auto;
+        }
+
+        #admin-dashboard-page th,
+        #admin-dashboard-page td {
+            padding: 0.5rem !important;
+            word-wrap: break-word;
+            overflow-wrap: break-word;
+        }
+
+        /* Staff cards */
+        #admin-staff-content .glass-card {
+            min-width: 0;
+            overflow: hidden;
+        }
+
+        /* Staff management page - fix card sizes and text overflow */
+        #admin-staff-content .staff-card {
+            max-width: 100%;
+            overflow: hidden;
+            word-wrap: break-word;
+        }
+
+        #admin-staff-content .staff-card * {
+            word-wrap: break-word;
+            overflow-wrap: break-word;
+            max-width: 100%;
+        }
+
+        /* Delete overlay fix */
+        #admin-staff-content .delete-staff-overlay {
+            max-width: 100%;
+            overflow: hidden;
+        }
+
+        /* Staff table improvements */
+        #admin-staff-content table {
+            width: 100%;
+            table-layout: auto;
+        }
+
+        #admin-staff-content th,
+        #admin-staff-content td {
+            padding: 0.5rem !important;
+            word-wrap: break-word;
+            overflow-wrap: break-word;
+            max-width: 200px;
+        }
+
+        /* Chart containers */
+        #admin-dashboard-page .chart-container {
+            max-width: 100%;
+            overflow-x: auto;
+        }
+
         .min-h-screen {
             min-height: 100vh;
         }

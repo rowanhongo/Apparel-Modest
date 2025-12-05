@@ -225,26 +225,20 @@ class OverviewService {
             // Fetch completed orders with timestamps
             const { data: completedOrders, error } = await this.supabase
                 .from('orders')
-                .select('created_at, updated_at, status, completed_at')
+                .select('created_at, updated_at, status')
                 .eq('status', 'completed');
 
             if (error || !completedOrders || completedOrders.length === 0) {
                 return 'N/A';
             }
 
-            // Filter out orders without completed_at
-            const validOrders = completedOrders.filter(order => order.completed_at);
-
-            if (validOrders.length === 0) {
-                return 'N/A';
-            }
-
+            // Use updated_at as fallback if completed_at doesn't exist
             // Calculate time differences for each stage
-            // For now, we'll use a simplified calculation based on completed_at - created_at
+            // For now, we'll use a simplified calculation based on updated_at - created_at
             // In a real system, you'd track stage transitions
-            const processingTimes = validOrders.map(order => {
+            const processingTimes = completedOrders.map(order => {
                 const created = new Date(order.created_at);
-                const completed = new Date(order.completed_at);
+                const completed = order.updated_at ? new Date(order.updated_at) : new Date();
                 const diffHours = (completed - created) / (1000 * 60 * 60);
                 return diffHours;
             }).filter(time => time > 0 && isFinite(time));
