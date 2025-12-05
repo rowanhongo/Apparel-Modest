@@ -1533,11 +1533,69 @@
         let map = null;
         let marker = null;
         let locationSearchTimeout = null;
+        let mapInitialized = false;
         let selectedLocation = {
             lat: null,
             lng: null,
             displayName: null
         };
+
+        // Pre-initialize map on page load (hidden) for faster loading
+        function preInitializeMap() {
+            if (mapInitialized || typeof L === 'undefined') {
+                return;
+            }
+
+            try {
+                const mapElement = document.getElementById('map');
+                if (!mapElement) return;
+
+                // Initialize map in background (container is hidden)
+                map = L.map('map', {
+                    zoomControl: false, // Disable controls initially for faster load
+                    attributionControl: false,
+                    preferCanvas: false,
+                    fadeAnimation: false, // Disable fade for faster rendering
+                    zoomAnimation: false // Disable zoom animation for faster response
+                }).setView([-1.2921, 36.8219], 6);
+
+                // Use lighter, faster tile set
+                const tileLayer = L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+                    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
+                    subdomains: 'abcd',
+                    maxZoom: 19,
+                    minZoom: 3,
+                    errorTileUrl: 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7',
+                    tileSize: 256,
+                    zoomOffset: 0
+                });
+
+                tileLayer.addTo(map);
+                mapInitialized = true;
+                
+                // Add click handler
+                map.on('click', function(e) {
+                    const lat = e.latlng.lat;
+                    const lng = e.latlng.lng;
+                    
+                    // Reverse geocode to get address
+                    fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=18&addressdetails=1`)
+                        .then(response => response.json())
+                        .then(data => {
+                            const displayName = data.display_name || `${lat}, ${lng}`;
+                            setLocationMarker(lat, lng, displayName);
+                        })
+                        .catch(error => {
+                            console.error('Reverse geocoding error:', error);
+                            setLocationMarker(lat, lng, `${lat}, ${lng}`);
+                        });
+                });
+
+                console.log('✅ Map pre-initialized in background');
+            } catch (error) {
+                console.error('Error pre-initializing map:', error);
+            }
+        }
 
         // Initialize map when delivery location input is shown
         function initializeMap() {
@@ -1554,16 +1612,26 @@
                 mapContainer.style.display = 'block';
             }
 
-            // Remove loading message
+            // Remove loading message quickly
             const mapLoading = document.getElementById('mapLoading');
             if (mapLoading) {
                 mapLoading.style.display = 'none';
             }
 
-            if (map) {
-                // Map already initialized, invalidate size after a delay to ensure container is visible
+            if (map && mapInitialized) {
+                // Map already initialized, just show it and invalidate size
                 setTimeout(() => {
                     try {
+                        // Enable controls now that map is visible
+                        if (!map.hasControl(L.control.zoom())) {
+                            L.control.zoom().addTo(map);
+                        }
+                        if (!map.hasControl(L.control.attribution())) {
+                            L.control.attribution({
+                                position: 'bottomright'
+                            }).addTo(map);
+                        }
+                        
                         map.invalidateSize();
                         // Re-center on Kenya if needed
                         if (!marker) {
@@ -1572,100 +1640,38 @@
                     } catch (error) {
                         console.error('Error invalidating map size:', error);
                     }
-                }, 200);
+                }, 50); // Reduced delay for faster response
                 return;
             }
 
-            // Wait a bit to ensure container is fully visible and Leaflet is loaded
+            // If map not pre-initialized, initialize it now (shouldn't happen, but fallback)
+            if (!mapInitialized) {
+                preInitializeMap();
+            }
+            
+            // Show map quickly
             setTimeout(() => {
                 try {
-                    // Check if Leaflet is loaded
-                    if (typeof L === 'undefined') {
-                        console.error('❌ Leaflet.js not loaded');
-                        if (mapLoading) {
-                            mapLoading.textContent = 'Map library not loaded. Please refresh the page.';
-                            mapLoading.style.display = 'block';
+                    if (map) {
+                        // Enable controls
+                        if (!map.hasControl(L.control.zoom())) {
+                            L.control.zoom().addTo(map);
                         }
-                        return;
-                    }
-
-                    // Ensure map element exists and is visible
-                    if (!mapElement || mapElement.offsetWidth === 0 || mapElement.offsetHeight === 0) {
-                        console.error('❌ Map element not visible or has no dimensions');
-                        if (mapLoading) {
-                            mapLoading.textContent = 'Map container not ready. Please try again.';
-                            mapLoading.style.display = 'block';
+                        if (!map.hasControl(L.control.attribution())) {
+                            L.control.attribution({
+                                position: 'bottomright'
+                            }).addTo(map);
                         }
-                        return;
-                    }
-
-                    // Initialize map centered on Kenya
-                    map = L.map('map', {
-                        zoomControl: true,
-                        attributionControl: true,
-                        preferCanvas: false // Use DOM renderer for better compatibility
-                    }).setView([-1.2921, 36.8219], 6); // Center on Kenya
-
-                    // Add OpenStreetMap tiles - using CartoDB which is CORS-friendly
-                    // Alternative: If you prefer standard OSM style, you can use:
-                    // 'https://{s}.tile.openstreetmap.org/{s}/{z}/{x}/{y}.png' (but may have CORS issues)
-                    // CartoDB Positron provides a clean, light style that works well
-                    const tileLayer = L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
-                        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
-                        subdomains: 'abcd',
-                        maxZoom: 19,
-                        minZoom: 3,
-                        errorTileUrl: 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7'
-                    });
-
-                    tileLayer.addTo(map);
-
-                    // Wait a moment then force map to render
-                    setTimeout(() => {
-                        try {
-                            map.invalidateSize();
-                            // Trigger a resize event to ensure tiles load
-                            window.dispatchEvent(new Event('resize'));
-                            console.log('✅ Map initialized and invalidated size');
-                        } catch (e) {
-                            console.warn('Warning invalidating size:', e);
-                        }
-                    }, 100);
-
-                    // Add click handler to place marker
-                    map.on('click', function(e) {
-                        const lat = e.latlng.lat;
-                        const lng = e.latlng.lng;
                         
-                        // Reverse geocode to get address
-                        fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=18&addressdetails=1`)
-                            .then(response => response.json())
-                            .then(data => {
-                                const displayName = data.display_name || `${lat}, ${lng}`;
-                                setLocationMarker(lat, lng, displayName);
-                            })
-                            .catch(error => {
-                                console.error('Reverse geocoding error:', error);
-                                setLocationMarker(lat, lng, `${lat}, ${lng}`);
-                            });
-                    });
-
-                    // Handle map load event
-                    map.whenReady(function() {
-                        console.log('✅ Map tiles loaded');
-                        if (mapLoading) {
-                            mapLoading.style.display = 'none';
+                        map.invalidateSize();
+                        if (!marker) {
+                            map.setView([-1.2921, 36.8219], 6);
                         }
-                    });
-
-                } catch (error) {
-                    console.error('❌ Error initializing map:', error);
-                    if (mapLoading) {
-                        mapLoading.textContent = 'Error loading map: ' + error.message + '. Please refresh the page.';
-                        mapLoading.style.display = 'block';
                     }
+                } catch (error) {
+                    console.error('Error showing map:', error);
                 }
-            }, 200);
+            }, 50);
         }
 
         // Set location marker on map
@@ -1701,9 +1707,9 @@
             selectedLocationText.textContent = displayName;
         }
 
-        // Search for locations using Nominatim
+        // Search for locations using Nominatim with improved accuracy
         function searchLocation(query) {
-            if (!query || query.length < 3) {
+            if (!query || query.length < 2) {
                 document.getElementById('locationSuggestions').style.display = 'none';
                 return;
             }
@@ -1715,32 +1721,104 @@
 
             // Debounce search
             locationSearchTimeout = setTimeout(() => {
-                // Search in Kenya only
-                const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&countrycodes=ke&limit=5&addressdetails=1`;
+                const encodedQuery = encodeURIComponent(query);
                 
-                fetch(url)
-                    .then(response => response.json())
-                    .then(data => {
-                        displayLocationSuggestions(data);
-                    })
-                    .catch(error => {
-                        console.error('Geocoding error:', error);
+                // Use multiple search strategies for better results
+                // Strategy 1: Standard search with better parameters for POIs
+                const url1 = `https://nominatim.openstreetmap.org/search?format=json&q=${encodedQuery}&countrycodes=ke&limit=10&addressdetails=1&extratags=1&namedetails=1&dedupe=1`;
+                
+                // Strategy 2: Search with "Nairobi" context for better results in Nairobi area
+                const url2 = `https://nominatim.openstreetmap.org/search?format=json&q=${encodedQuery}+Nairobi&countrycodes=ke&limit=5&addressdetails=1&extratags=1&namedetails=1&dedupe=1`;
+                
+                // Run both searches in parallel
+                Promise.all([
+                    fetch(url1).then(r => r.json()),
+                    fetch(url2).then(r => r.json())
+                ])
+                .then(([results1, results2]) => {
+                    // Combine and deduplicate results
+                    const allResults = [...results1, ...results2];
+                    const uniqueResults = [];
+                    const seenIds = new Set();
+                    
+                    // Deduplicate by OSM ID and prioritize better matches
+                    allResults.forEach(result => {
+                        const id = result.osm_id || result.place_id;
+                        if (!seenIds.has(id)) {
+                            seenIds.add(id);
+                            uniqueResults.push(result);
+                        }
                     });
-            }, 300);
+                    
+                    // Sort by relevance (importance, then by how well query matches)
+                    uniqueResults.sort((a, b) => {
+                        // Prioritize results with higher importance
+                        const importanceA = a.importance || 0;
+                        const importanceB = b.importance || 0;
+                        
+                        // Boost results where query appears in name
+                        const queryLower = query.toLowerCase();
+                        const nameA = (a.name || a.display_name || '').toLowerCase();
+                        const nameB = (b.name || b.display_name || '').toLowerCase();
+                        const nameMatchA = nameA.includes(queryLower) ? 1 : 0;
+                        const nameMatchB = nameB.includes(queryLower) ? 1 : 0;
+                        
+                        // Prioritize buildings, places, amenities (POIs)
+                        const typeA = (a.type || a.class || '').toLowerCase();
+                        const typeB = (b.type || b.class || '').toLowerCase();
+                        const isPOIA = ['building', 'place', 'amenity', 'shop', 'leisure'].some(t => typeA.includes(t));
+                        const isPOIB = ['building', 'place', 'amenity', 'shop', 'leisure'].some(t => typeB.includes(t));
+                        const poiBoostA = isPOIA ? 0.2 : 0;
+                        const poiBoostB = isPOIB ? 0.2 : 0;
+                        
+                        return (importanceB + nameMatchB + poiBoostB) - (importanceA + nameMatchA + poiBoostA);
+                    });
+                    
+                    // Take top 8 results
+                    displayLocationSuggestions(uniqueResults.slice(0, 8));
+                })
+                .catch(error => {
+                    console.error('Geocoding error:', error);
+                    // Fallback to single search
+                    fetch(url1)
+                        .then(response => response.json())
+                        .then(data => {
+                            displayLocationSuggestions(data);
+                        })
+                        .catch(err => {
+                            console.error('Fallback geocoding error:', err);
+                        });
+                });
+            }, 250); // Reduced debounce for faster response
         }
 
-        // Display location suggestions
+        // Display location suggestions with better formatting
         function displayLocationSuggestions(results) {
             const suggestionsDiv = document.getElementById('locationSuggestions');
             
             if (!results || results.length === 0) {
-                suggestionsDiv.innerHTML = '<div style="padding: 12px; color: #718096; font-size: 13px;">No locations found</div>';
+                suggestionsDiv.innerHTML = '<div style="padding: 12px; color: #718096; font-size: 13px;">No locations found. Try searching for a street name, landmark, or area.</div>';
                 suggestionsDiv.style.display = 'block';
                 return;
             }
 
             suggestionsDiv.innerHTML = results.map(result => {
                 const displayName = result.display_name;
+                const primaryName = result.name || result.display_name.split(',')[0];
+                
+                // Extract address components for better display
+                const address = result.address || {};
+                const addressParts = [];
+                if (address.road) addressParts.push(address.road);
+                if (address.suburb || address.neighbourhood) addressParts.push(address.suburb || address.neighbourhood);
+                if (address.city || address.town) addressParts.push(address.city || address.town);
+                
+                const addressLine = addressParts.length > 0 ? addressParts.join(', ') : displayName;
+                
+                // Show type/class if available (building, place, etc.)
+                const type = result.type || result.class || '';
+                const typeLabel = type ? `<span style="font-size: 11px; color: #718096; background: rgba(27, 77, 62, 0.1); padding: 2px 6px; border-radius: 4px; margin-left: 6px;">${type}</span>` : '';
+                
                 return `
                     <div class="location-suggestion" 
                          data-lat="${result.lat}" 
@@ -1749,8 +1827,10 @@
                          style="padding: 12px 16px; cursor: pointer; border-bottom: 1px solid rgba(0, 0, 0, 0.05); transition: background 0.2s;"
                          onmouseover="this.style.background='rgba(246, 211, 101, 0.1)'"
                          onmouseout="this.style.background='white'">
-                        <div style="font-size: 14px; font-weight: 600; color: #2d3748; margin-bottom: 2px;">${result.name || displayName}</div>
-                        <div style="font-size: 12px; color: #718096;">${displayName}</div>
+                        <div style="font-size: 14px; font-weight: 600; color: #2d3748; margin-bottom: 4px; display: flex; align-items: center;">
+                            ${primaryName}${typeLabel}
+                        </div>
+                        <div style="font-size: 12px; color: #718096; line-height: 1.4;">${addressLine}</div>
                     </div>
                 `;
             }).join('');
@@ -1763,7 +1843,9 @@
                     const name = this.dataset.name;
                     
                     setLocationMarker(lat, lng, name);
-                    document.getElementById('locationSearch').value = name;
+                    // Show primary name in search box, not full address
+                    const primaryName = name.split(',')[0];
+                    document.getElementById('locationSearch').value = primaryName;
                     suggestionsDiv.style.display = 'none';
                 });
             });
@@ -1786,6 +1868,23 @@
                     }
                 });
             }
+            
+            // Pre-initialize map in background for faster loading
+            // Wait for Leaflet to load
+            let leafletCheckAttempts = 0;
+            const checkLeaflet = setInterval(() => {
+                leafletCheckAttempts++;
+                if (typeof L !== 'undefined') {
+                    clearInterval(checkLeaflet);
+                    // Pre-initialize map (hidden) for faster loading when user selects delivery option
+                    setTimeout(() => {
+                        preInitializeMap();
+                    }, 500); // Wait a bit after page load
+                } else if (leafletCheckAttempts > 50) {
+                    clearInterval(checkLeaflet);
+                    console.warn('Leaflet.js not loaded after 5 seconds');
+                }
+            }, 100);
         });
 
         // Delivery option - show location input for delivery options that need it
@@ -1805,10 +1904,10 @@
                     mapContainer.style.height = '400px';
                 }
                 
-                // Initialize map when shown - use longer delay to ensure DOM is ready
+                // Show map immediately (it's already pre-initialized)
                 setTimeout(() => {
                     initializeMap();
-                }, 300);
+                }, 50); // Much faster since map is pre-loaded
             } else if (this.value === 'in-store-pickup') {
                 deliveryLocationInput.style.display = 'none';
                 storeLocationMessage.style.display = 'block';

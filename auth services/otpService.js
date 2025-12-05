@@ -310,10 +310,10 @@ class OTPService {
                 }
             } else {
                 // Non-login OTPs: mark as used (single use)
-                await supabase
-                    .from('otps')
-                    .update({ used: true })
-                    .eq('id', data.id);
+            await supabase
+                .from('otps')
+                .update({ used: true })
+                .eq('id', data.id);
             }
 
             return {

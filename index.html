@@ -4698,37 +4698,37 @@
         // Check for existing valid OTP when email is entered
         let emailCheckTimeout;
         async function checkOTPStatus(email) {
-            if (!email) {
-                document.getElementById('otp-remaining-time').textContent = '';
-                document.getElementById('otp-expired-warning').style.display = 'none';
+                    if (!email) {
+                        document.getElementById('otp-remaining-time').textContent = '';
+                        document.getElementById('otp-expired-warning').style.display = 'none';
                 // Reset login button
                 const loginBtn = document.getElementById('login-btn');
                 loginBtn.textContent = 'Login';
                 loginBtn.style.background = '';
                 loginBtn.style.borderColor = '';
-                return;
-            }
+                        return;
+                    }
 
-            // Validate email format
-            const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-            if (!emailRegex.test(email)) {
-                return;
-            }
+                    // Validate email format
+                    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+                    if (!emailRegex.test(email)) {
+                        return;
+                    }
 
-            try {
+                    try {
                 // Check for existing valid OTP that has been verified before (can auto-login)
                 const verifiedOTP = await otpService.getValidOTP(email, 'login', true);
-                const remainingTimeDiv = document.getElementById('otp-remaining-time');
-                const warningDiv = document.getElementById('otp-expired-warning');
-                
+                        const remainingTimeDiv = document.getElementById('otp-remaining-time');
+                        const warningDiv = document.getElementById('otp-expired-warning');
+                        
                 if (verifiedOTP) {
                     // Valid OTP exists and has been verified before - user can login directly
                     const remainingTime = otpService.formatRemainingTime(verifiedOTP);
                     remainingTimeDiv.textContent = `✅ Valid OTP found! Time remaining: ${remainingTime}. Click "Login" to continue.`;
-                    remainingTimeDiv.style.display = 'block';
-                    remainingTimeDiv.style.color = 'rgba(16, 185, 129, 0.9)';
-                    warningDiv.style.display = 'none';
-                    
+                            remainingTimeDiv.style.display = 'block';
+                            remainingTimeDiv.style.color = 'rgba(16, 185, 129, 0.9)';
+                            warningDiv.style.display = 'none';
+                            
                     // Update login button to show OTP is ready
                     const loginBtn = document.getElementById('login-btn');
                     loginBtn.textContent = 'Login (OTP Ready)';
@@ -4741,20 +4741,20 @@
                     otpGroupEl.classList.add('hidden');
                     // Remove required attribute when hidden
                     document.getElementById('otp').removeAttribute('required');
-                } else {
-                    remainingTimeDiv.textContent = '';
-                    warningDiv.textContent = '⚠️ No valid OTP found. Please click "Send OTP Code" to get a new one.';
-                    warningDiv.style.display = 'block';
+                        } else {
+                            remainingTimeDiv.textContent = '';
+                            warningDiv.textContent = '⚠️ No valid OTP found. Please click "Send OTP Code" to get a new one.';
+                            warningDiv.style.display = 'block';
                     
                     // Reset login button to default
                     const loginBtn = document.getElementById('login-btn');
                     loginBtn.textContent = 'Login';
                     loginBtn.style.background = '';
                     loginBtn.style.borderColor = '';
-                }
-            } catch (error) {
-                console.error('Error checking for valid OTP:', error);
-            }
+                        }
+                    } catch (error) {
+                        console.error('Error checking for valid OTP:', error);
+                    }
         }
 
         function setupEmailCheck() {
@@ -4909,17 +4909,17 @@
                 // Verify authService is available and has the method
                 if (!authService) {
                     showMessage('Authentication service not loaded. Please refresh the page.', 'error');
-                    return;
-                }
-                
+                return;
+            }
+
                 if (typeof authService.loginWithValidOTP !== 'function') {
                     console.error('❌ loginWithValidOTP method not found!');
                     console.error('Available methods:', Object.getOwnPropertyNames(Object.getPrototypeOf(authService)));
                     console.error('authService object:', authService);
                     showMessage('Please do a hard refresh (Ctrl+Shift+R or Cmd+Shift+R) to load the latest version.', 'error');
-                    return;
-                }
-                
+                return;
+            }
+
                 // First, check if there's a valid OTP in the database
                 const validOTPCheck = await otpService.getValidOTP(email, 'login');
                 
@@ -4966,10 +4966,10 @@
                 }
 
                 // OTP was provided, validate format
-                if (!/^\d{6}$/.test(otp)) {
-                    showMessage('OTP must be 6 digits', 'error');
-                    return;
-                }
+            if (!/^\d{6}$/.test(otp)) {
+                showMessage('OTP must be 6 digits', 'error');
+                return;
+            }
 
                 // Verify OTP and login
                 btn.textContent = 'Verifying...';
@@ -5018,7 +5018,7 @@
                             btn.style.background = 'rgba(16, 185, 129, 0.2)';
                             btn.style.borderColor = 'rgba(16, 185, 129, 0.5)';
                         } else {
-                            btn.textContent = 'Login';
+                btn.textContent = 'Login';
                             btn.style.background = '';
                             btn.style.borderColor = '';
                         }

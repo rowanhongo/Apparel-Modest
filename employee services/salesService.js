@@ -199,10 +199,10 @@ class SalesService {
             emptyMessage.textContent = 'No sales yet';
             this.container.appendChild(emptyMessage);
         } else {
-            this.orders.forEach(order => {
-                const orderBubble = this.createOrderBubble(order);
-                this.container.appendChild(orderBubble);
-            });
+        this.orders.forEach(order => {
+            const orderBubble = this.createOrderBubble(order);
+            this.container.appendChild(orderBubble);
+        });
         }
 
         // Restore scroll position
