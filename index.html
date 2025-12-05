@@ -1588,8 +1588,15 @@
             }
 
             /* Admin dashboard mobile */
+            #admin-dashboard-page {
+                overflow-x: hidden;
+                width: 100%;
+                max-width: 100vw;
+            }
+
             #admin-sidebar {
                 transform: translateX(-100%);
+                width: 280px;
             }
 
             #admin-sidebar.mobile-open {
@@ -1597,7 +1604,20 @@
             }
 
             main.lg\:pl-64 {
-                padding-left: 0;
+                padding-left: 0 !important;
+            }
+
+            #admin-dashboard-page main {
+                padding: 12px !important;
+                width: 100%;
+                max-width: 100vw;
+                overflow-x: hidden;
+                box-sizing: border-box;
+            }
+
+            #admin-dashboard-page .p-6,
+            #admin-dashboard-page .p-8 {
+                padding: 12px !important;
             }
 
             .admin-mobile-menu-btn {
@@ -1606,28 +1626,60 @@
 
             /* Admin cards */
             .glass-card {
-                padding: 16px !important;
+                padding: 12px !important;
+                margin: 0;
+                width: 100%;
+                max-width: 100%;
+                box-sizing: border-box;
+                overflow: hidden;
+            }
+
+            .glass-card .p-6 {
+                padding: 12px !important;
             }
 
             .text-4xl {
-                font-size: 1.875rem;
+                font-size: 1.5rem !important;
+                line-height: 1.75rem !important;
+                word-wrap: break-word;
+                overflow-wrap: break-word;
             }
 
             .text-3xl {
-                font-size: 1.5rem;
+                font-size: 1.25rem !important;
+                line-height: 1.5rem !important;
+                word-wrap: break-word;
+                overflow-wrap: break-word;
             }
 
             .text-2xl {
-                font-size: 1.25rem;
+                font-size: 1.125rem !important;
+                line-height: 1.375rem !important;
+                word-wrap: break-word;
+                overflow-wrap: break-word;
+            }
+
+            .text-xl {
+                font-size: 1rem !important;
+                line-height: 1.25rem !important;
             }
 
             /* Grid adjustments */
-            .grid-cols-1.md\:grid-cols-2.lg\:grid-cols-4 {
-                grid-template-columns: 1fr;
+            .grid-cols-1.md\:grid-cols-2.lg\:grid-cols-4,
+            #admin-dashboard-page .grid.grid-cols-1.md\:grid-cols-2.lg\:grid-cols-4 {
+                grid-template-columns: 1fr !important;
+                gap: 12px !important;
             }
 
-            .grid-cols-1.md\:grid-cols-2.lg\:grid-cols-3 {
-                grid-template-columns: 1fr;
+            .grid-cols-1.md\:grid-cols-2.lg\:grid-cols-3,
+            #admin-dashboard-page .grid.grid-cols-1.md\:grid-cols-2.lg\:grid-cols-3 {
+                grid-template-columns: 1fr !important;
+                gap: 12px !important;
+            }
+
+            #admin-dashboard-page .grid.grid-cols-1.lg\:grid-cols-2 {
+                grid-template-columns: 1fr !important;
+                gap: 12px !important;
             }
 
             /* Section headers */
@@ -1638,13 +1690,111 @@
             }
 
             .section-header h2 {
-                font-size: 20px;
+                font-size: 18px !important;
+                word-wrap: break-word;
+                overflow-wrap: break-word;
             }
 
             /* Buttons */
             .btn {
-                font-size: 13px;
-                padding: 8px 12px;
+                font-size: 12px !important;
+                padding: 8px 12px !important;
+                white-space: nowrap;
+            }
+
+            /* Text overflow fixes */
+            #admin-dashboard-page * {
+                max-width: 100%;
+                box-sizing: border-box;
+            }
+
+            #admin-dashboard-page h1,
+            #admin-dashboard-page h2,
+            #admin-dashboard-page h3,
+            #admin-dashboard-page p,
+            #admin-dashboard-page span,
+            #admin-dashboard-page div {
+                word-wrap: break-word;
+                overflow-wrap: break-word;
+                word-break: break-word;
+            }
+
+            /* Chart containers */
+            #admin-dashboard-page .chart-container {
+                width: 100% !important;
+                max-width: 100% !important;
+                overflow-x: auto;
+                overflow-y: hidden;
+            }
+
+            #admin-dashboard-page svg {
+                max-width: 100% !important;
+                height: auto !important;
+            }
+
+            /* Space adjustments */
+            #admin-dashboard-page .space-y-6 > * + * {
+                margin-top: 16px !important;
+            }
+
+            #admin-dashboard-page .space-y-4 > * + * {
+                margin-top: 12px !important;
+            }
+
+            /* Gap adjustments */
+            #admin-dashboard-page .gap-4 {
+                gap: 12px !important;
+            }
+
+            #admin-dashboard-page .gap-6 {
+                gap: 16px !important;
+            }
+
+            /* Sidebar text */
+            #admin-sidebar h1 {
+                font-size: 1.25rem !important;
+                word-wrap: break-word;
+            }
+
+            #admin-sidebar .text-sm {
+                font-size: 0.75rem !important;
+            }
+
+            /* Navigation links */
+            #admin-sidebar .nav-link {
+                font-size: 0.875rem !important;
+                padding: 10px 12px !important;
+                white-space: nowrap;
+            }
+
+            /* Table fixes */
+            #admin-dashboard-page table {
+                width: 100%;
+                max-width: 100%;
+                display: block;
+                overflow-x: auto;
+                -webkit-overflow-scrolling: touch;
+            }
+
+            #admin-dashboard-page thead,
+            #admin-dashboard-page tbody {
+                display: block;
+                width: 100%;
+            }
+
+            #admin-dashboard-page tr {
+                display: table;
+                width: 100%;
+                table-layout: fixed;
+            }
+
+            #admin-dashboard-page th,
+            #admin-dashboard-page td {
+                font-size: 0.75rem !important;
+                padding: 8px 4px !important;
+                word-wrap: break-word;
+                overflow-wrap: break-word;
+                word-break: break-word;
             }
 
             /* Profile button mobile fix */
@@ -1698,6 +1848,181 @@
                 right: 10px;
                 padding: 8px 16px;
                 font-size: 12px;
+            }
+
+            /* Revenue values - prevent overflow */
+            #admin-dashboard-page .text-3xl.font-bold {
+                font-size: 1.125rem !important;
+                line-height: 1.375rem !important;
+                word-wrap: break-word;
+                overflow-wrap: break-word;
+                white-space: normal;
+            }
+
+            /* Yearly total text */
+            #yearly-total {
+                font-size: 14px !important;
+                padding: 0 8px;
+                word-wrap: break-word;
+            }
+
+            /* Chart SVG responsive */
+            #admin-dashboard-page svg[viewBox] {
+                max-width: 100% !important;
+                height: auto !important;
+            }
+
+            /* Flex items wrap */
+            #admin-dashboard-page .flex.flex-row {
+                flex-wrap: wrap;
+                gap: 8px;
+            }
+
+            /* Prevent horizontal scroll */
+            #admin-dashboard-page {
+                overflow-x: hidden !important;
+                width: 100vw !important;
+                max-width: 100vw !important;
+            }
+
+            #admin-dashboard-page * {
+                max-width: 100%;
+            }
+
+            /* Content page padding */
+            #admin-dashboard-page .content-page {
+                padding: 0 !important;
+                width: 100%;
+                max-width: 100%;
+            }
+
+            /* Grid gap reduction */
+            #admin-dashboard-page .gap-4 {
+                gap: 8px !important;
+            }
+
+            #admin-dashboard-page .gap-6 {
+                gap: 12px !important;
+            }
+
+            /* Text sizes for mobile */
+            #admin-dashboard-page .text-sm {
+                font-size: 0.75rem !important;
+            }
+
+            #admin-dashboard-page .text-xs {
+                font-size: 0.625rem !important;
+            }
+
+            /* Card padding reduction */
+            #admin-dashboard-page .glass-card > div {
+                padding: 10px !important;
+            }
+
+            /* Headings */
+            #admin-dashboard-page h1 {
+                font-size: 1.5rem !important;
+                line-height: 1.75rem !important;
+            }
+
+            #admin-dashboard-page h3 {
+                font-size: 0.875rem !important;
+                line-height: 1.125rem !important;
+            }
+
+            /* Sidebar mobile */
+            #admin-sidebar {
+                width: 260px !important;
+            }
+
+            #admin-sidebar .p-6 {
+                padding: 12px !important;
+            }
+
+            #admin-sidebar .p-4 {
+                padding: 10px !important;
+            }
+
+            /* Mobile menu button */
+            #admin-mobile-menu-btn {
+                padding: 8px !important;
+                min-width: 40px;
+                min-height: 40px;
+            }
+
+            /* Revenue page specific */
+            #admin-revenue-content .text-3xl {
+                font-size: 1rem !important;
+            }
+
+            /* Staff page */
+            #admin-staff-content table {
+                font-size: 0.7rem !important;
+            }
+
+            /* Inventory/Kanban page */
+            #admin-inventory-content {
+                overflow-x: hidden;
+            }
+
+            /* Analytics page */
+            #admin-analytics-content .glass-card {
+                min-width: 0;
+            }
+
+            /* Override inline styles for mobile */
+            #admin-dashboard-page [style*="font-size: 18px"],
+            #admin-dashboard-page [style*="font-size: 16px"] {
+                font-size: 14px !important;
+                word-wrap: break-word;
+                overflow-wrap: break-word;
+            }
+
+            /* Ensure all text elements wrap */
+            #admin-dashboard-page p,
+            #admin-dashboard-page span,
+            #admin-dashboard-page div,
+            #admin-dashboard-page label {
+                word-wrap: break-word;
+                overflow-wrap: break-word;
+                word-break: break-word;
+            }
+
+            /* Long text values */
+            #admin-dashboard-page .text-white,
+            #admin-dashboard-page .text-accent {
+                word-wrap: break-word;
+                overflow-wrap: break-word;
+            }
+
+            /* Revenue values that might be long */
+            #total-revenue,
+            #revenue-total,
+            #revenue-avg-order-value {
+                font-size: 1rem !important;
+                word-wrap: break-word;
+                white-space: normal;
+            }
+        }
+
+        @media (max-width: 480px) {
+            /* Admin dashboard extra small screens - additional fixes */
+            #admin-dashboard-page [style*="font-size: 18px"] {
+                font-size: 12px !important;
+            }
+
+            #admin-dashboard-page [style*="font-size: 16px"] {
+                font-size: 11px !important;
+            }
+
+            #yearly-total {
+                font-size: 12px !important;
+            }
+
+            #total-revenue,
+            #revenue-total,
+            #revenue-avg-order-value {
+                font-size: 0.875rem !important;
             }
         }
 
@@ -1773,6 +2098,85 @@
         }
 
         @media (max-width: 480px) {
+            /* Admin dashboard extra small screens */
+            #admin-dashboard-page main {
+                padding: 8px !important;
+            }
+
+            #admin-dashboard-page .p-6,
+            #admin-dashboard-page .p-8 {
+                padding: 8px !important;
+            }
+
+            #admin-dashboard-page .glass-card {
+                padding: 8px !important;
+            }
+
+            #admin-dashboard-page .glass-card .p-6 {
+                padding: 8px !important;
+            }
+
+            #admin-dashboard-page .text-4xl {
+                font-size: 1.25rem !important;
+            }
+
+            #admin-dashboard-page .text-3xl {
+                font-size: 1rem !important;
+            }
+
+            #admin-dashboard-page .text-2xl {
+                font-size: 0.875rem !important;
+            }
+
+            #admin-dashboard-page h1 {
+                font-size: 1.25rem !important;
+            }
+
+            #admin-dashboard-page .text-sm {
+                font-size: 0.7rem !important;
+            }
+
+            #admin-dashboard-page .text-xs {
+                font-size: 0.6rem !important;
+            }
+
+            #admin-dashboard-page .gap-4 {
+                gap: 6px !important;
+            }
+
+            #admin-dashboard-page .gap-6 {
+                gap: 8px !important;
+            }
+
+            #admin-dashboard-page .space-y-6 > * + * {
+                margin-top: 12px !important;
+            }
+
+            #admin-dashboard-page .space-y-4 > * + * {
+                margin-top: 8px !important;
+            }
+
+            /* Chart containers */
+            #admin-dashboard-page .chart-container {
+                height: 200px !important;
+                overflow-x: auto;
+            }
+
+            #admin-dashboard-page svg {
+                min-width: 100%;
+            }
+
+            /* Tables */
+            #admin-dashboard-page table {
+                font-size: 0.65rem !important;
+            }
+
+            #admin-dashboard-page th,
+            #admin-dashboard-page td {
+                padding: 6px 2px !important;
+                font-size: 0.65rem !important;
+            }
+
             .orders-container {
                 grid-template-columns: repeat(2, 1fr);
                 gap: 6px;
@@ -3285,7 +3689,7 @@
                                                 </g>
                                             </svg>
                                         </div>
-                                        <div id="yearly-total" style="text-align: center; margin-top: 12px; font-size: 18px; font-weight: 600; color: #41463F;">
+                                        <div id="yearly-total" style="text-align: center; margin-top: 12px; font-size: 18px; font-weight: 600; color: #41463F; word-wrap: break-word; overflow-wrap: break-word; padding: 0 8px;">
                                             Total Yearly Orders: <span id="yearly-total-value">0</span>
                                         </div>
                                     </div>
