@@ -46,37 +46,56 @@
         }
 
         .header {
-            background: linear-gradient(135deg, #f6d365 0%, #fda085 100%);
+            background: #1B4D3E;
             color: white;
-            padding: 50px 40px;
+            padding: 40px 40px 30px;
             text-align: center;
             position: relative;
             overflow: hidden;
         }
 
-        .header::before {
-            content: '';
-            position: absolute;
-            top: -50%;
-            left: -50%;
-            width: 200%;
-            height: 200%;
-            background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 70%);
-            animation: shimmer 8s infinite;
+        .company-logo {
+            margin-bottom: 24px;
+            position: relative;
+            z-index: 1;
         }
 
-        @keyframes shimmer {
-            0%, 100% { transform: translate(0, 0); }
-            50% { transform: translate(30px, 30px); }
+        .company-logo-top {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', sans-serif;
+            font-size: 28px;
+            font-weight: 600;
+            color: white;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            margin-bottom: 8px;
+        }
+
+        .company-logo-divider {
+            width: 80px;
+            height: 1px;
+            background: white;
+            margin: 8px auto;
+        }
+
+        .company-logo-bottom {
+            font-family: Georgia, 'Times New Roman', serif;
+            font-size: 32px;
+            font-weight: 700;
+            color: white;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-top: 8px;
         }
 
         .header h1 {
-            font-size: 32px;
+            font-size: 36px;
             font-weight: 700;
             margin-bottom: 10px;
             letter-spacing: -0.5px;
             position: relative;
             z-index: 1;
+            color: white;
+            text-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
         }
 
         .header p {
@@ -85,6 +104,7 @@
             font-weight: 400;
             position: relative;
             z-index: 1;
+            color: white;
         }
 
         .form-content {
@@ -613,7 +633,29 @@
             }
 
             .header {
-                padding: 40px 30px;
+                padding: 30px 20px 20px;
+            }
+
+            .company-logo-top {
+                font-size: 22px;
+                letter-spacing: 1.5px;
+            }
+
+            .company-logo-bottom {
+                font-size: 26px;
+                letter-spacing: 0.5px;
+            }
+
+            .company-logo-divider {
+                width: 60px;
+            }
+
+            .header h1 {
+                font-size: 28px;
+            }
+
+            .header p {
+                font-size: 14px;
             }
 
             .clothing-type-selector {
@@ -703,6 +745,11 @@
 <body>
     <div class="container">
         <div class="header">
+            <div class="company-logo">
+                <div class="company-logo-top">APPAREL</div>
+                <div class="company-logo-divider"></div>
+                <div class="company-logo-bottom">MODEST</div>
+            </div>
             <h1>Place Your Order</h1>
             <p>Find your perfect piece and let us create it for you</p>
         </div>

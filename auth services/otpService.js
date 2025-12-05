@@ -254,17 +254,26 @@ class OTPService {
                 throw new Error('Supabase client not initialized');
             }
 
-            // Find OTP in database
-            const { data, error } = await supabase
+            // For login OTPs, allow reuse (don't check used status)
+            // For other purposes (password reset, etc.), only allow unused OTPs
+            const isLoginOTP = purpose === 'login';
+            
+            let query = supabase
                 .from('otps')
                 .select('*')
                 .eq('email', email)
                 .eq('otp_code', otpCode)
                 .eq('purpose', purpose)
-                .eq('used', false)
+                .gt('expires_at', new Date().toISOString())
                 .order('created_at', { ascending: false })
-                .limit(1)
-                .single();
+                .limit(1);
+
+            // Only filter by used=false for non-login OTPs
+            if (!isLoginOTP) {
+                query = query.eq('used', false);
+            }
+
+            const { data, error } = await query.single();
 
             if (error || !data) {
                 return {
@@ -274,7 +283,7 @@ class OTPService {
                 };
             }
 
-            // Check if OTP has expired
+            // Check if OTP has expired (double check)
             const expiresAt = new Date(data.expires_at);
             const now = new Date();
             
@@ -286,11 +295,13 @@ class OTPService {
                 };
             }
 
-            // Mark OTP as used
-            await supabase
-                .from('otps')
-                .update({ used: true })
-                .eq('id', data.id);
+            // Only mark non-login OTPs as used (login OTPs can be reused until expiration)
+            if (!isLoginOTP) {
+                await supabase
+                    .from('otps')
+                    .update({ used: true })
+                    .eq('id', data.id);
+            }
 
             return {
                 valid: true,
@@ -320,17 +331,25 @@ class OTPService {
                 return null;
             }
 
-            // Find valid, unused OTP
-            const { data, error } = await supabase
+            // For login OTPs, allow used OTPs (they can be reused until expiration)
+            // For other purposes, only allow unused OTPs
+            const isLoginOTP = purpose === 'login';
+            
+            let query = supabase
                 .from('otps')
                 .select('*')
                 .eq('email', email)
                 .eq('purpose', purpose)
-                .eq('used', false)
                 .gt('expires_at', new Date().toISOString())
                 .order('created_at', { ascending: false })
-                .limit(1)
-                .single();
+                .limit(1);
+
+            // Only filter by used=false for non-login OTPs
+            if (!isLoginOTP) {
+                query = query.eq('used', false);
+            }
+
+            const { data, error } = await query.single();
 
             if (error || !data) {
                 return null;

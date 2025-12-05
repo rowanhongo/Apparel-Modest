@@ -125,6 +125,71 @@ class AuthService {
     }
 
     /**
+     * Login with existing valid OTP (no OTP code required if valid OTP exists)
+     * @param {string} email - User email
+     * @returns {Promise<Object>} { success: boolean, user: Object|null, token: string|null, message: string, remainingTime: string }
+     */
+    async loginWithValidOTP(email) {
+        try {
+            // Find user
+            const user = await this.findUserByEmail(email);
+            if (!user) {
+                return {
+                    success: false,
+                    user: null,
+                    token: null,
+                    message: 'User not found',
+                    remainingTime: ''
+                };
+            }
+
+            // Check if there's a valid OTP
+            const validOTP = await otpService.getValidOTP(email, 'login');
+            if (!validOTP) {
+                return {
+                    success: false,
+                    user: null,
+                    token: null,
+                    message: 'No valid OTP found. Please click "Send OTP Code" to get a new one.',
+                    remainingTime: '',
+                    needsRenewal: true
+                };
+            }
+
+            // Valid OTP exists, proceed with login without requiring OTP code
+            const remainingTime = otpService.formatRemainingTime(validOTP);
+
+            // Update last login
+            await this.updateLastLogin(user.id);
+
+            // Create JWT token
+            const token = this.createJWTToken(user);
+
+            // Save user and token
+            this.saveUserToStorage(user, token);
+
+            const message = `Login successful! Your OTP is valid for ${remainingTime}.`;
+
+            return {
+                success: true,
+                user: user,
+                token: token,
+                message: message,
+                remainingTime: remainingTime
+            };
+        } catch (error) {
+            console.error('Error logging in with valid OTP:', error);
+            return {
+                success: false,
+                user: null,
+                token: null,
+                message: 'An error occurred during login',
+                remainingTime: ''
+            };
+        }
+    }
+
+    /**
      * Verify OTP and login (OTP required, must be renewed if expired)
      * @param {string} email - User email
      * @param {string} otpCode - OTP code (required)
