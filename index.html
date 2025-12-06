@@ -541,26 +541,61 @@
             overflow-x: hidden;
         }
 
-        /* Revenue content page - match employee dashboard background */
-        #admin-revenue-content {
+        /* All admin content pages - match employee dashboard background */
+        #admin-overview-content,
+        #admin-revenue-content,
+        #admin-staff-content,
+        #admin-inventory-content,
+        #admin-analytics-content {
             background: #FAFAFA !important;
             padding: 30px;
             border-radius: 0;
         }
 
-        #admin-revenue-content .glass-card {
+        /* Glass cards - light theme for all admin pages */
+        #admin-overview-content .glass-card,
+        #admin-revenue-content .glass-card,
+        #admin-staff-content .glass-card,
+        #admin-inventory-content .glass-card,
+        #admin-analytics-content .glass-card {
             background: rgba(224, 216, 201, 0.1) !important;
             border: 1px solid rgba(224, 216, 201, 0.2) !important;
         }
 
+        /* Text colors - dark for light background */
+        #admin-overview-content .text-white,
+        #admin-overview-content h3.text-white,
         #admin-revenue-content .text-white,
-        #admin-revenue-content h3.text-white {
+        #admin-revenue-content h3.text-white,
+        #admin-staff-content .text-white,
+        #admin-staff-content h3.text-white,
+        #admin-inventory-content .text-white,
+        #admin-inventory-content h3.text-white,
+        #admin-analytics-content .text-white,
+        #admin-analytics-content h3.text-white {
             color: #41463F !important;
         }
 
+        #admin-overview-content .text-white\/70,
+        #admin-overview-content .text-white\/60,
         #admin-revenue-content .text-white\/70,
-        #admin-revenue-content .text-white\/60 {
+        #admin-revenue-content .text-white\/60,
+        #admin-staff-content .text-white\/70,
+        #admin-staff-content .text-white\/60,
+        #admin-inventory-content .text-white\/70,
+        #admin-inventory-content .text-white\/60,
+        #admin-analytics-content .text-white\/70,
+        #admin-analytics-content .text-white\/60 {
             color: rgba(65, 70, 63, 0.7) !important;
+        }
+
+        /* Remove black borders/rings - use light colors */
+        #admin-overview-content *,
+        #admin-revenue-content *,
+        #admin-staff-content *,
+        #admin-inventory-content *,
+        #admin-analytics-content * {
+            border-color: rgba(224, 216, 201, 0.2) !important;
         }
 
         /* Ensure content pages fit properly */
@@ -1807,6 +1842,9 @@
                 box-sizing: border-box;
                 -webkit-overflow-scrolling: touch;
                 position: relative;
+                display: block !important;
+                visibility: visible !important;
+                opacity: 1 !important;
             }
 
             #admin-dashboard-page .chart-container svg {
@@ -1814,19 +1852,32 @@
                 width: 100% !important;
                 height: auto !important;
                 min-width: 0 !important;
-                display: block;
+                display: block !important;
+                visibility: visible !important;
+                opacity: 1 !important;
             }
 
             #admin-dashboard-page canvas {
                 max-width: 100% !important;
                 width: 100% !important;
                 height: auto !important;
-                display: block;
+                display: block !important;
+                visibility: visible !important;
+                opacity: 1 !important;
+            }
+
+            /* Ensure chart containers are visible on mobile */
+            #admin-overview-content .chart-container,
+            #admin-revenue-content .chart-container,
+            #admin-analytics-content .chart-container {
+                display: block !important;
+                visibility: visible !important;
+                opacity: 1 !important;
             }
 
             /* Chart wrapper cards - prevent overflow */
             #admin-dashboard-page .glass-card {
-                overflow: hidden !important;
+                overflow: visible !important;
                 width: 100% !important;
                 max-width: 100% !important;
             }
@@ -4129,9 +4180,9 @@
                             <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
                                 <div class="glass-card hover:bg-white/15 transition-all duration-300">
                                     <div class="p-6">
-                                        <h3 class="text-white mb-4">Monthly Orders</h3>
+                                        <h3 class="mb-4" style="color: #41463F;">Monthly Orders</h3>
                                         <div class="chart-container">
-                                            <svg width="100%" height="300" viewBox="0 0 800 300">
+                                            <svg width="100%" height="300" viewBox="0 0 800 300" style="display: block; visibility: visible; opacity: 1;">
                                                 <defs>
                                                     <pattern id="grid" width="40" height="30" patternUnits="userSpaceOnUse">
                                                         <path d="M 40 0 L 0 0 0 30" fill="none" stroke="rgba(224,216,201,0.1)" stroke-width="1"/>
@@ -4158,9 +4209,9 @@
 
                                 <div class="glass-card hover:bg-white/15 transition-all duration-300">
                                     <div class="p-6">
-                                        <h3 class="text-white mb-4">Delivery Methods</h3>
+                                        <h3 class="mb-4" style="color: #41463F;">Delivery Methods</h3>
                                         <div class="chart-container flex justify-center">
-                                            <svg width="200" height="200" viewBox="0 0 200 200">
+                                            <svg width="200" height="200" viewBox="0 0 200 200" style="display: block; visibility: visible; opacity: 1; max-width: 100%; height: auto;">
                                                 <defs>
                                                     <linearGradient id="pieGradient1" x1="0%" y1="0%" x2="100%" y2="100%">
                                                         <stop offset="0%" style="stop-color:#41463F;stop-opacity:1" />
@@ -4376,7 +4427,7 @@
                         <div class="space-y-6">
                             <div class="flex justify-between items-center">
                             <div>
-                                <h1 class="text-4xl font-bold text-white">Staff Management</h1>
+                                <h1 class="text-4xl font-bold" style="color: #41463F;">Staff Management</h1>
                                 <p class="text-white/70">Manage team members and performance</p>
                                 </div>
                                 <button id="add-staff-btn" class="btn flex items-center gap-2" style="background: linear-gradient(135deg, #E0D8C9 0%, #D4C5B0 100%); color: #3C3F3E; border: none; font-weight: 600;">
@@ -4444,7 +4495,7 @@
                         <div class="space-y-6">
                             <div class="flex items-center justify-between">
                                 <div>
-                                    <h1 class="text-4xl font-bold text-white">Kanban Board</h1>
+                                    <h1 class="text-4xl font-bold" style="color: #41463F;">Kanban Board</h1>
                                     <p class="text-white/70">Write anything you want to remember or deal with - tasks, notes, reminders, ideas</p>
                                 </div>
                             </div>
@@ -4538,8 +4589,8 @@
                     <div id="admin-analytics-content" class="content-page hidden">
                         <div class="space-y-6">
                             <div>
-                                <h1 class="text-4xl font-bold text-white">Analytics Dashboard</h1>
-                                <p class="text-white/70">Deep insights into order performance, customer behavior, and operational efficiency</p>
+                                <h1 class="text-4xl font-bold" style="color: #41463F;">Analytics Dashboard</h1>
+                                <p style="color: rgba(65, 70, 63, 0.7);">Deep insights into order performance, customer behavior, and operational efficiency</p>
                             </div>
 
                             <!-- Customer Metrics -->
@@ -4643,37 +4694,37 @@
                             <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
                                 <div class="glass-card hover:bg-white/15 transition-all duration-300">
                                     <div class="p-6">
-                                        <h3 class="text-white mb-4">Order Status Breakdown</h3>
-                                        <div id="analytics-status-chart" class="flex items-center justify-center" style="min-height: 240px;">
-                                            <div class="text-center py-8 text-white/60">Loading chart...</div>
+                                        <h3 class="mb-4" style="color: #41463F;">Order Status Breakdown</h3>
+                                        <div id="analytics-status-chart" class="flex items-center justify-center" style="min-height: 240px; display: block !important; visibility: visible !important;">
+                                            <div class="text-center py-8" style="color: rgba(65, 70, 63, 0.6);">Loading chart...</div>
                                         </div>
                                     </div>
                                 </div>
 
                                 <div class="glass-card hover:bg-white/15 transition-all duration-300">
                                     <div class="p-6">
-                                        <h3 class="text-white mb-4">Stage Performance</h3>
+                                        <h3 class="mb-4" style="color: #41463F;">Stage Performance</h3>
                                         <div class="space-y-4">
                                             <div class="flex justify-between items-center">
-                                                <span class="text-white/70">Sales Stage</span>
-                                                <span class="text-white font-semibold" id="analytics-sales-time">N/A</span>
+                                                <span style="color: rgba(65, 70, 63, 0.7);">Sales Stage</span>
+                                                <span class="font-semibold" style="color: #41463F;" id="analytics-sales-time">N/A</span>
                                             </div>
                                             <div class="flex justify-between items-center">
-                                                <span class="text-white/70">Production Stage</span>
-                                                <span class="text-white font-semibold" id="analytics-production-time">N/A</span>
+                                                <span style="color: rgba(65, 70, 63, 0.7);">Production Stage</span>
+                                                <span class="font-semibold" style="color: #41463F;" id="analytics-production-time">N/A</span>
                                             </div>
                                             <div class="flex justify-between items-center">
-                                                <span class="text-white/70">In-Store Stage</span>
-                                                <span class="text-white font-semibold" id="analytics-instore-time">N/A</span>
+                                                <span style="color: rgba(65, 70, 63, 0.7);">In-Store Stage</span>
+                                                <span class="font-semibold" style="color: #41463F;" id="analytics-instore-time">N/A</span>
                                             </div>
                                             <div class="flex justify-between items-center">
-                                                <span class="text-white/70">Logistics Stage</span>
-                                                <span class="text-white font-semibold" id="analytics-logistics-time">N/A</span>
+                                                <span style="color: rgba(65, 70, 63, 0.7);">Logistics Stage</span>
+                                                <span class="font-semibold" style="color: #41463F;" id="analytics-logistics-time">N/A</span>
                                             </div>
-                                            <div class="border-t border-white/20 pt-2">
+                                            <div class="pt-2" style="border-top: 1px solid rgba(224, 216, 201, 0.2);">
                                                 <div class="flex justify-between items-center">
-                                                    <span class="text-accent font-semibold">Total Average</span>
-                                                    <span class="text-accent font-bold" id="analytics-total-time">N/A</span>
+                                                    <span class="font-semibold" style="color: #41463F;">Total Average</span>
+                                                    <span class="font-bold" style="color: #41463F;" id="analytics-total-time">N/A</span>
                                                 </div>
                                             </div>
                                         </div>

@@ -267,6 +267,11 @@ class RevenueService {
             svg.setAttribute('width', '100%');
             svg.setAttribute('height', '300');
             svg.setAttribute('viewBox', '0 0 800 300');
+            svg.style.display = 'block';
+            svg.style.visibility = 'visible';
+            svg.style.opacity = '1';
+            svg.style.maxWidth = '100%';
+            svg.style.height = 'auto';
             
             // Add defs
             const defs = document.createElementNS('http://www.w3.org/2000/svg', 'defs');

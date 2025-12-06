@@ -713,7 +713,7 @@ class AnalyticsService {
                      orderStatusBreakdown.cancelled;
 
         if (total === 0) {
-            container.innerHTML = '<div class="text-center py-8 text-white/60">No order data available</div>';
+            container.innerHTML = '<div class="text-center py-8" style="color: rgba(65, 70, 63, 0.6);">No order data available</div>';
             return;
         }
 
@@ -735,6 +735,11 @@ class AnalyticsService {
             svg.setAttribute('width', '100%');
             svg.setAttribute('height', '240');
             svg.setAttribute('viewBox', '0 0 240 240');
+            svg.style.display = 'block';
+            svg.style.visibility = 'visible';
+            svg.style.opacity = '1';
+            svg.style.maxWidth = '100%';
+            svg.style.height = 'auto';
             container.appendChild(svg);
         }
 
@@ -812,7 +817,7 @@ class AnalyticsService {
         if (!container) return;
 
         if (this.metrics.weeklyOrderTrend.length === 0) {
-            container.innerHTML = '<div class="text-center py-8 text-white/60">No trend data available</div>';
+            container.innerHTML = '<div class="text-center py-8" style="color: rgba(65, 70, 63, 0.6);">No trend data available</div>';
             return;
         }
 
@@ -829,6 +834,11 @@ class AnalyticsService {
             svg.setAttribute('width', '100%');
             svg.setAttribute('height', '240');
             svg.setAttribute('viewBox', '0 0 800 240');
+            svg.style.display = 'block';
+            svg.style.visibility = 'visible';
+            svg.style.opacity = '1';
+            svg.style.maxWidth = '100%';
+            svg.style.height = 'auto';
             container.appendChild(svg);
         }
 
