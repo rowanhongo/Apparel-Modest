@@ -525,7 +525,7 @@
             position: fixed;
             height: 100vh;
             overflow-y: auto;
-            border-right: 1px solid rgba(250, 250, 250, 0.2);
+            border-right: 1px solid rgba(224, 216, 201, 0.2) !important;
             z-index: 40;
             padding: 30px 0;
         }
@@ -616,14 +616,34 @@
         .glass-card-strong {
             background: rgba(65, 70, 63, 0.8);
             backdrop-filter: blur(20px);
-            border: 1px solid rgba(250, 250, 250, 0.1);
+            border: 1px solid rgba(224, 216, 201, 0.2) !important;
         }
 
         .glass-card {
             background: rgba(65, 70, 63, 0.6);
             backdrop-filter: blur(10px);
-            border: 1px solid rgba(250, 250, 250, 0.1);
+            border: 1px solid rgba(224, 216, 201, 0.2) !important;
             border-radius: 12px;
+        }
+
+        /* Remove all black/dark borders from admin pages */
+        #admin-overview-content,
+        #admin-revenue-content,
+        #admin-staff-content,
+        #admin-inventory-content,
+        #admin-analytics-content {
+            border: none !important;
+            outline: none !important;
+            box-shadow: none !important;
+        }
+
+        #admin-overview-content *,
+        #admin-revenue-content *,
+        #admin-staff-content *,
+        #admin-inventory-content *,
+        #admin-analytics-content * {
+            border-color: rgba(224, 216, 201, 0.2) !important;
+            outline-color: rgba(224, 216, 201, 0.2) !important;
         }
 
         /* Sidebar */
@@ -636,12 +656,12 @@
             position: fixed;
             height: 100vh;
             overflow-y: auto;
-            border-right: 1px solid rgba(250, 250, 250, 0.2);
+            border-right: 1px solid rgba(224, 216, 201, 0.2) !important;
         }
 
         .logo {
             padding: 0 25px 30px;
-            border-bottom: 1px solid rgba(250, 250, 250, 0.2);
+            border-bottom: 1px solid rgba(224, 216, 201, 0.2) !important;
         }
 
         .logo h2 {
@@ -681,7 +701,7 @@
         .nav-item.active {
             background: linear-gradient(90deg, rgba(250, 250, 250, 0.2) 0%, transparent 100%);
             color: #FAFAFA;
-            border-right: 3px solid rgba(250, 250, 250, 0.6);
+            border-right: 3px solid rgba(224, 216, 201, 0.3) !important;
         }
 
         .nav-icon {
@@ -1425,7 +1445,7 @@
                 z-index: 1001;
                 background: #41463F;
                 backdrop-filter: blur(10px);
-                border: 1px solid rgba(250, 250, 250, 0.2);
+                border: 1px solid rgba(224, 216, 201, 0.2) !important;
                 padding: 12px;
                 border-radius: 8px;
                 cursor: pointer;
@@ -1832,11 +1852,12 @@
                 word-break: break-word;
             }
 
-            /* Chart containers - mobile optimized like employee dashboard */
+            /* Chart containers - larger on mobile for better visibility */
             #admin-dashboard-page .chart-container {
                 width: 100% !important;
                 max-width: 100% !important;
-                height: 180px !important;
+                height: 320px !important;
+                min-height: 320px !important;
                 overflow-x: auto;
                 overflow-y: hidden;
                 box-sizing: border-box;
@@ -1994,7 +2015,15 @@
             }
 
             .chart-container {
-                height: 250px !important;
+                height: 320px !important;
+                min-height: 320px !important;
+            }
+
+            @media (max-width: 480px) {
+                .chart-container {
+                    height: 300px !important;
+                    min-height: 300px !important;
+                }
             }
 
             /* Back button */
@@ -2402,9 +2431,10 @@
                 margin-top: 8px !important;
             }
 
-            /* Chart containers - match employee dashboard (480px and below) */
+            /* Chart containers - larger on extra small screens (480px and below) */
             #admin-dashboard-page .chart-container {
-                height: 160px !important;
+                height: 300px !important;
+                min-height: 300px !important;
                 max-width: 100% !important;
                 width: 100% !important;
                 overflow-x: auto;
@@ -3137,15 +3167,15 @@
         }
 
         .border-white\/20 {
-            border-color: rgba(224, 216, 201, 0.2);
+            border-color: rgba(224, 216, 201, 0.2) !important;
         }
 
         .border-white\/30 {
-            border-color: rgba(224, 216, 201, 0.3);
+            border-color: rgba(224, 216, 201, 0.3) !important;
         }
 
         .glass-card-strong .border-white\/20 {
-            border-color: rgba(250, 250, 250, 0.2);
+            border-color: rgba(224, 216, 201, 0.2) !important;
         }
 
         .px-3 {
@@ -3302,7 +3332,7 @@
         }
 
         .glass-card-strong .btn-outline {
-            border-color: rgba(250, 250, 250, 0.2);
+            border-color: rgba(224, 216, 201, 0.2) !important;
             color: #FAFAFA;
         }
 
@@ -3346,7 +3376,7 @@
             background: #41463F;
             backdrop-filter: blur(20px);
             -webkit-backdrop-filter: blur(20px);
-            border: 1px solid rgba(250, 250, 250, 0.2);
+            border: 1px solid rgba(224, 216, 201, 0.2) !important;
             box-shadow: 2px 0 20px rgba(0, 0, 0, 0.1);
             border-radius: 1rem;
         }
@@ -4052,7 +4082,7 @@
             <!-- Sidebar -->
             <aside id="admin-sidebar" class="transform transition-transform duration-200 ease-in-out lg:translate-x-0 -translate-x-full">
                 <div class="flex flex-col h-full">
-                    <div class="p-6 border-b border-white/20">
+                    <div class="p-6 border-b" style="border-color: rgba(224, 216, 201, 0.2) !important;">
                         <h1 class="text-2xl font-bold text-white">Apparel Modest Admin</h1>
                         <p class="text-sm text-white/70" id="admin-name">Admin User</p>
                     </div>
@@ -4091,7 +4121,7 @@
                         </a>
                     </nav>
 
-                    <div class="p-4 border-t border-white/20 space-y-2">
+                    <div class="p-4 border-t space-y-2" style="border-color: rgba(224, 216, 201, 0.2) !important;">
                         <!-- Back to Employee View Button -->
                         <button id="back-to-employee-btn" class="btn btn-outline w-full flex items-center gap-2">
                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -6290,7 +6320,7 @@
                         </div>
                         ${staff.phone ? `<div class="flex justify-between"><span class="text-white/60">Phone:</span><span class="text-white">${staff.phone}</span></div>` : ''}
                     </div>
-                    <div class="mt-4 pt-4 border-t border-white/10">
+                    <div class="mt-4 pt-4 border-t" style="border-color: rgba(224, 216, 201, 0.2) !important;">
                         <button class="delete-staff-btn w-full py-2 px-4 rounded-lg text-sm font-medium transition-all duration-200 flex items-center justify-center gap-2" data-staff-id="${staff.id}" data-staff-name="${staff.name}" style="background: rgba(239, 68, 68, 0.2); border: 1px solid rgba(239, 68, 68, 0.4); color: #ef4444;">
                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
@@ -6749,7 +6779,7 @@
                     const formattedAmount = `KES ${parseFloat(cost.amount).toLocaleString()}`;
                     
                     return `
-                        <tr style="background: rgba(255, 255, 255, 0.2); border-bottom: 1px solid rgba(250, 250, 250, 0.1);">
+                        <tr style="background: rgba(224, 216, 201, 0.1); border-bottom: 1px solid rgba(224, 216, 201, 0.2) !important;">
                             <td style="padding: 12px; color: #000000;">${cost.name}</td>
                             <td style="padding: 12px; color: #000000;">${formattedDate}</td>
                             <td style="padding: 12px; color: #000000; font-weight: 600;">${formattedAmount}</td>

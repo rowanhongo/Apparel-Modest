@@ -342,8 +342,9 @@ class AnalyticsService {
                 .order('created_at', { ascending: false })
                 .limit(1000);
 
-            // If error is about completed_at column, try without it
-            if (error && error.message && (error.message.includes('completed_at') || error.code === '42703')) {
+            // If error occurs (400 Bad Request, 42703 column doesn't exist, etc.), try without completed_at
+            if (error) {
+                // Try without completed_at
                 const result = await this.supabase
                     .from('orders')
                     .select('status, created_at, updated_at')
@@ -351,12 +352,27 @@ class AnalyticsService {
                     .limit(1000);
                 
                 if (result.error) {
-                    throw result.error;
+                    // If still error, try with just status and created_at
+                    const fallbackResult = await this.supabase
+                        .from('orders')
+                        .select('status, created_at')
+                        .order('created_at', { ascending: false })
+                        .limit(1000);
+                    
+                    if (fallbackResult.error) {
+                        // Silently return empty metrics if all queries fail
+                        return {
+                            sales: { avgTime: 0, count: 0 },
+                            production: { avgTime: 0, count: 0 },
+                            instore: { avgTime: 0, count: 0 },
+                            logistics: { avgTime: 0, count: 0 }
+                        };
+                    }
+                    orders = fallbackResult.data;
+                } else {
+                    orders = result.data;
                 }
-                orders = result.data;
                 error = null;
-            } else if (error) {
-                throw error;
             }
 
             if (error) {
