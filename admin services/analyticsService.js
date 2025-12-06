@@ -194,13 +194,7 @@ class AnalyticsService {
                 ? (repeatCustomers / totalCustomers) * 100 
                 : 0;
 
-            console.log('📊 Customer Metrics:', {
-                totalCustomers,
-                activeCustomers: activeCustomers.size,
-                repeatCustomers,
-                repeatCustomerRate,
-                totalOrders: ordersList.length
-            });
+            // Removed console.log for cleaner output
 
             return {
                 totalCustomers,
@@ -341,11 +335,29 @@ class AnalyticsService {
      */
     async fetchStagePerformance() {
         try {
-            const { data: orders, error } = await this.supabase
+            // Try to fetch with completed_at, but handle if column doesn't exist
+            let { data: orders, error } = await this.supabase
                 .from('orders')
                 .select('status, created_at, updated_at, completed_at')
                 .order('created_at', { ascending: false })
                 .limit(1000);
+
+            // If error is about completed_at column, try without it
+            if (error && error.message && (error.message.includes('completed_at') || error.code === '42703')) {
+                const result = await this.supabase
+                    .from('orders')
+                    .select('status, created_at, updated_at')
+                    .order('created_at', { ascending: false })
+                    .limit(1000);
+                
+                if (result.error) {
+                    throw result.error;
+                }
+                orders = result.data;
+                error = null;
+            } else if (error) {
+                throw error;
+            }
 
             if (error) {
                 throw error;
@@ -423,7 +435,7 @@ class AnalyticsService {
 
             return performance;
         } catch (error) {
-            console.error('Error fetching stage performance:', error);
+            // Silently return empty metrics on error
             return {
                 sales: { avgTime: 0, count: 0 },
                 production: { avgTime: 0, count: 0 },

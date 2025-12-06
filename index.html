@@ -541,6 +541,28 @@
             overflow-x: hidden;
         }
 
+        /* Revenue content page - match employee dashboard background */
+        #admin-revenue-content {
+            background: #FAFAFA !important;
+            padding: 30px;
+            border-radius: 0;
+        }
+
+        #admin-revenue-content .glass-card {
+            background: rgba(224, 216, 201, 0.1) !important;
+            border: 1px solid rgba(224, 216, 201, 0.2) !important;
+        }
+
+        #admin-revenue-content .text-white,
+        #admin-revenue-content h3.text-white {
+            color: #41463F !important;
+        }
+
+        #admin-revenue-content .text-white\/70,
+        #admin-revenue-content .text-white\/60 {
+            color: rgba(65, 70, 63, 0.7) !important;
+        }
+
         /* Ensure content pages fit properly */
         #admin-dashboard-page .content-page {
             width: 100%;
@@ -4219,11 +4241,11 @@
                     </div>
 
                     <!-- Revenue Page -->
-                    <div id="admin-revenue-content" class="content-page hidden">
+                    <div id="admin-revenue-content" class="content-page hidden" style="background: #FAFAFA;">
                         <div class="space-y-6">
                             <div>
-                                <h1 class="text-4xl font-bold text-white">Revenue Dashboard</h1>
-                                <p class="text-white/70">Financial insights and revenue analytics</p>
+                                <h1 class="text-4xl font-bold" style="color: #41463F;">Revenue Dashboard</h1>
+                                <p style="color: rgba(65, 70, 63, 0.7);">Financial insights and revenue analytics</p>
                             </div>
 
                             <!-- Revenue Metrics -->
@@ -4309,15 +4331,15 @@
                             </div>
 
                             <!-- Costs Table -->
-                            <div class="glass-card hover:bg-white/15 transition-all duration-300">
+                            <div class="glass-card hover:bg-white/15 transition-all duration-300" style="background: rgba(224, 216, 201, 0.1); border: 1px solid rgba(224, 216, 201, 0.2);">
                                 <div class="p-6">
-                                    <div class="flex justify-between items-center mb-4">
-                                        <h3 class="text-white">Costs This Month</h3>
+                                    <div class="flex justify-between items-center mb-4" style="flex-direction: row;">
+                                        <h3 style="color: #41463F; writing-mode: horizontal-tb; text-orientation: mixed; white-space: nowrap; display: inline-block;">Costs This Month</h3>
                                         <div class="flex gap-2 items-center">
-                                            <input type="text" id="cost-search" placeholder="Search by name..." class="px-3 py-1.5 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:border-accent text-sm" style="min-width: 200px;">
-                                            <input type="date" id="cost-date-filter" class="px-3 py-1.5 bg-white/10 border border-white/20 rounded-lg text-white focus:outline-none focus:border-accent text-sm">
-                                            <input type="number" id="cost-amount-filter" placeholder="Amount" class="px-3 py-1.5 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:border-accent text-sm" style="min-width: 120px;">
-                                            <select id="cost-sort" class="px-3 py-1.5 bg-white/10 border border-white/20 rounded-lg text-white focus:outline-none focus:border-accent text-sm">
+                                            <input type="text" id="cost-search" placeholder="Search by name..." class="px-3 py-1.5 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:border-accent text-sm" style="min-width: 200px; background: rgba(65, 70, 63, 0.1); border: 1px solid rgba(65, 70, 63, 0.2); color: #41463F;">
+                                            <input type="date" id="cost-date-filter" class="px-3 py-1.5 bg-white/10 border border-white/20 rounded-lg text-white focus:outline-none focus:border-accent text-sm" style="background: rgba(65, 70, 63, 0.1); border: 1px solid rgba(65, 70, 63, 0.2); color: #41463F;">
+                                            <input type="number" id="cost-amount-filter" placeholder="Amount" class="px-3 py-1.5 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:border-accent text-sm" style="min-width: 120px; background: rgba(65, 70, 63, 0.1); border: 1px solid rgba(65, 70, 63, 0.2); color: #41463F;">
+                                            <select id="cost-sort" class="px-3 py-1.5 bg-white/10 border border-white/20 rounded-lg text-white focus:outline-none focus:border-accent text-sm" style="background: rgba(65, 70, 63, 0.1); border: 1px solid rgba(65, 70, 63, 0.2); color: #41463F;">
                                                 <option value="created_at-desc">Latest First</option>
                                                 <option value="created_at-asc">Oldest First</option>
                                                 <option value="amount-desc">Highest Amount</option>
@@ -4328,13 +4350,13 @@
                                         </div>
                                     </div>
                                     <div class="table-container" style="overflow-x: auto;">
-                                        <table style="width: 100%; border-collapse: collapse; background: rgba(255, 255, 255, 0.2);">
+                                        <table style="width: 100%; border-collapse: collapse; background: rgba(224, 216, 201, 0.1);">
                                             <thead>
-                                                <tr style="background: rgba(255, 255, 255, 0.2);">
-                                                    <th style="padding: 12px; text-align: left; font-size: 12px; font-weight: 600; color: #000000; text-transform: uppercase;">Name</th>
-                                                    <th style="padding: 12px; text-align: left; font-size: 12px; font-weight: 600; color: #000000; text-transform: uppercase;">Date</th>
-                                                    <th style="padding: 12px; text-align: left; font-size: 12px; font-weight: 600; color: #000000; text-transform: uppercase;">Amount</th>
-                                                    <th style="padding: 12px; text-align: left; font-size: 12px; font-weight: 600; color: #000000; text-transform: uppercase;">Actions</th>
+                                                <tr style="background: rgba(224, 216, 201, 0.15);">
+                                                    <th style="padding: 12px; text-align: left; font-size: 12px; font-weight: 600; color: #41463F; text-transform: uppercase;">Name</th>
+                                                    <th style="padding: 12px; text-align: left; font-size: 12px; font-weight: 600; color: #41463F; text-transform: uppercase;">Date</th>
+                                                    <th style="padding: 12px; text-align: left; font-size: 12px; font-weight: 600; color: #41463F; text-transform: uppercase;">Amount</th>
+                                                    <th style="padding: 12px; text-align: left; font-size: 12px; font-weight: 600; color: #41463F; text-transform: uppercase;">Actions</th>
                                                 </tr>
                                             </thead>
                                             <tbody id="costs-table-body" style="background: rgba(255, 255, 255, 0.2);">
@@ -4750,7 +4772,6 @@
         (async function() {
             try {
                 await loadEnvConfig();
-                console.log('✅ All environment variables loaded');
                 
                 // Load all dependent scripts after config is ready
                 const scripts = [
@@ -4819,7 +4840,6 @@
                 // Use window.waitForEnvConfig to ensure it's available
                 if (typeof window.waitForEnvConfig === 'function') {
                     await window.waitForEnvConfig();
-                    console.log('✅ Config ready, initializing services...');
                 } else {
                     // Fallback: wait for env-loader to be available
                     let attempts = 0;
@@ -4829,7 +4849,6 @@
                     }
                     if (typeof window.waitForEnvConfig === 'function') {
                         await window.waitForEnvConfig();
-                        console.log('✅ Config ready, initializing services...');
                     } else {
                         console.warn('⚠️ waitForEnvConfig not available, trying loadEnvConfig');
                         if (typeof window.loadEnvConfig === 'function') {
@@ -6669,7 +6688,7 @@
 
                 // Render table
                 if (costs.length === 0) {
-                    tableBody.innerHTML = '<tr style="background: rgba(255, 255, 255, 0.2);"><td colspan="4" style="padding: 20px; text-align: center; color: #000000;">No costs found for this month</td></tr>';
+                    tableBody.innerHTML = '<tr style="background: rgba(224, 216, 201, 0.1);"><td colspan="4" style="padding: 20px; text-align: center; color: #41463F;">No costs found for this month</td></tr>';
                     return;
                 }
 

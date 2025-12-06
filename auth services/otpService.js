@@ -46,7 +46,6 @@ class OTPService {
         
         // Initialize EmailJS with public key
         emailjs.init(config.publicKey);
-        console.log('✅ EmailJS initialized');
         return true;
     }
 

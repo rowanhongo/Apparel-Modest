@@ -17,7 +17,6 @@ class CloudinaryService {
             console.error('❌ Cloudinary service initialization failed');
             return false;
         }
-        console.log('✅ Cloudinary service initialized');
         return true;
     }
 
