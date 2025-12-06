@@ -118,10 +118,9 @@ class AnalyticsService {
             return phone;
         }
         
-        // Fallback to email from customer relation
-        const email = customer?.email || order.customer_email;
-        if (email && email.trim().length > 0) {
-            return email.trim().toLowerCase();
+        // Fallback to email from customer relation (only if customer relation exists)
+        if (customer?.email && customer.email.trim().length > 0) {
+            return customer.email.trim().toLowerCase();
         }
         
         // If neither available, return null (will be excluded from customer count)
