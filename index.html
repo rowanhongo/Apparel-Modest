@@ -19,7 +19,7 @@
 
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', sans-serif;
-            background: #3C3F3E;
+            background: #FAFAFA;
             min-height: 100vh;
             overflow-x: hidden;
             width: 100%;
@@ -1873,6 +1873,8 @@
                 width: 100% !important;
                 height: auto !important;
                 min-width: 0 !important;
+                min-height: 200px !important;
+                max-height: 300px !important;
                 display: block !important;
                 visibility: visible !important;
                 opacity: 1 !important;
@@ -2448,7 +2450,11 @@
                 max-width: 100% !important;
                 height: auto !important;
                 min-width: 0 !important;
-                display: block;
+                min-height: 200px !important;
+                max-height: 300px !important;
+                display: block !important;
+                visibility: visible !important;
+                opacity: 1 !important;
             }
 
             #admin-dashboard-page canvas {
@@ -4212,7 +4218,7 @@
                                     <div class="p-6">
                                         <h3 class="mb-4" style="color: #41463F;">Monthly Orders</h3>
                                         <div class="chart-container">
-                                            <svg width="100%" height="300" viewBox="0 0 800 300" style="display: block; visibility: visible; opacity: 1;">
+                                            <svg width="100%" height="100%" viewBox="0 0 800 300" preserveAspectRatio="xMidYMid meet" style="display: block; visibility: visible; opacity: 1; max-width: 100%; max-height: 300px; height: auto; min-height: 200px;">
                                                 <defs>
                                                     <pattern id="grid" width="40" height="30" patternUnits="userSpaceOnUse">
                                                         <path d="M 40 0 L 0 0 0 30" fill="none" stroke="rgba(224,216,201,0.1)" stroke-width="1"/>
@@ -4241,7 +4247,7 @@
                                     <div class="p-6">
                                         <h3 class="mb-4" style="color: #41463F;">Delivery Methods</h3>
                                         <div class="chart-container flex justify-center">
-                                            <svg width="200" height="200" viewBox="0 0 200 200" style="display: block; visibility: visible; opacity: 1; max-width: 100%; height: auto;">
+                                            <svg width="100%" height="100%" viewBox="0 0 200 200" preserveAspectRatio="xMidYMid meet" style="display: block; visibility: visible; opacity: 1; max-width: 100%; max-height: 300px; height: auto; min-height: 200px;">
                                                 <defs>
                                                     <linearGradient id="pieGradient1" x1="0%" y1="0%" x2="100%" y2="100%">
                                                         <stop offset="0%" style="stop-color:#41463F;stop-opacity:1" />
