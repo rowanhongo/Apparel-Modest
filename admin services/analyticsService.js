@@ -749,13 +749,16 @@ class AnalyticsService {
         if (!svg) {
             svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
             svg.setAttribute('width', '100%');
-            svg.setAttribute('height', '240');
+            svg.setAttribute('height', '100%');
             svg.setAttribute('viewBox', '0 0 240 240');
+            svg.setAttribute('preserveAspectRatio', 'xMidYMid meet');
             svg.style.display = 'block';
             svg.style.visibility = 'visible';
             svg.style.opacity = '1';
             svg.style.maxWidth = '100%';
+            svg.style.maxHeight = '300px';
             svg.style.height = 'auto';
+            svg.style.minHeight = '200px';
             container.appendChild(svg);
         }
 
@@ -815,8 +818,9 @@ class AnalyticsService {
             const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
             text.setAttribute('x', '38');
             text.setAttribute('y', legendY);
-            text.setAttribute('fill', '#FAFAFA');
+            text.setAttribute('fill', '#000000');
             text.setAttribute('font-size', '11');
+            text.setAttribute('font-weight', '600');
             text.textContent = `${item.label}: ${item.value}`;
             legend.appendChild(text);
 
@@ -848,13 +852,16 @@ class AnalyticsService {
         if (!svg) {
             svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
             svg.setAttribute('width', '100%');
-            svg.setAttribute('height', '240');
+            svg.setAttribute('height', '100%');
             svg.setAttribute('viewBox', '0 0 800 240');
+            svg.setAttribute('preserveAspectRatio', 'xMidYMid meet');
             svg.style.display = 'block';
             svg.style.visibility = 'visible';
             svg.style.opacity = '1';
             svg.style.maxWidth = '100%';
+            svg.style.maxHeight = '300px';
             svg.style.height = 'auto';
+            svg.style.minHeight = '200px';
             container.appendChild(svg);
         }
 

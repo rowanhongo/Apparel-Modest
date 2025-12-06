@@ -265,13 +265,16 @@ class RevenueService {
         if (!svg) {
             svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
             svg.setAttribute('width', '100%');
-            svg.setAttribute('height', '300');
+            svg.setAttribute('height', '100%');
             svg.setAttribute('viewBox', '0 0 800 300');
+            svg.setAttribute('preserveAspectRatio', 'xMidYMid meet');
             svg.style.display = 'block';
             svg.style.visibility = 'visible';
             svg.style.opacity = '1';
             svg.style.maxWidth = '100%';
+            svg.style.maxHeight = '300px';
             svg.style.height = 'auto';
+            svg.style.minHeight = '200px';
             
             // Add defs
             const defs = document.createElementNS('http://www.w3.org/2000/svg', 'defs');
