@@ -87,6 +87,7 @@
             border: 1px solid rgba(224, 216, 201, 0.2);
             position: relative;
             margin: auto;
+            z-index: 1;
         }
 
         .login-header {
@@ -7247,10 +7248,23 @@
         // Show install prompt
         function showInstallPrompt() {
             if (pwaInstallPrompt && shouldShowPrompt()) {
-                // Wait a bit before showing to not be too aggressive
-                setTimeout(() => {
-                    pwaInstallPrompt.classList.add('show');
-                }, 2000); // Show after 2 seconds
+                // Only show on login page
+                const loginPage = document.getElementById('login-page');
+                const dashboardPage = document.getElementById('dashboard-page');
+                const adminDashboardPage = document.getElementById('admin-dashboard-page');
+                
+                // Check if login page is visible
+                const isLoginPageVisible = loginPage && !loginPage.classList.contains('hidden');
+                const isDashboardVisible = dashboardPage && !dashboardPage.classList.contains('hidden');
+                const isAdminDashboardVisible = adminDashboardPage && !adminDashboardPage.classList.contains('hidden');
+                
+                // Only show prompt on login page
+                if (isLoginPageVisible && !isDashboardVisible && !isAdminDashboardVisible) {
+                    // Show immediately on login page
+                    setTimeout(() => {
+                        pwaInstallPrompt.classList.add('show');
+                    }, 1000); // Show after 1 second on login page
+                }
             }
         }
 
@@ -7274,9 +7288,47 @@
                 return;
             }
             
-            // Show our custom prompt
+            // Show our custom prompt immediately on login page
             showInstallPrompt();
         });
+
+        // Also check on page load if we should show the prompt
+        window.addEventListener('load', () => {
+            // Small delay to ensure DOM is ready
+            setTimeout(() => {
+                const loginPage = document.getElementById('login-page');
+                if (loginPage && !loginPage.classList.contains('hidden')) {
+                    // Login page is visible, check if we should show prompt
+                    if (deferredPrompt && shouldShowPrompt()) {
+                        showInstallPrompt();
+                    }
+                }
+            }, 500);
+        });
+
+        // Check immediately on DOM ready (before load event)
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', () => {
+                setTimeout(() => {
+                    const loginPage = document.getElementById('login-page');
+                    if (loginPage && !loginPage.classList.contains('hidden')) {
+                        if (deferredPrompt && shouldShowPrompt()) {
+                            showInstallPrompt();
+                        }
+                    }
+                }, 1000);
+            });
+        } else {
+            // DOM already loaded
+            setTimeout(() => {
+                const loginPage = document.getElementById('login-page');
+                if (loginPage && !loginPage.classList.contains('hidden')) {
+                    if (deferredPrompt && shouldShowPrompt()) {
+                        showInstallPrompt();
+                    }
+                }
+            }, 1000);
+        }
 
         // Handle install button click
         if (pwaInstallBtn) {
@@ -7331,6 +7383,44 @@
         if (window.matchMedia('(display-mode: standalone)').matches) {
             // App is running in standalone mode (installed)
             hideInstallPrompt();
+        }
+
+        // Hide prompt when user logs in (switches to dashboard)
+        const originalLoginUser = window.loginUser;
+        if (typeof originalLoginUser === 'function') {
+            // If loginUser is already defined, we'll hook into it
+            // Otherwise, we'll add a listener for dashboard visibility
+        }
+
+        // Monitor for dashboard visibility changes to hide prompt
+        const observer = new MutationObserver(() => {
+            const loginPage = document.getElementById('login-page');
+            const dashboardPage = document.getElementById('dashboard-page');
+            const adminDashboardPage = document.getElementById('admin-dashboard-page');
+            
+            const isLoginPageVisible = loginPage && !loginPage.classList.contains('hidden');
+            const isDashboardVisible = dashboardPage && !dashboardPage.classList.contains('hidden');
+            const isAdminDashboardVisible = adminDashboardPage && !adminDashboardPage.classList.contains('hidden');
+            
+            // Hide prompt if dashboard is shown
+            if ((isDashboardVisible || isAdminDashboardVisible) && !isLoginPageVisible) {
+                hideInstallPrompt();
+            }
+        });
+
+        // Observe changes to the login and dashboard pages
+        const loginPage = document.getElementById('login-page');
+        const dashboardPage = document.getElementById('dashboard-page');
+        const adminDashboardPage = document.getElementById('admin-dashboard-page');
+        
+        if (loginPage) {
+            observer.observe(loginPage, { attributes: true, attributeFilter: ['class'] });
+        }
+        if (dashboardPage) {
+            observer.observe(dashboardPage, { attributes: true, attributeFilter: ['class'] });
+        }
+        if (adminDashboardPage) {
+            observer.observe(adminDashboardPage, { attributes: true, attributeFilter: ['class'] });
         }
     </script>
 </body>
