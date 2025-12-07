@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512">
+  <!-- Background -->
+  <rect width="512" height="512" fill="#1B4D3E"/>
+  
+  <!-- Decorative border -->
+  <rect x="64" y="64" width="384" height="384" fill="none" stroke="#E0D8C9" stroke-width="8" rx="32"/>
+  
+  <!-- Text: Apparel Modest -->
+  <text x="256" y="220" font-family="Arial, sans-serif" font-size="48" font-weight="bold" fill="#E0D8C9" text-anchor="middle">APPAREL</text>
+  <line x1="180" y1="240" x2="332" y2="240" stroke="#E0D8C9" stroke-width="2"/>
+  <text x="256" y="300" font-family="Georgia, serif" font-size="56" font-weight="bold" fill="#FFFFFF" text-anchor="middle">MODEST</text>
+  
+  <!-- Optional: Small decorative elements -->
+  <circle cx="150" cy="150" r="8" fill="#E0D8C9" opacity="0.6"/>
+  <circle cx="362" cy="150" r="8" fill="#E0D8C9" opacity="0.6"/>
+  <circle cx="150" cy="362" r="8" fill="#E0D8C9" opacity="0.6"/>
+  <circle cx="362" cy="362" r="8" fill="#E0D8C9" opacity="0.6"/>
+</svg>
+

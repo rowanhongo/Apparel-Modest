@@ -9,8 +9,8 @@
     SECRETS_SCAN_OMIT_KEYS = "SUPABASE_URL,SUPABASE_ANON_KEY,SUPABASE_SERVICE_ROLE_KEY,CLOUDINARY_API_KEY,CLOUDINARY_API_SECRET,CLOUDINARY_ID,CLOUDINARY_UPLOAD_PRESET,EMAILJS_SERVICE_ID,EMAILJS_TEMPLATE_ID,EMAILJS_PUBLIC_KEY,EMAILJS_WELCOME_TEMPLATE_ID,API_keys_Public_Key,Welcome_Template_ID,One_Time_Password_Template_ID"
 
 [[redirects]]
-  # Route /customer-form to fashion_order_form.html
-  from = "/customer-form"
+  # Route /customerform to fashion_order_form.html
+  from = "/customerform"
   to = "/fashion_order_form.html"
   status = 200
 
@@ -38,6 +38,25 @@
 
 [[headers]]
   for = "/*.css"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000, immutable"
+
+# PWA Headers
+[[headers]]
+  for = "/manifest.json"
+  [headers.values]
+    Content-Type = "application/manifest+json"
+    Cache-Control = "public, max-age=3600"
+
+[[headers]]
+  for = "/service-worker.js"
+  [headers.values]
+    Content-Type = "application/javascript"
+    Cache-Control = "public, max-age=0"
+    Service-Worker-Allowed = "/"
+
+[[headers]]
+  for = "/icons/*"
   [headers.values]
     Cache-Control = "public, max-age=31536000, immutable"
 
