@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512">
+  <!-- Dark forest green background -->
+  <rect width="512" height="512" fill="#1B4D3E"/>
+  
+  <!-- Text group centered -->
+  <g transform="translate(256, 256)">
+    <!-- A/M text - clean sans-serif, caps -->
+    <text 
+      x="0" 
+      y="10" 
+      font-family="Arial, sans-serif" 
+      font-size="120" 
+      font-weight="700" 
+      fill="#FFFFFF" 
+      text-anchor="middle" 
+      letter-spacing="4">
+      A/M
+    </text>
+  </g>
+</svg>
+

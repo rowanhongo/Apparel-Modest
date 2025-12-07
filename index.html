@@ -12,6 +12,9 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="Apparel Modest">
     <meta name="mobile-web-app-capable" content="yes">
+    <meta name="msapplication-TileColor" content="#1B4D3E">
+    <meta name="msapplication-config" content="/browserconfig.xml">
+    <meta name="application-name" content="Apparel Modest">
     
     <!-- PWA Manifest -->
     <link rel="manifest" href="/manifest.json">
@@ -7190,7 +7193,7 @@
     <script>
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
-                navigator.serviceWorker.register('/service-worker.js')
+                navigator.serviceWorker.register('/service-worker.js', { scope: '/' })
                     .then((registration) => {
                         console.log('✅ Service Worker registered successfully:', registration.scope);
                         
@@ -7247,24 +7250,36 @@
 
         // Show install prompt
         function showInstallPrompt() {
-            if (pwaInstallPrompt && shouldShowPrompt()) {
-                // Only show on login page
-                const loginPage = document.getElementById('login-page');
-                const dashboardPage = document.getElementById('dashboard-page');
-                const adminDashboardPage = document.getElementById('admin-dashboard-page');
-                
-                // Check if login page is visible
-                const isLoginPageVisible = loginPage && !loginPage.classList.contains('hidden');
-                const isDashboardVisible = dashboardPage && !dashboardPage.classList.contains('hidden');
-                const isAdminDashboardVisible = adminDashboardPage && !adminDashboardPage.classList.contains('hidden');
-                
-                // Only show prompt on login page
-                if (isLoginPageVisible && !isDashboardVisible && !isAdminDashboardVisible) {
-                    // Show immediately on login page
-                    setTimeout(() => {
+            if (!pwaInstallPrompt || !shouldShowPrompt()) {
+                return;
+            }
+            
+            // Check if app is already installed
+            if (window.matchMedia('(display-mode: standalone)').matches || 
+                window.navigator.standalone === true) {
+                hideInstallPrompt();
+                return;
+            }
+            
+            // Only show on login page
+            const loginPage = document.getElementById('login-page');
+            const dashboardPage = document.getElementById('dashboard-page');
+            const adminDashboardPage = document.getElementById('admin-dashboard-page');
+            
+            // Check if login page is visible
+            const isLoginPageVisible = loginPage && !loginPage.classList.contains('hidden');
+            const isDashboardVisible = dashboardPage && !dashboardPage.classList.contains('hidden');
+            const isAdminDashboardVisible = adminDashboardPage && !adminDashboardPage.classList.contains('hidden');
+            
+            // Only show prompt on login page
+            if (isLoginPageVisible && !isDashboardVisible && !isAdminDashboardVisible) {
+                // Show immediately on login page
+                setTimeout(() => {
+                    if (pwaInstallPrompt) {
                         pwaInstallPrompt.classList.add('show');
-                    }, 1000); // Show after 1 second on login page
-                }
+                        console.log('📱 PWA Install prompt shown');
+                    }
+                }, 2000); // Show after 2 seconds on login page
             }
         }
 
@@ -7277,20 +7292,45 @@
 
         // Listen for beforeinstallprompt event
         window.addEventListener('beforeinstallprompt', (e) => {
+            console.log('📱 beforeinstallprompt event fired');
             // Prevent the default browser install prompt
             e.preventDefault();
             // Store the event for later use
             deferredPrompt = e;
             
             // Check if app is already installed
-            if (window.matchMedia('(display-mode: standalone)').matches) {
+            if (window.matchMedia('(display-mode: standalone)').matches || 
+                window.navigator.standalone === true) {
                 // App is already installed
+                console.log('📱 App already installed, hiding prompt');
+                hideInstallPrompt();
                 return;
             }
             
-            // Show our custom prompt immediately on login page
+            // Show our custom prompt on login page
             showInstallPrompt();
         });
+        
+        // Fallback: Show prompt even if beforeinstallprompt doesn't fire
+        // This helps when icons are missing but we still want to show installation instructions
+        setTimeout(() => {
+            const loginPage = document.getElementById('login-page');
+            if (loginPage && !loginPage.classList.contains('hidden')) {
+                // Check if we're not in standalone mode and haven't shown prompt yet
+                const isStandalone = window.matchMedia('(display-mode: standalone)').matches || 
+                                    window.navigator.standalone === true;
+                const isInstalled = localStorage.getItem('pwa-installed') === 'true';
+                
+                if (!isStandalone && !isInstalled && shouldShowPrompt()) {
+                    // If beforeinstallprompt hasn't fired after 3 seconds, show prompt anyway
+                    // (it might not fire if icons are missing, but we can still show instructions)
+                    if (!deferredPrompt) {
+                        console.log('📱 Showing install prompt (fallback - beforeinstallprompt not fired)');
+                        showInstallPrompt();
+                    }
+                }
+            }
+        }, 3000);
 
         // Also check on page load if we should show the prompt
         window.addEventListener('load', () => {
@@ -7334,29 +7374,47 @@
         if (pwaInstallBtn) {
             pwaInstallBtn.addEventListener('click', async () => {
                 if (!deferredPrompt) {
-                    // Fallback: try to show browser's native prompt
-                    alert('Please use your browser\'s menu to install this app.');
+                    // Fallback: Show instructions for manual installation
+                    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+                    const isAndroid = /Android/.test(navigator.userAgent);
+                    
+                    let instructions = '';
+                    if (isIOS) {
+                        instructions = 'To install:\n1. Tap the Share button (square with arrow)\n2. Select "Add to Home Screen"\n3. Tap "Add"';
+                    } else if (isAndroid) {
+                        instructions = 'To install:\n1. Tap the menu (3 dots)\n2. Select "Install app" or "Add to Home screen"';
+                    } else {
+                        instructions = 'To install:\n1. Look for the install icon in your browser\'s address bar\n2. Or use your browser\'s menu to install this app';
+                    }
+                    
+                    alert(instructions);
                     hideInstallPrompt();
                     return;
                 }
 
-                // Show the browser's install prompt
-                deferredPrompt.prompt();
-                
-                // Wait for user response
-                const { outcome } = await deferredPrompt.userChoice;
-                
-                console.log(`User response to install prompt: ${outcome}`);
-                
-                // Clear the deferred prompt
-                deferredPrompt = null;
-                
-                // Hide our prompt
-                hideInstallPrompt();
-                
-                // Mark as installed or dismissed
-                if (outcome === 'accepted') {
-                    localStorage.setItem('pwa-installed', 'true');
+                try {
+                    // Show the browser's install prompt
+                    deferredPrompt.prompt();
+                    
+                    // Wait for user response
+                    const { outcome } = await deferredPrompt.userChoice;
+                    
+                    console.log(`📱 User response to install prompt: ${outcome}`);
+                    
+                    // Clear the deferred prompt
+                    deferredPrompt = null;
+                    
+                    // Hide our prompt
+                    hideInstallPrompt();
+                    
+                    // Mark as installed or dismissed
+                    if (outcome === 'accepted') {
+                        localStorage.setItem('pwa-installed', 'true');
+                        console.log('✅ PWA installation accepted');
+                    }
+                } catch (error) {
+                    console.error('❌ Error showing install prompt:', error);
+                    hideInstallPrompt();
                 }
             });
         }
@@ -7380,9 +7438,16 @@
         });
 
         // Check on page load if app is already installed
-        if (window.matchMedia('(display-mode: standalone)').matches) {
+        const isStandalone = window.matchMedia('(display-mode: standalone)').matches || 
+                            window.navigator.standalone === true ||
+                            (window.matchMedia('(display-mode: fullscreen)').matches) ||
+                            (window.matchMedia('(display-mode: minimal-ui)').matches);
+        
+        if (isStandalone) {
             // App is running in standalone mode (installed)
+            console.log('📱 App is running in standalone mode');
             hideInstallPrompt();
+            localStorage.setItem('pwa-installed', 'true');
         }
 
         // Hide prompt when user logs in (switches to dashboard)

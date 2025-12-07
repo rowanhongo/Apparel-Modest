@@ -1,6 +1,6 @@
 // Service Worker for Apparel Modest PWA
-const CACHE_NAME = 'apparel-modest-v1';
-const RUNTIME_CACHE = 'apparel-modest-runtime-v1';
+const CACHE_NAME = 'apparel-modest-v2';
+const RUNTIME_CACHE = 'apparel-modest-runtime-v2';
 
 // Assets to cache on install
 const STATIC_ASSETS = [

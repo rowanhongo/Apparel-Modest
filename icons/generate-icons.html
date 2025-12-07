@@ -3,11 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>PWA Icon Generator</title>
+    <title>PWA Icon Generator - Apparel Modest</title>
     <style>
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            max-width: 800px;
+            max-width: 900px;
             margin: 40px auto;
             padding: 20px;
             background: #f5f5f5;
@@ -45,7 +45,7 @@
         }
         .icon-preview {
             display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+            grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
             gap: 15px;
             margin-top: 20px;
         }
@@ -59,6 +59,8 @@
             border: 1px solid #ddd;
             border-radius: 4px;
             margin-bottom: 5px;
+            display: block;
+            margin: 0 auto 5px;
         }
         .icon-item label {
             display: block;
@@ -66,22 +68,34 @@
             color: #666;
             margin-top: 5px;
         }
+        .status {
+            margin-top: 20px;
+            padding: 10px;
+            border-radius: 8px;
+            display: none;
+        }
+        .status.success {
+            background: #d4edda;
+            color: #155724;
+            display: block;
+        }
     </style>
 </head>
 <body>
     <div class="container">
-        <h1>PWA Icon Generator</h1>
+        <h1>PWA Icon Generator - Apparel Modest</h1>
         <div class="instructions">
             <p><strong>Instructions:</strong></p>
             <ol>
-                <li>Click "Generate Icons" to create all required icon sizes</li>
-                <li>Right-click each icon preview and "Save image as..." to download</li>
-                <li>Save them in the <code>icons/</code> folder with the correct filenames</li>
-                <li>Or use the "Download All" button (if supported by your browser)</li>
+                <li>Click "Generate Icons" to create all required icon sizes from the logo</li>
+                <li>Click "Download All Icons" to download all icons at once</li>
+                <li>The icons will be saved to your Downloads folder</li>
+                <li>Move them to the <code>icons/</code> folder in your project</li>
             </ol>
         </div>
         <button onclick="generateIcons()">Generate Icons</button>
         <button onclick="downloadAll()">Download All Icons</button>
+        <div id="status" class="status"></div>
         <div id="preview" class="icon-preview"></div>
     </div>
 
@@ -92,6 +106,9 @@
         function generateIcons() {
             const preview = document.getElementById('preview');
             preview.innerHTML = '';
+            const status = document.getElementById('status');
+            status.className = 'status';
+            status.textContent = '';
 
             sizes.forEach(size => {
                 const canvas = document.createElement('canvas');
@@ -99,53 +116,22 @@
                 canvas.height = size;
                 const ctx = canvas.getContext('2d');
 
-                // Background
+                // Dark forest green background
                 ctx.fillStyle = '#1B4D3E';
                 ctx.fillRect(0, 0, size, size);
 
-                // Border
-                const padding = size * 0.125;
-                ctx.strokeStyle = '#E0D8C9';
-                ctx.lineWidth = size * 0.015;
-                ctx.beginPath();
-                ctx.roundRect(padding, padding, size - padding * 2, size - padding * 2, size * 0.0625);
-                ctx.stroke();
+                // Calculate text size based on icon size
+                const fontSize = size * 0.234; // A/M font size (larger for visibility)
+                const centerX = size / 2;
+                const centerY = size / 2;
 
-                // Text
-                ctx.fillStyle = '#E0D8C9';
-                ctx.font = `bold ${size * 0.094}px Arial`;
+                // A/M text - clean sans-serif, caps
+                ctx.fillStyle = '#FFFFFF';
+                ctx.font = `700 ${fontSize}px Arial, sans-serif`;
                 ctx.textAlign = 'center';
                 ctx.textBaseline = 'middle';
-                ctx.fillText('APPAREL', size / 2, size * 0.43);
-
-                // Line
-                ctx.beginPath();
-                ctx.moveTo(size * 0.35, size * 0.47);
-                ctx.lineTo(size * 0.65, size * 0.47);
-                ctx.stroke();
-
-                // MODEST text
-                ctx.fillStyle = '#FFFFFF';
-                ctx.font = `bold ${size * 0.11}px Georgia`;
-                ctx.fillText('MODEST', size / 2, size * 0.59);
-
-                // Decorative circles
-                const circleSize = size * 0.015;
-                ctx.fillStyle = '#E0D8C9';
-                ctx.globalAlpha = 0.6;
-                ctx.beginPath();
-                ctx.arc(size * 0.29, size * 0.29, circleSize, 0, Math.PI * 2);
-                ctx.fill();
-                ctx.beginPath();
-                ctx.arc(size * 0.71, size * 0.29, circleSize, 0, Math.PI * 2);
-                ctx.fill();
-                ctx.beginPath();
-                ctx.arc(size * 0.29, size * 0.71, circleSize, 0, Math.PI * 2);
-                ctx.fill();
-                ctx.beginPath();
-                ctx.arc(size * 0.71, size * 0.71, circleSize, 0, Math.PI * 2);
-                ctx.fill();
-                ctx.globalAlpha = 1;
+                ctx.letterSpacing = `${size * 0.008}px`;
+                ctx.fillText('A/M', centerX, centerY);
 
                 // Store canvas
                 icons[size] = canvas;
@@ -154,49 +140,57 @@
                 const item = document.createElement('div');
                 item.className = 'icon-item';
                 const previewCanvas = canvas.cloneNode();
-                previewCanvas.width = 80;
-                previewCanvas.height = 80;
+                previewCanvas.width = 100;
+                previewCanvas.height = 100;
                 const previewCtx = previewCanvas.getContext('2d');
-                previewCtx.drawImage(canvas, 0, 0, 80, 80);
+                previewCtx.drawImage(canvas, 0, 0, 100, 100);
                 item.appendChild(previewCanvas);
-                item.appendChild(document.createElement('label'));
-                item.querySelector('label').textContent = `${size}x${size}`;
+                const label = document.createElement('label');
+                label.textContent = `${size}x${size}`;
+                item.appendChild(label);
                 preview.appendChild(item);
             });
+
+            status.className = 'status success';
+            status.textContent = `✅ Generated ${sizes.length} icons! Click "Download All Icons" to save them.`;
         }
 
         function downloadAll() {
-            sizes.forEach(size => {
+            if (Object.keys(icons).length === 0) {
+                alert('Please generate icons first!');
+                return;
+            }
+
+            let downloaded = 0;
+            sizes.forEach((size, index) => {
                 if (icons[size]) {
-                    icons[size].toBlob(blob => {
-                        const url = URL.createObjectURL(blob);
-                        const a = document.createElement('a');
-                        a.href = url;
-                        a.download = `icon-${size}x${size}.png`;
-                        a.click();
-                        URL.revokeObjectURL(url);
-                    });
+                    setTimeout(() => {
+                        icons[size].toBlob(blob => {
+                            const url = URL.createObjectURL(blob);
+                            const a = document.createElement('a');
+                            a.href = url;
+                            a.download = `icon-${size}x${size}.png`;
+                            document.body.appendChild(a);
+                            a.click();
+                            document.body.removeChild(a);
+                            URL.revokeObjectURL(url);
+                            downloaded++;
+                            
+                            if (downloaded === sizes.length) {
+                                const status = document.getElementById('status');
+                                status.className = 'status success';
+                                status.textContent = `✅ All ${sizes.length} icons downloaded! Move them to the icons/ folder.`;
+                            }
+                        }, 'image/png');
+                    }, index * 100); // Stagger downloads
                 }
             });
         }
 
-        // Polyfill for roundRect if needed
-        if (!CanvasRenderingContext2D.prototype.roundRect) {
-            CanvasRenderingContext2D.prototype.roundRect = function(x, y, width, height, radius) {
-                this.beginPath();
-                this.moveTo(x + radius, y);
-                this.lineTo(x + width - radius, y);
-                this.quadraticCurveTo(x + width, y, x + width, y + radius);
-                this.lineTo(x + width, y + height - radius);
-                this.quadraticCurveTo(x + width, y + height, x + width - radius, y + height);
-                this.lineTo(x + radius, y + height);
-                this.quadraticCurveTo(x, y + height, x, y + height - radius);
-                this.lineTo(x, y + radius);
-                this.quadraticCurveTo(x, y, x + radius, y);
-                this.closePath();
-            };
-        }
+        // Auto-generate on load
+        window.addEventListener('load', () => {
+            setTimeout(generateIcons, 500);
+        });
     </script>
 </body>
 </html>
-
