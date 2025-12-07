@@ -3548,26 +3548,46 @@
             display: flex;
         }
 
-        /* Desktop styles - popup style */
+        /* Desktop styles - positioned below login button */
         @media (min-width: 641px) {
-            .pwa-install-prompt {
-                position: fixed !important;
-                bottom: 40px !important;
-                left: 50% !important;
-                transform: translateX(-50%) !important;
-                width: auto !important;
-                min-width: 400px !important;
-                max-width: 90% !important;
-                margin-bottom: 0 !important;
-                padding: 20px 24px !important;
-                gap: 20px !important;
-                z-index: 10000 !important;
-                animation: slideUp 0.3s ease-out;
-                backdrop-filter: blur(20px);
+            /* Make login-card a flex container to control order */
+            #login-page .login-card {
+                display: flex;
+                flex-direction: column;
+            }
+
+            /* Order elements: header first, form second, install prompt third */
+            #login-page .login-header {
+                order: 1;
+            }
+
+            #login-page #login-form {
+                order: 2;
             }
 
             #login-page .pwa-install-prompt {
+                order: 3;
+                position: relative !important;
+                bottom: auto !important;
+                top: auto !important;
+                left: auto !important;
+                right: auto !important;
+                transform: none !important;
+                width: 100% !important;
+                min-width: auto !important;
+                max-width: 100% !important;
+                margin-top: 24px !important;
+                margin-bottom: 0 !important;
+                padding: 20px 24px !important;
+                gap: 20px !important;
+                z-index: 1 !important;
+                animation: none !important;
+                backdrop-filter: none !important;
                 display: flex;
+            }
+
+            #login-page #messages {
+                order: 4;
             }
 
             .pwa-install-prompt.hidden {
