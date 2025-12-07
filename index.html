@@ -3543,75 +3543,57 @@
             box-sizing: border-box;
         }
 
-        /* Show on login page by default */
+        /* Show on login page by default (mobile) */
         #login-page .pwa-install-prompt {
             display: flex;
         }
 
-        /* Desktop styles - ensure proper fit */
+        /* Desktop styles - popup style */
         @media (min-width: 641px) {
             .pwa-install-prompt {
-                flex-direction: row;
-                align-items: center;
-                padding: 18px 28px;
-                gap: 24px;
+                position: fixed !important;
+                bottom: 20px !important;
+                left: 50% !important;
+                transform: translateX(-50%) !important;
+                width: auto !important;
+                min-width: 400px !important;
+                max-width: 90% !important;
+                margin-bottom: 0 !important;
+                padding: 20px 24px !important;
+                gap: 20px !important;
+                z-index: 10000 !important;
+                animation: slideUp 0.3s ease-out;
+                backdrop-filter: blur(20px);
+            }
+
+            #login-page .pwa-install-prompt {
+                display: flex;
+            }
+
+            .pwa-install-prompt.hidden {
+                display: none !important;
             }
 
             .pwa-install-prompt-content {
-                flex: 1;
-                min-width: 0;
-                display: flex;
-                align-items: center;
-                gap: 20px;
-                margin-right: 24px;
-            }
-
-            .pwa-install-icon {
-                flex-shrink: 0;
+                gap: 16px;
+                margin-right: 0;
             }
 
             .pwa-install-text {
-                flex: 1;
-                min-width: 200px;
+                min-width: 0;
                 overflow: visible;
             }
 
             .pwa-install-text h3 {
-                font-size: 16px;
-                font-weight: 600;
-                margin: 0 0 4px 0;
-                line-height: 1.3;
-                white-space: normal;
-                word-break: break-word;
+                white-space: nowrap;
             }
 
             .pwa-install-text p {
-                font-size: 13px;
-                margin: 0;
-                opacity: 0.9;
-                line-height: 1.4;
-                white-space: normal;
-                word-break: break-word;
+                white-space: nowrap;
             }
 
             .pwa-install-buttons {
-                display: flex;
-                gap: 12px;
-                flex-shrink: 0;
-                align-items: center;
-                margin-left: auto;
-            }
-
-            .pwa-install-btn {
-                padding: 10px 22px;
-                white-space: nowrap;
-                min-width: 85px;
-            }
-
-            .pwa-dismiss-btn {
-                padding: 10px 20px;
-                white-space: nowrap;
-                min-width: 95px;
+                margin-left: 0;
             }
         }
 
@@ -7353,6 +7335,48 @@
             }
         }
 
+        // Show install prompt immediately (for desktop popup)
+        function showInstallPromptImmediately() {
+            if (!pwaInstallPrompt) return;
+            
+            // Check if app is already installed
+            if (window.matchMedia('(display-mode: standalone)').matches || 
+                window.navigator.standalone === true) {
+                hideInstallPrompt();
+                return;
+            }
+            
+            // Check if user dismissed it
+            if (!shouldShowPrompt()) {
+                hideInstallPrompt();
+                return;
+            }
+            
+            // Check if we're on login page
+            const loginPage = document.getElementById('login-page');
+            const dashboardPage = document.getElementById('dashboard-page');
+            const adminDashboardPage = document.getElementById('admin-dashboard-page');
+            
+            const isLoginPageVisible = loginPage && !loginPage.classList.contains('hidden');
+            const isDashboardVisible = dashboardPage && !dashboardPage.classList.contains('hidden');
+            const isAdminDashboardVisible = adminDashboardPage && !adminDashboardPage.classList.contains('hidden');
+            
+            // Show on login page
+            if (isLoginPageVisible && !isDashboardVisible && !isAdminDashboardVisible) {
+                // Check if desktop (show as popup) or mobile (show inline)
+                const isDesktop = window.innerWidth >= 641;
+                if (isDesktop) {
+                    // Desktop: show as popup immediately
+                    pwaInstallPrompt.classList.remove('hidden');
+                } else {
+                    // Mobile: use existing inline behavior
+                    pwaInstallPrompt.classList.remove('hidden');
+                }
+            } else {
+                hideInstallPrompt();
+            }
+        }
+
         // Hide install prompt
         function hideInstallPrompt() {
             if (pwaInstallPrompt) {
@@ -7368,8 +7392,8 @@
             // Store the event for later use
             deferredPrompt = e;
             
-            // Check and show prompt
-            checkAndShowInstallPrompt();
+            // Show immediately (no delay)
+            showInstallPromptImmediately();
         });
         
         // Check on page load immediately
@@ -7377,15 +7401,15 @@
             checkAndShowInstallPrompt();
         }
         
-        // Initialize immediately when DOM is ready
+        // Initialize immediately when DOM is ready (no delay)
         if (document.readyState === 'loading') {
-            document.addEventListener('DOMContentLoaded', initializeInstallPrompt);
+            document.addEventListener('DOMContentLoaded', showInstallPromptImmediately);
         } else {
-            initializeInstallPrompt();
+            showInstallPromptImmediately();
         }
         
-        // Also check on page load
-        window.addEventListener('load', initializeInstallPrompt);
+        // Also check on page load (immediately)
+        window.addEventListener('load', showInstallPromptImmediately);
 
         // Handle install button click
         if (pwaInstallBtn) {
@@ -7466,8 +7490,8 @@
             hideInstallPrompt();
             localStorage.setItem('pwa-installed', 'true');
         } else {
-            // Not in standalone mode, check if we should show prompt
-            checkAndShowInstallPrompt();
+            // Not in standalone mode, show prompt immediately
+            showInstallPromptImmediately();
         }
 
         // Hide prompt when user logs in (switches to dashboard)
@@ -7479,7 +7503,7 @@
 
         // Monitor for dashboard visibility changes to show/hide prompt
         const observer = new MutationObserver(() => {
-            checkAndShowInstallPrompt();
+            showInstallPromptImmediately();
         });
 
         // Observe changes to the login and dashboard pages
