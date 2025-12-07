@@ -3584,6 +3584,8 @@
                 animation: none !important;
                 backdrop-filter: none !important;
                 display: flex;
+                flex-wrap: nowrap;
+                align-items: center;
             }
 
             #login-page #messages {
@@ -3597,23 +3599,35 @@
             .pwa-install-prompt-content {
                 gap: 16px;
                 margin-right: 0;
+                align-items: center;
+                flex: 1;
+                min-width: 0;
+                overflow: visible !important;
             }
 
             .pwa-install-text {
                 min-width: 0;
                 overflow: visible;
+                flex: 1;
             }
 
             .pwa-install-text h3 {
-                white-space: nowrap;
+                white-space: normal;
+                word-wrap: break-word;
+                line-height: 1.4;
+                overflow-wrap: break-word;
             }
 
             .pwa-install-text p {
-                white-space: nowrap;
+                white-space: normal;
+                word-wrap: break-word;
+                line-height: 1.4;
+                overflow-wrap: break-word;
             }
 
             .pwa-install-buttons {
                 margin-left: 0;
+                flex-shrink: 0;
             }
         }
 
