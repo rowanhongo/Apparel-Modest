@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Place Your Order</title>
+    <title>In-Person Order Form</title>
     <style>
         * {
             margin: 0;
@@ -873,7 +873,7 @@
                 <div class="company-logo-divider"></div>
                 <div class="company-logo-bottom">MODEST</div>
             </div>
-            <h1>Place Your Order</h1>
+            <h1>In-Person Order Form</h1>
             <p>Find your perfect piece and let us create it for you</p>
         </div>
 
@@ -1086,21 +1086,11 @@
             </div>
 
             <div class="form-group">
-                <label for="email">Email Address <span class="required">*</span></label>
-                <input type="email" id="email" required placeholder="Enter your email address">
-            </div>
-
-            <div class="form-group">
-                <label>Payment Method</label>
-                <div style="padding: 14px 18px; background: rgba(27, 77, 62, 0.1); border-radius: 12px; border: 1px solid rgba(27, 77, 62, 0.2);">
-                    <p style="margin: 0; font-size: 15px; font-weight: 400; color: #2d3748; margin-bottom: 8px;">
-                        💳 Payment Facilitated by Paystack
-                    </p>
-                    <p style="margin: 0; font-size: 13px; color: #718096; line-height: 1.6; font-weight: 400;">
-                        Available payment methods: M-Pesa, Airtel Money, Visa/Mastercard, Bank Transfer, Apple Pay, and more.<br>
-                        You'll see all available options when you click "Submit Order".
-                    </p>
-                </div>
+                <label for="mpesaCode">M-Pesa Code <span class="required">*</span></label>
+                <input type="text" id="mpesaCode" required placeholder="Enter your M-Pesa transaction code (e.g., QGH7X2K9L)" maxlength="20">
+                <small style="display: block; margin-top: 6px; font-size: 12px; color: #718096; font-weight: 400;">
+                    Please enter the M-Pesa transaction code you received after payment
+                </small>
             </div>
 
             <div class="form-group">
@@ -1122,9 +1112,6 @@
             integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
             crossorigin=""></script>
     
-    <!-- Paystack Inline JS -->
-    <script src="https://js.paystack.co/v1/inline.js"></script>
-
     <!-- Supabase JS Library -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     
@@ -1149,23 +1136,6 @@
         let products = [];
         let supabaseClient = null;
         
-        // Paystack configuration (loaded from environment variables)
-        // Will be set after env-loader.js loads
-        let PAYSTACK_PUBLIC_KEY = '';
-        
-        // Wait for environment config to load Paystack key
-        if (window.ENV_CONFIG_LOADED) {
-            PAYSTACK_PUBLIC_KEY = window.PAYSTACK_PUBLIC_KEY || '';
-        } else {
-            // Wait for config to load
-            window.addEventListener('envConfigLoaded', function() {
-                PAYSTACK_PUBLIC_KEY = window.PAYSTACK_PUBLIC_KEY || '';
-                if (!PAYSTACK_PUBLIC_KEY) {
-                    console.error('❌ Paystack Public Key not found. Please set LIVE_PUBLIC_KEY in Netlify environment variables.');
-                }
-            });
-        }
-        
         // Mapbox configuration (loaded from environment)
         // Will be set after env-loader.js loads
         let MAPBOX_ACCESS_TOKEN = '';
@@ -1180,9 +1150,7 @@
             });
         }
         
-        // Payment state
-        let paymentCompleted = false;
-        let paymentReference = null;
+        // M-Pesa code for in-person orders
 
         // Wait for Supabase library and environment variables to be available
         async function waitForSupabase(callback, maxAttempts = 50) {
@@ -2255,63 +2223,6 @@
             }
         });
 
-        // Function to launch Paystack payment
-        function launchPaystackPayment(email, name, phone, amount) {
-            return new Promise((resolve, reject) => {
-                // Get Paystack key from window (loaded from environment)
-                const paystackKey = window.PAYSTACK_PUBLIC_KEY || PAYSTACK_PUBLIC_KEY;
-                
-                if (!paystackKey) {
-                    reject(new Error('Paystack Public Key not configured. Please set LIVE_PUBLIC_KEY in Netlify environment variables.'));
-                    return;
-                }
-                
-                // Format phone number for Paystack (remove + and ensure it's in the right format)
-                // Paystack expects phone number in format: 254712345678 (country code + number, no +)
-                let formattedPhone = phone.replace(/^\+/, ''); // Remove leading +
-                
-                const handler = PaystackPop.setup({
-                    key: paystackKey,
-                    email: email,
-                    amount: amount, // Amount in cents (KES * 100)
-                    currency: 'KES', // Kenyan Shilling
-                    ref: 'APPAREL_' + Math.floor((Math.random() * 1000000000) + 1), // Generate a unique reference
-                    // Phone number for M-Pesa and other mobile money payments
-                    phone: formattedPhone,
-                    metadata: {
-                        custom_fields: [
-                            {
-                                display_name: "Customer Name",
-                                variable_name: "customer_name",
-                                value: name
-                            },
-                            {
-                                display_name: "Phone Number",
-                                variable_name: "phone_number",
-                                value: phone
-                            }
-                        ]
-                    },
-                    // Enable all payment channels (M-Pesa, Airtel Money, Cards, Bank Transfer, etc.)
-                    channels: ['card', 'bank', 'ussd', 'qr', 'mobile_money', 'bank_transfer'],
-                    callback: function(response) {
-                        // Payment successful
-                        paymentReference = response.reference;
-                        paymentCompleted = true;
-                        resolve(response);
-                    },
-                    onClose: function() {
-                        // User closed the payment window
-                        paymentCompleted = false;
-                        paymentReference = null;
-                        reject(new Error('Payment window closed. Payment not completed.'));
-                    }
-                });
-                
-                handler.openIframe();
-            });
-        }
-
         document.addEventListener('click', (e) => {
             // Don't close if clicking on search input, search results, or any search result item
             const isSearchInput = searchInput.contains(e.target);
@@ -2347,17 +2258,17 @@
                 return;
             }
             
-            // Get email
-            const customerEmail = document.getElementById('email').value.trim();
-            if (!customerEmail) {
-                alert('Please enter your email address');
+            // Get M-Pesa code
+            const mpesaCode = document.getElementById('mpesaCode').value.trim();
+            if (!mpesaCode) {
+                alert('Please enter your M-Pesa transaction code');
                 return;
             }
             
-            // Validate email format
-            const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-            if (!emailRegex.test(customerEmail)) {
-                alert('Please enter a valid email address');
+            // Validate M-Pesa code format (typically alphanumeric, 8-20 characters)
+            const mpesaCodeRegex = /^[A-Z0-9]{8,20}$/i;
+            if (!mpesaCodeRegex.test(mpesaCode)) {
+                alert('Please enter a valid M-Pesa transaction code (8-20 alphanumeric characters)');
                 return;
             }
 
@@ -2425,28 +2336,22 @@
                 }
             }
             
-            // Payment is always facilitated by Paystack
-            const paymentOption = 'paystack';
+            // Payment is in-person with M-Pesa
+            const paymentOption = 'mpesa';
 
             // Disable submit button and show loading
             const submitBtn = document.querySelector('.submit-btn');
             const originalBtnText = submitBtn.textContent;
             submitBtn.disabled = true;
-            submitBtn.textContent = 'Processing Payment...';
+            submitBtn.textContent = 'Creating Order...';
 
             try {
                 const customerName = document.getElementById('name').value.trim();
                 
-                // Reset payment state
-                paymentCompleted = false;
-                paymentReference = null;
+                // Get M-Pesa code (already validated above)
+                const mpesaCodeValue = mpesaCode.toUpperCase(); // Store in uppercase for consistency
                 
-                // Calculate amount in kobo (Paystack uses smallest currency unit)
-                // Since we're using KES, we'll convert to kobo equivalent
-                // 1 KES = 100 kobo (similar to NGN)
-                const amountInKobo = Math.round(selectedProduct.price * 100);
-                
-                // Get phone number for payment
+                // Get phone number
                 let countryCode = document.getElementById('countryCode').value.trim();
                 let phoneNumber = document.getElementById('phoneNumber').value.trim();
                 
@@ -2459,32 +2364,7 @@
                 }
                 
                 // Combine for full phone number
-                const fullPhoneNumber = '+' + countryCode + phoneNumber;
-                
-                // Launch Paystack payment
-                try {
-                    await launchPaystackPayment(customerEmail, customerName, fullPhoneNumber, amountInKobo);
-                } catch (paymentError) {
-                    // Payment failed or was cancelled
-                    submitBtn.disabled = false;
-                    submitBtn.textContent = originalBtnText;
-                    alert('❌ Payment not completed. Please complete payment to submit your order.');
-                    return;
-                }
-                
-                // Check if payment was successful
-                if (!paymentCompleted || !paymentReference) {
-                    submitBtn.disabled = false;
-                    submitBtn.textContent = originalBtnText;
-                    alert('❌ Payment not completed. Please complete payment to submit your order.');
-                    return;
-                }
-                
-                // Payment successful, proceed with order creation
-                submitBtn.textContent = 'Creating Order...';
-                
-                // Use the phone number we already formatted for payment
-                const customerPhone = fullPhoneNumber;
+                const customerPhone = '+' + countryCode + phoneNumber;
                 
                 const comments = document.getElementById('comments').value.trim();
 
@@ -2556,9 +2436,9 @@
                         delivery_latitude: deliveryLatitude ? parseFloat(deliveryLatitude) : null,
                         delivery_longitude: deliveryLongitude ? parseFloat(deliveryLongitude) : null,
                         delivery_display_name: deliveryDisplayName || null,
-                        payment_option: paymentOption, // 'paystack' - now allowed in database constraint
-                        payment_reference: paymentReference, // Store payment reference in dedicated column
-                        payment_status: 'completed', // Payment status
+                        payment_option: paymentOption, // 'mpesa' for in-person orders
+                        payment_reference: mpesaCodeValue, // Store M-Pesa code in payment_reference column
+                        payment_status: 'pending', // Payment status - pending verification for in-person orders
                         comments: finalComments || null
                     })
                     .select()
@@ -2568,7 +2448,7 @@
                     throw new Error(`Failed to create order: ${orderError.message}`);
                 }
 
-                alert(`✓ Payment successful!\n✓ Order submitted successfully!\n\nPayment Reference: ${paymentReference}\n\nYou can freely exit.`);
+                alert(`✓ Order submitted successfully!\n\nM-Pesa Code: ${mpesaCodeValue}\n\nYour order will be processed after payment verification.`);
                 
                 // Reset form
                 document.getElementById('orderForm').reset();
@@ -2603,8 +2483,8 @@
                 selectedColor = null;
                 
                 // Reset payment state
-                paymentCompleted = false;
-                paymentReference = null;
+                // Reset M-Pesa code field
+                document.getElementById('mpesaCode').value = '';
             } catch (error) {
                 console.error('Error submitting order:', error);
                 alert(`❌ Failed to submit order: ${error.message}. Please try again.`);
