@@ -4291,8 +4291,16 @@
                         Open in New Window
                     </button>
                 </div>
-                <div style="width: 100%; height: calc(100vh - 200px); border: 1px solid rgba(65, 70, 63, 0.2); border-radius: 12px; overflow: hidden; background: #fff;">
-                    <iframe src="inperson_order_form.html" style="width: 100%; height: 100%; border: none;" title="In-Person Order Form"></iframe>
+                <div style="width: 100%; height: calc(100vh - 200px); border: 1px solid rgba(65, 70, 63, 0.2); border-radius: 12px; overflow: hidden; background: #fff; position: relative;">
+                    <iframe 
+                        id="inperson-order-iframe"
+                        src="./inperson_order_form.html" 
+                        style="width: 100%; height: 100%; border: none; display: block;" 
+                        title="In-Person Order Form"
+                        allow="fullscreen"
+                        frameborder="0"
+                        scrolling="yes">
+                    </iframe>
                 </div>
             </div>
 
