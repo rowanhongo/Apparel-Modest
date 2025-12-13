@@ -4278,23 +4278,342 @@
                         <h2 style="font-size: 24px; font-weight: 600; color: #41463F; margin-bottom: 4px;">In-House Order Form</h2>
                         <p style="font-size: 14px; color: rgba(65, 70, 63, 0.7); margin: 0;">Fill out the order form for in-house customers</p>
                     </div>
-                    <button class="btn btn-accept" onclick="window.open('inperson_order_form.html', '_blank')" style="display: flex; align-items: center; gap: 8px;">
+                    <button class="btn btn-accept" onclick="window.open('inhouse_order_form.html', '_blank')" style="display: flex; align-items: center; gap: 8px;">
                         <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/>
                         </svg>
                         Open in New Window
                     </button>
                 </div>
-                <div style="width: 100%; height: calc(100vh - 200px); border: 1px solid rgba(65, 70, 63, 0.2); border-radius: 12px; overflow: hidden; background: #fff; position: relative;">
-                    <iframe 
-                        id="inperson-order-iframe"
-                        src="./inhouse_order_form.html" 
-                        style="width: 100%; height: 100%; border: none; display: block;" 
-                        title="In-House Order Form"
-                        allow="fullscreen"
-                        frameborder="0"
-                        scrolling="yes">
-                    </iframe>
+                <div id="inhouse-order-form-container" style="width: 100%; max-height: calc(100vh - 200px); overflow-y: auto; padding: 20px; background: #f5f5f5; border-radius: 12px;">
+                    <style>
+                        /* In-House Order Form Styles */
+                        #inhouse-order-form-container .inhouse-form-wrapper {
+                            max-width: 700px;
+                            margin: 0 auto;
+                            background: rgba(255, 255, 255, 0.95);
+                            border-radius: 16px;
+                            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+                            overflow: hidden;
+                        }
+                        #inhouse-order-form-container .inhouse-form-content {
+                            padding: 30px;
+                        }
+                        #inhouse-order-form-container .inhouse-form-group {
+                            margin-bottom: 24px;
+                        }
+                        #inhouse-order-form-container .inhouse-form-group label {
+                            display: block;
+                            font-size: 14px;
+                            font-weight: 600;
+                            color: #2d3748;
+                            margin-bottom: 8px;
+                        }
+                        #inhouse-order-form-container .inhouse-form-group input,
+                        #inhouse-order-form-container .inhouse-form-group textarea,
+                        #inhouse-order-form-container .inhouse-form-group select {
+                            width: 100%;
+                            padding: 12px 16px;
+                            border: 1.5px solid rgba(0, 0, 0, 0.1);
+                            border-radius: 8px;
+                            font-size: 15px;
+                            font-family: inherit;
+                            background: #fff;
+                            transition: all 0.3s ease;
+                        }
+                        #inhouse-order-form-container .inhouse-form-group input:focus,
+                        #inhouse-order-form-container .inhouse-form-group textarea:focus,
+                        #inhouse-order-form-container .inhouse-form-group select:focus {
+                            outline: none;
+                            border-color: #1B4D3E;
+                            box-shadow: 0 0 0 3px rgba(27, 77, 62, 0.1);
+                        }
+                        #inhouse-order-form-container .inhouse-search-container {
+                            position: relative;
+                        }
+                        #inhouse-order-form-container .inhouse-search-results {
+                            position: absolute;
+                            top: 100%;
+                            left: 0;
+                            right: 0;
+                            background: white;
+                            border: 1.5px solid rgba(0, 0, 0, 0.1);
+                            border-radius: 8px;
+                            margin-top: 4px;
+                            max-height: 300px;
+                            overflow-y: auto;
+                            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+                            z-index: 1000;
+                            display: none;
+                        }
+                        #inhouse-order-form-container .inhouse-search-results.active {
+                            display: block;
+                        }
+                        #inhouse-order-form-container .inhouse-search-result-item {
+                            display: flex;
+                            align-items: center;
+                            padding: 12px 16px;
+                            cursor: pointer;
+                            border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+                        }
+                        #inhouse-order-form-container .inhouse-search-result-item:hover {
+                            background: rgba(27, 77, 62, 0.05);
+                        }
+                        #inhouse-order-form-container .inhouse-result-image {
+                            width: 50px;
+                            height: 50px;
+                            object-fit: cover;
+                            border-radius: 6px;
+                            margin-right: 12px;
+                        }
+                        #inhouse-order-form-container .inhouse-result-name {
+                            font-weight: 600;
+                            color: #2d3748;
+                            margin-bottom: 4px;
+                        }
+                        #inhouse-order-form-container .inhouse-result-price {
+                            font-size: 14px;
+                            color: #1B4D3E;
+                            font-weight: 600;
+                        }
+                        #inhouse-order-form-container .inhouse-selected-product {
+                            display: none;
+                            background: rgba(27, 77, 62, 0.05);
+                            border-radius: 12px;
+                            padding: 16px;
+                            margin-top: 12px;
+                            align-items: center;
+                            border: 1px solid rgba(27, 77, 62, 0.2);
+                            position: relative;
+                        }
+                        #inhouse-order-form-container .inhouse-selected-product.active {
+                            display: flex;
+                        }
+                        #inhouse-order-form-container .inhouse-selected-product-image {
+                            width: 80px;
+                            height: 80px;
+                            object-fit: cover;
+                            border-radius: 8px;
+                            margin-right: 16px;
+                        }
+                        #inhouse-order-form-container .inhouse-color-grid {
+                            display: grid;
+                            grid-template-columns: repeat(auto-fill, minmax(36px, 1fr));
+                            gap: 10px;
+                            margin-top: 12px;
+                        }
+                        #inhouse-order-form-container .inhouse-color-option {
+                            width: 36px;
+                            height: 36px;
+                            border-radius: 50%;
+                            cursor: pointer;
+                            border: 3px solid rgba(0, 0, 0, 0.1);
+                            transition: all 0.2s;
+                        }
+                        #inhouse-order-form-container .inhouse-color-option:hover {
+                            transform: scale(1.1);
+                        }
+                        #inhouse-order-form-container .inhouse-color-option.selected {
+                            border-color: #1B4D3E;
+                            border-width: 4px;
+                        }
+                        #inhouse-order-form-container .inhouse-submit-btn {
+                            width: 100%;
+                            padding: 14px;
+                            background: #1B4D3E;
+                            color: white;
+                            border: none;
+                            border-radius: 8px;
+                            font-size: 16px;
+                            font-weight: 600;
+                            cursor: pointer;
+                            margin-top: 20px;
+                            transition: all 0.3s;
+                        }
+                        #inhouse-order-form-container .inhouse-submit-btn:hover {
+                            background: #1a5a47;
+                            transform: translateY(-2px);
+                        }
+                        #inhouse-order-form-container .inhouse-required {
+                            color: #dc2626;
+                            margin-left: 4px;
+                        }
+                        #inhouse-order-form-container .inhouse-size-chart {
+                            background: #fff;
+                            border-radius: 8px;
+                            padding: 16px;
+                            margin: 16px 0;
+                            border: 1px solid rgba(0, 0, 0, 0.1);
+                        }
+                        #inhouse-order-form-container .inhouse-size-chart-table {
+                            width: 100%;
+                            border-collapse: collapse;
+                            margin-top: 12px;
+                        }
+                        #inhouse-order-form-container .inhouse-size-chart-table th,
+                        #inhouse-order-form-container .inhouse-size-chart-table td {
+                            padding: 8px;
+                            text-align: left;
+                            border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+                            font-size: 13px;
+                        }
+                        #inhouse-order-form-container .inhouse-size-chart-table th {
+                            font-weight: 600;
+                        }
+                        #inhouse-order-form-container #inhouse-dash-mapContainer {
+                            width: 100%;
+                            height: 300px;
+                            border-radius: 8px;
+                            border: 1.5px solid rgba(0, 0, 0, 0.1);
+                            margin-top: 12px;
+                            position: relative;
+                            background: #f0f0f0;
+                        }
+                        #inhouse-order-form-container #inhouse-dash-map {
+                            width: 100%;
+                            height: 100%;
+                        }
+                    </style>
+                    <div class="inhouse-form-wrapper">
+                        <form class="inhouse-form-content" id="inhouse-dash-orderForm">
+                            <div class="inhouse-form-group">
+                                <label for="inhouse-dash-name">Full Name <span class="inhouse-required">*</span></label>
+                                <input type="text" id="inhouse-dash-name" required placeholder="Enter customer full name">
+                            </div>
+
+                            <div class="inhouse-form-group">
+                                <label>WhatsApp Number <span class="inhouse-required">*</span></label>
+                                <div style="display: grid; grid-template-columns: 120px 1fr; gap: 12px;">
+                                    <div>
+                                        <input type="tel" id="inhouse-dash-countryCode" required placeholder="+254" maxlength="4" style="text-align: center;">
+                                        <small style="display: block; margin-top: 4px; font-size: 11px; color: #718096; text-align: center;">Country</small>
+                                    </div>
+                                    <div>
+                                        <input type="tel" id="inhouse-dash-phoneNumber" required placeholder="0712345678" maxlength="15">
+                                        <small style="display: block; margin-top: 4px; font-size: 11px; color: #718096;">Phone</small>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="inhouse-form-group">
+                                <label for="inhouse-dash-productSearch">Search Item <span class="inhouse-required">*</span></label>
+                                <div class="inhouse-search-container">
+                                    <input type="text" id="inhouse-dash-productSearch" placeholder="Type to search items..." autocomplete="off">
+                                    <div class="inhouse-search-results" id="inhouse-dash-searchResults"></div>
+                                </div>
+                                <div class="inhouse-selected-product" id="inhouse-dash-selectedProduct">
+                                    <button type="button" id="inhouse-dash-clearProductBtn" style="position: absolute; top: 8px; right: 8px; background: rgba(255,255,255,0.9); border: 1px solid rgba(0,0,0,0.1); border-radius: 50%; width: 28px; height: 28px; cursor: pointer; display: flex; align-items: center; justify-content: center;">×</button>
+                                    <img src="" alt="" class="inhouse-selected-product-image" id="inhouse-dash-selectedImage">
+                                    <div>
+                                        <h3 id="inhouse-dash-selectedName" style="font-size: 16px; font-weight: 600; color: #2d3748; margin-bottom: 4px;"></h3>
+                                        <p id="inhouse-dash-selectedPrice" style="font-size: 15px; color: #1B4D3E; font-weight: 600;"></p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="inhouse-form-group" id="inhouse-dash-colorOptions" style="display: none;">
+                                <label>Select Color <span class="inhouse-required">*</span></label>
+                                <div id="inhouse-dash-selectedColorDisplay" style="margin-bottom: 12px; padding: 10px; background: rgba(27, 77, 62, 0.05); border-radius: 8px; text-align: center; font-size: 14px; font-weight: 600; color: #2d3748; min-height: 40px; display: flex; align-items: center; justify-content: center;"></div>
+                                <div class="inhouse-color-grid" id="inhouse-dash-colorGrid"></div>
+                            </div>
+
+                            <div class="inhouse-form-group">
+                                <label for="inhouse-dash-bodyMeasurements">Body Measurements <span class="inhouse-required">*</span></label>
+                                <div class="inhouse-size-chart">
+                                    <div style="font-size: 18px; font-weight: 700; margin-bottom: 12px; text-align: center;">Size Chart</div>
+                                    <table class="inhouse-size-chart-table">
+                                        <thead>
+                                            <tr>
+                                                <th>A/M</th>
+                                                <th>SIZE</th>
+                                                <th>BUST</th>
+                                                <th>WAIST</th>
+                                                <th>HIPS</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <tr><td>SS</td><td>6</td><td>32</td><td>25</td><td>36</td></tr>
+                                            <tr><td>S</td><td>8</td><td>34</td><td>27</td><td>39</td></tr>
+                                            <tr><td>SM</td><td>10</td><td>36</td><td>30</td><td>41</td></tr>
+                                            <tr><td>M</td><td>12</td><td>38</td><td>32</td><td>43</td></tr>
+                                            <tr><td>SL</td><td>14</td><td>40</td><td>34</td><td>45</td></tr>
+                                            <tr><td>L</td><td>16</td><td>44</td><td>36</td><td>48</td></tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                                <select id="inhouse-dash-bodyMeasurements" required>
+                                    <option value="">Select your size</option>
+                                    <option value="SS">SS 6, 32, 25, 36</option>
+                                    <option value="S">S 8, 34, 27, 39</option>
+                                    <option value="SM">SM 10, 36, 30, 41</option>
+                                    <option value="M">M 12, 38, 32, 43</option>
+                                    <option value="SL">SL 14, 40, 34, 45</option>
+                                    <option value="L">L 16, 44, 36, 48</option>
+                                    <option value="custom">Custom Size</option>
+                                </select>
+                                <div id="inhouse-dash-customSizeInput" style="display: none; margin-top: 12px;">
+                                    <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px;">
+                                        <div>
+                                            <label style="font-size: 12px; font-weight: 600; color: #4a5568; margin-bottom: 6px; display: block;">Height <span class="inhouse-required">*</span></label>
+                                            <input type="number" id="inhouse-dash-customHeight" min="0" placeholder="e.g., 165" style="width: 100%; padding: 10px; border: 1.5px solid rgba(0,0,0,0.1); border-radius: 6px;">
+                                        </div>
+                                        <div>
+                                            <label style="font-size: 12px; font-weight: 600; color: #4a5568; margin-bottom: 6px; display: block;">Bust <span class="inhouse-required">*</span></label>
+                                            <input type="number" id="inhouse-dash-customBust" min="0" placeholder="e.g., 42" style="width: 100%; padding: 10px; border: 1.5px solid rgba(0,0,0,0.1); border-radius: 6px;">
+                                        </div>
+                                        <div>
+                                            <label style="font-size: 12px; font-weight: 600; color: #4a5568; margin-bottom: 6px; display: block;">High Waist <span class="inhouse-required">*</span></label>
+                                            <input type="number" id="inhouse-dash-customWaist" min="0" placeholder="e.g., 34" style="width: 100%; padding: 10px; border: 1.5px solid rgba(0,0,0,0.1); border-radius: 6px;">
+                                        </div>
+                                        <div>
+                                            <label style="font-size: 12px; font-weight: 600; color: #4a5568; margin-bottom: 6px; display: block;">Hips <span class="inhouse-required">*</span></label>
+                                            <input type="number" id="inhouse-dash-customHips" min="0" placeholder="e.g., 46" style="width: 100%; padding: 10px; border: 1.5px solid rgba(0,0,0,0.1); border-radius: 6px;">
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="inhouse-form-group">
+                                <label for="inhouse-dash-deliveryOption">Preferred Choice of Delivery <span class="inhouse-required">*</span></label>
+                                <select id="inhouse-dash-deliveryOption" required>
+                                    <option value="">Select delivery option</option>
+                                    <option value="uber">Uber</option>
+                                    <option value="pickup-mtaani">Pick Up Mtaani</option>
+                                    <option value="courier">Courier</option>
+                                    <option value="in-store-pickup">In Store Pick Up</option>
+                                </select>
+                                <div id="inhouse-dash-deliveryLocationInput" style="display: none; margin-top: 12px;">
+                                    <div style="margin-bottom: 12px;">
+                                        <label style="display: block; font-size: 13px; font-weight: 600; color: #2d3748; margin-bottom: 6px;">Search for Location in Kenya</label>
+                                        <input type="text" id="inhouse-dash-locationSearch" placeholder="Type a place name..." style="width: 100%; padding: 10px; border: 1.5px solid rgba(0,0,0,0.1); border-radius: 6px; font-size: 14px;">
+                                        <div id="inhouse-dash-locationSuggestions" style="position: absolute; background: white; border: 1px solid rgba(0,0,0,0.1); border-radius: 6px; margin-top: 4px; max-height: 200px; overflow-y: auto; z-index: 1000; display: none; box-shadow: 0 4px 12px rgba(0,0,0,0.1);"></div>
+                                    </div>
+                                    <div id="inhouse-dash-mapContainer">
+                                        <div id="inhouse-dash-map"></div>
+                                    </div>
+                                    <input type="hidden" id="inhouse-dash-deliveryLatitude">
+                                    <input type="hidden" id="inhouse-dash-deliveryLongitude">
+                                    <input type="hidden" id="inhouse-dash-deliveryDisplayName">
+                                </div>
+                                <div id="inhouse-dash-storeLocationMessage" style="display: none; margin-top: 12px; padding: 12px; background: rgba(27, 77, 62, 0.1); border-radius: 8px; color: #2d3748; font-size: 14px;">
+                                    The store is opposite Jevanjee, Muindi Mbingu street, next to delight college.
+                                </div>
+                            </div>
+
+                            <div class="inhouse-form-group">
+                                <label for="inhouse-dash-mpesaCode">M-Pesa Code <span class="inhouse-required">*</span></label>
+                                <input type="text" id="inhouse-dash-mpesaCode" required placeholder="Enter M-Pesa transaction code" maxlength="20">
+                                <small style="display: block; margin-top: 4px; font-size: 12px; color: #718096;">Enter the M-Pesa transaction code received after payment</small>
+                            </div>
+
+                            <div class="inhouse-form-group">
+                                <label for="inhouse-dash-comments">Additional Comments</label>
+                                <textarea id="inhouse-dash-comments" rows="3" placeholder="Any special requests or preferences..."></textarea>
+                            </div>
+
+                            <button type="submit" class="inhouse-submit-btn">Submit Order</button>
+                        </form>
+                    </div>
                 </div>
             </div>
 
@@ -6048,6 +6367,14 @@
                     }
                 }
                 
+                // Initialize in-house order form when inperson-order tab is clicked
+                if (tabId === 'inperson-order') {
+                    if (!window.inhouseFormInitialized) {
+                        window.inhouseFormInitialized = true;
+                        initializeInhouseOrderForm();
+                    }
+                }
+                
                 // Close mobile sidebar after navigation
                 if (window.innerWidth <= 768) {
                     closeMobileSidebar();
@@ -7570,6 +7897,459 @@
         }
 
         // Monitor for dashboard visibility changes to show/hide prompt
+        // Initialize In-House Order Form
+        async function initializeInhouseOrderForm() {
+            const container = document.getElementById('inhouse-order-form-container');
+            if (!container) return;
+
+            // Load Leaflet.js if not already loaded
+            if (typeof L === 'undefined') {
+                const leafletCSS = document.createElement('link');
+                leafletCSS.rel = 'stylesheet';
+                leafletCSS.href = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';
+                leafletCSS.integrity = 'sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=';
+                leafletCSS.crossOrigin = '';
+                document.head.appendChild(leafletCSS);
+
+                const leafletJS = document.createElement('script');
+                leafletJS.src = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js';
+                leafletJS.integrity = 'sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=';
+                leafletJS.crossOrigin = '';
+                await new Promise((resolve) => {
+                    leafletJS.onload = resolve;
+                    document.head.appendChild(leafletJS);
+                });
+            }
+
+            const supabase = getSupabaseClient();
+            if (!supabase) {
+                console.error('Supabase client not available');
+                return;
+            }
+
+            // State variables
+            let inhouseProducts = [];
+            let inhouseSelectedProduct = null;
+            let inhouseSelectedColor = null;
+            let inhouseMap = null;
+            let inhouseMarker = null;
+            let inhouseSelectedLocation = { lat: null, lng: null, displayName: null };
+            let inhouseProductsChannel = null;
+
+            // Get form elements
+            const form = document.getElementById('inhouse-dash-orderForm');
+            const productSearch = document.getElementById('inhouse-dash-productSearch');
+            const searchResults = document.getElementById('inhouse-dash-searchResults');
+            const selectedProductDiv = document.getElementById('inhouse-dash-selectedProduct');
+            const colorOptionsDiv = document.getElementById('inhouse-dash-colorOptions');
+            const colorGrid = document.getElementById('inhouse-dash-colorGrid');
+            const selectedColorDisplay = document.getElementById('inhouse-dash-selectedColorDisplay');
+            const clearProductBtn = document.getElementById('inhouse-dash-clearProductBtn');
+            const bodyMeasurements = document.getElementById('inhouse-dash-bodyMeasurements');
+            const customSizeInput = document.getElementById('inhouse-dash-customSizeInput');
+            const deliveryOption = document.getElementById('inhouse-dash-deliveryOption');
+            const deliveryLocationInput = document.getElementById('inhouse-dash-deliveryLocationInput');
+            const storeLocationMessage = document.getElementById('inhouse-dash-storeLocationMessage');
+            const mapContainer = document.getElementById('inhouse-dash-mapContainer');
+            const mapElement = document.getElementById('inhouse-dash-map');
+
+            // Load products
+            async function loadInhouseProducts() {
+                try {
+                    const { data, error } = await supabase
+                        .from('products')
+                        .select('*')
+                        .order('name', { ascending: true });
+
+                    if (error) throw error;
+
+                    inhouseProducts = (data || []).map(p => ({
+                        id: String(p.id),
+                        name: p.name || 'Unknown',
+                        price: p.price || 0,
+                        image: p.image_url || 'https://via.placeholder.com/400',
+                        colors: (() => {
+                            if (Array.isArray(p.colors)) return p.colors;
+                            if (typeof p.colors === 'string') {
+                                try { return JSON.parse(p.colors); } catch { return p.colors.split(',').map(c => c.trim()); }
+                            }
+                            return ['Black', 'White', 'Red', 'Blue'];
+                        })()
+                    }));
+                } catch (error) {
+                    console.error('Error loading products:', error);
+                    inhouseProducts = [];
+                }
+            }
+
+            // Setup realtime
+            function setupInhouseProductsRealtime() {
+                if (inhouseProductsChannel) supabase.removeChannel(inhouseProductsChannel);
+                inhouseProductsChannel = supabase
+                    .channel('products-changes-inhouse-dash')
+                    .on('postgres_changes', { event: '*', schema: 'public', table: 'products' }, () => {
+                        loadInhouseProducts();
+                    })
+                    .subscribe();
+            }
+
+            // Product search
+            productSearch.addEventListener('input', (e) => {
+                const query = e.target.value.toLowerCase().trim();
+                if (!query) {
+                    searchResults.classList.remove('active');
+                    return;
+                }
+                const filtered = inhouseProducts.filter(p => p.name.toLowerCase().includes(query));
+                if (filtered.length === 0) {
+                    searchResults.innerHTML = '<div style="padding: 16px; text-align: center; color: #718096;">No items found</div>';
+                } else {
+                    searchResults.innerHTML = filtered.map(p => `
+                        <div class="inhouse-search-result-item" data-id="${p.id}">
+                            <img src="${p.image}" alt="${p.name}" class="inhouse-result-image">
+                            <div>
+                                <div class="inhouse-result-name">${p.name}</div>
+                                <div class="inhouse-result-price">KES ${p.price.toLocaleString()}</div>
+                            </div>
+                        </div>
+                    `).join('');
+                }
+                searchResults.classList.add('active');
+            });
+
+            // Product selection
+            searchResults.addEventListener('click', (e) => {
+                const item = e.target.closest('.inhouse-search-result-item');
+                if (item) {
+                    const productId = String(item.dataset.id);
+                    const product = inhouseProducts.find(p => String(p.id) === productId);
+                    if (product) {
+                        inhouseSelectedProduct = product;
+                        productSearch.value = product.name;
+                        searchResults.classList.remove('active');
+                        document.getElementById('inhouse-dash-selectedImage').src = product.image;
+                        document.getElementById('inhouse-dash-selectedName').textContent = product.name;
+                        document.getElementById('inhouse-dash-selectedPrice').textContent = `KES ${product.price.toLocaleString()}`;
+                        selectedProductDiv.classList.add('active');
+                        displayInhouseColors();
+                    }
+                }
+            });
+
+            // Clear product
+            if (clearProductBtn) {
+                clearProductBtn.addEventListener('click', () => {
+                    inhouseSelectedProduct = null;
+                    inhouseSelectedColor = null;
+                    productSearch.value = '';
+                    selectedProductDiv.classList.remove('active');
+                    colorOptionsDiv.style.display = 'none';
+                    selectedColorDisplay.textContent = '';
+                });
+            }
+
+            // Color selection
+            const colorMap = {
+                'Red': '#DC2626', 'Bright orange': '#FF8C00', 'Burnt orange': '#CC5500',
+                'Emerald green': '#50C878', 'Lilac': '#C8A2C8', 'Black': '#000000',
+                'White': '#FFFFFF', 'Fuschia': '#FF1493', 'Sage green': '#87AE73',
+                'Maroon': '#800000', 'Burgundy': '#800020', 'Hot pink': '#FF69B4',
+                'Baby pink': '#FFB6C1', 'Chocolate brown': '#7B3F00', 'Beige': '#F5F5DC',
+                'Mustard yellow': '#FFDB58', 'Royal blue': '#4169E1', 'Navy blue': '#000080',
+                'Blackcurrant': '#2E1837', 'Royal purple': '#7851A9', 'Teal Blue': '#008080'
+            };
+
+            function displayInhouseColors() {
+                colorGrid.innerHTML = Object.keys(colorMap).map(colorName => {
+                    const hex = colorMap[colorName];
+                    const borderStyle = colorName === 'White' ? 'border: 2px solid rgba(0,0,0,0.2);' : '';
+                    return `<div class="inhouse-color-option" data-color="${colorName}" style="background-color: ${hex}; ${borderStyle}" title="${colorName}"></div>`;
+                }).join('');
+                colorOptionsDiv.style.display = 'block';
+                colorGrid.querySelectorAll('.inhouse-color-option').forEach(opt => {
+                    opt.addEventListener('click', () => {
+                        colorGrid.querySelectorAll('.inhouse-color-option').forEach(o => o.classList.remove('selected'));
+                        opt.classList.add('selected');
+                        inhouseSelectedColor = opt.dataset.color;
+                        selectedColorDisplay.textContent = `Selected: ${inhouseSelectedColor}`;
+                    });
+                });
+            }
+
+            // Body measurements
+            bodyMeasurements.addEventListener('change', function() {
+                customSizeInput.style.display = this.value === 'custom' ? 'block' : 'none';
+            });
+
+            // Delivery option
+            deliveryOption.addEventListener('change', function() {
+                if (this.value === 'uber' || this.value === 'pickup-mtaani' || this.value === 'courier') {
+                    deliveryLocationInput.style.display = 'block';
+                    storeLocationMessage.style.display = 'none';
+                    if (typeof L !== 'undefined' && !inhouseMap) {
+                        setTimeout(() => initializeInhouseMap(), 100);
+                    }
+                } else if (this.value === 'in-store-pickup') {
+                    deliveryLocationInput.style.display = 'none';
+                    storeLocationMessage.style.display = 'block';
+                } else {
+                    deliveryLocationInput.style.display = 'none';
+                    storeLocationMessage.style.display = 'none';
+                }
+            });
+
+            // Initialize map
+            function initializeInhouseMap() {
+                if (!mapElement || typeof L === 'undefined') return;
+                try {
+                    const kenyaBounds = L.latLngBounds([-4.7, 33.9], [5.5, 41.9]);
+                    inhouseMap = L.map('inhouse-dash-map', {
+                        zoomControl: true,
+                        maxBounds: kenyaBounds,
+                        maxBoundsViscosity: 1.0
+                    }).setView([-1.2921, 36.8219], 6);
+
+                    const mapboxToken = window.MAPBOX_ACCESS_TOKEN || '';
+                    if (mapboxToken) {
+                        L.tileLayer(`https://api.mapbox.com/styles/v1/mapbox/streets-v12/tiles/{z}/{x}/{y}?access_token=${mapboxToken}`, {
+                            attribution: '© Mapbox © OpenStreetMap',
+                            maxZoom: 22,
+                            tileSize: 512,
+                            zoomOffset: -1
+                        }).addTo(inhouseMap);
+                    } else {
+                        L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+                            attribution: '© OpenStreetMap © CARTO',
+                            maxZoom: 19
+                        }).addTo(inhouseMap);
+                    }
+
+                    inhouseMap.on('click', (e) => {
+                        const lat = e.latlng.lat;
+                        const lng = e.latlng.lng;
+                        fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}`)
+                            .then(r => r.json())
+                            .then(data => {
+                                const displayName = data.display_name || `${lat}, ${lng}`;
+                                setInhouseLocation(lat, lng, displayName);
+                            })
+                            .catch(() => setInhouseLocation(lat, lng, `${lat}, ${lng}`));
+                    });
+                } catch (error) {
+                    console.error('Error initializing map:', error);
+                }
+            }
+
+            function setInhouseLocation(lat, lng, displayName) {
+                if (inhouseMarker) inhouseMap.removeLayer(inhouseMarker);
+                inhouseMarker = L.marker([lat, lng]).addTo(inhouseMap);
+                inhouseMarker.bindPopup(displayName).openPopup();
+                inhouseSelectedLocation = { lat, lng, displayName };
+                document.getElementById('inhouse-dash-deliveryLatitude').value = lat;
+                document.getElementById('inhouse-dash-deliveryLongitude').value = lng;
+                document.getElementById('inhouse-dash-deliveryDisplayName').value = displayName;
+                inhouseMap.setView([lat, lng], 15);
+            }
+
+            // Form submission
+            form.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                if (!inhouseSelectedProduct || !inhouseSelectedColor) {
+                    alert('Please select a product and color');
+                    return;
+                }
+
+                const bodyMeasurementsValue = bodyMeasurements.value;
+                if (!bodyMeasurementsValue) {
+                    alert('Please select body measurements');
+                    return;
+                }
+
+                let measurements = {};
+                if (bodyMeasurementsValue === 'custom') {
+                    const height = document.getElementById('inhouse-dash-customHeight').value;
+                    const bust = document.getElementById('inhouse-dash-customBust').value;
+                    const waist = document.getElementById('inhouse-dash-customWaist').value;
+                    const hips = document.getElementById('inhouse-dash-customHips').value;
+                    if (!height || !bust || !waist || !hips) {
+                        alert('Please fill all custom measurement fields');
+                        return;
+                    }
+                    measurements = { height, bust, high_waist: waist, hips };
+                } else {
+                    const sizeChart = {
+                        'SS': { height: 'N/A', bust: '32', high_waist: '25', hips: '36' },
+                        'S': { height: 'N/A', bust: '34', high_waist: '27', hips: '39' },
+                        'SM': { height: 'N/A', bust: '36', high_waist: '30', hips: '41' },
+                        'M': { height: 'N/A', bust: '38', high_waist: '32', hips: '43' },
+                        'SL': { height: 'N/A', bust: '40', high_waist: '34', hips: '45' },
+                        'L': { height: 'N/A', bust: '44', high_waist: '36', hips: '48' }
+                    };
+                    measurements = sizeChart[bodyMeasurementsValue] || {};
+                }
+
+                const deliveryOptionValue = deliveryOption.value;
+                if ((deliveryOptionValue === 'uber' || deliveryOptionValue === 'pickup-mtaani' || deliveryOptionValue === 'courier') && 
+                    (!inhouseSelectedLocation.lat || !inhouseSelectedLocation.lng)) {
+                    alert('Please select a delivery location on the map');
+                    return;
+                }
+
+                const mpesaCode = document.getElementById('inhouse-dash-mpesaCode').value.trim();
+                if (!mpesaCode || !/^[A-Z0-9]{8,20}$/i.test(mpesaCode)) {
+                    alert('Please enter a valid M-Pesa transaction code (8-20 alphanumeric characters)');
+                    return;
+                }
+
+                const customerName = document.getElementById('inhouse-dash-name').value.trim();
+                let countryCode = document.getElementById('inhouse-dash-countryCode').value.replace(/^\+/, '');
+                let phoneNumber = document.getElementById('inhouse-dash-phoneNumber').value;
+                if (phoneNumber.startsWith('0')) phoneNumber = phoneNumber.substring(1);
+                const customerPhone = '+' + countryCode + phoneNumber;
+                const comments = document.getElementById('inhouse-dash-comments').value.trim();
+
+                const submitBtn = form.querySelector('.inhouse-submit-btn');
+                const originalText = submitBtn.textContent;
+                submitBtn.disabled = true;
+                submitBtn.textContent = 'Creating Order...';
+
+                try {
+                    // Find or create customer
+                    let customerId;
+                    const { data: existingCustomer } = await supabase
+                        .from('customers')
+                        .select('id')
+                        .eq('phone', customerPhone)
+                        .single();
+
+                    if (existingCustomer) {
+                        customerId = existingCustomer.id;
+                        await supabase.from('customers').update({ name: customerName }).eq('id', customerId);
+                    } else {
+                        const { data: newCustomer, error: customerError } = await supabase
+                            .from('customers')
+                            .insert({ name: customerName, phone: customerPhone })
+                            .select()
+                            .single();
+                        if (customerError) throw new Error(`Failed to create customer: ${customerError.message}`);
+                        customerId = newCustomer.id;
+                    }
+
+                    // Create order
+                    let finalComments = comments || '';
+                    if (Object.keys(measurements).length > 0) {
+                        const measurementsText = `Measurements: Height=${measurements.height || 'N/A'}, Bust=${measurements.bust || 'N/A'}, High Waist=${measurements.high_waist || 'N/A'}, Hips=${measurements.hips || 'N/A'}`;
+                        finalComments = finalComments ? `${finalComments}\n${measurementsText}` : measurementsText;
+                    }
+
+                    const orderData = {
+                        customer_id: customerId,
+                        customer_phone: customerPhone,
+                        product_id: inhouseSelectedProduct.id,
+                        status: 'pending',
+                        color: inhouseSelectedColor,
+                        price: inhouseSelectedProduct.price,
+                        delivery_option: deliveryOptionValue,
+                        delivery_location: inhouseSelectedLocation.displayName || null,
+                        delivery_latitude: inhouseSelectedLocation.lat ? parseFloat(inhouseSelectedLocation.lat) : null,
+                        delivery_longitude: inhouseSelectedLocation.lng ? parseFloat(inhouseSelectedLocation.lng) : null,
+                        delivery_display_name: inhouseSelectedLocation.displayName || null,
+                        payment_option: 'inhouse-mpesa', // Mark as in-house order
+                        payment_reference: mpesaCode.toUpperCase(),
+                        payment_status: 'pending',
+                        comments: finalComments || null
+                    };
+
+                    const { error: orderError } = await supabase
+                        .from('orders')
+                        .insert(orderData)
+                        .select()
+                        .single();
+
+                    if (orderError) throw new Error(`Failed to create order: ${orderError.message}`);
+
+                    alert(`✓ Order submitted successfully!\n\nM-Pesa Code: ${mpesaCode.toUpperCase()}\n\nOrder will be processed after payment verification.`);
+                    form.reset();
+                    inhouseSelectedProduct = null;
+                    inhouseSelectedColor = null;
+                    selectedProductDiv.classList.remove('active');
+                    colorOptionsDiv.style.display = 'none';
+                    customSizeInput.style.display = 'none';
+                    deliveryLocationInput.style.display = 'none';
+                    storeLocationMessage.style.display = 'none';
+                    if (inhouseMarker) {
+                        inhouseMap.removeLayer(inhouseMarker);
+                        inhouseMarker = null;
+                    }
+                    inhouseSelectedLocation = { lat: null, lng: null, displayName: null };
+                } catch (error) {
+                    console.error('Error submitting order:', error);
+                    alert(`❌ Failed to submit order: ${error.message}`);
+                } finally {
+                    submitBtn.disabled = false;
+                    submitBtn.textContent = originalText;
+                }
+            });
+
+            // Input validation
+            const countryCodeField = document.getElementById('inhouse-dash-countryCode');
+            const phoneNumberField = document.getElementById('inhouse-dash-phoneNumber');
+            const nameField = document.getElementById('inhouse-dash-name');
+
+            // Country code - auto-add + prefix
+            if (countryCodeField) {
+                countryCodeField.addEventListener('input', function() {
+                    let value = this.value.replace(/[^0-9]/g, '');
+                    if (value && !this.value.startsWith('+')) {
+                        this.value = '+' + value;
+                    } else if (!value) {
+                        this.value = '+';
+                    } else {
+                        this.value = '+' + value;
+                    }
+                });
+                countryCodeField.addEventListener('focus', function() {
+                    if (!this.value) this.value = '+';
+                });
+                if (!countryCodeField.value) countryCodeField.value = '+';
+            }
+
+            // Phone number - only digits
+            if (phoneNumberField) {
+                phoneNumberField.addEventListener('input', function() {
+                    this.value = this.value.replace(/[^0-9]/g, '');
+                });
+            }
+
+            // Name - only letters, spaces, hyphens, apostrophes
+            if (nameField) {
+                nameField.addEventListener('input', function() {
+                    this.value = this.value.replace(/[^a-zA-Z\s\-'\.]/g, '');
+                });
+            }
+
+            // Custom size fields - only numbers
+            ['inhouse-dash-customHeight', 'inhouse-dash-customBust', 'inhouse-dash-customWaist', 'inhouse-dash-customHips'].forEach(id => {
+                const field = document.getElementById(id);
+                if (field) {
+                    field.addEventListener('input', function() {
+                        this.value = this.value.replace(/[^0-9]/g, '');
+                    });
+                }
+            });
+
+            // Initialize
+            await loadInhouseProducts();
+            setupInhouseProductsRealtime();
+
+            // Close search on outside click
+            document.addEventListener('click', (e) => {
+                if (!productSearch.contains(e.target) && !searchResults.contains(e.target)) {
+                    searchResults.classList.remove('active');
+                }
+            });
+        }
+
         const observer = new MutationObserver(() => {
             showInstallPromptImmediately();
         });

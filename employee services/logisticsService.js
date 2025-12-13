@@ -157,6 +157,7 @@ class LogisticsService {
             date: orderDate,
             deliveryOption: order.delivery_option || order.deliveryOption || '',
             paymentOption: order.payment_option || order.paymentOption || '',
+            paymentReference: order.payment_reference || order.paymentReference || '', // Include payment reference
             deliveryLocation: order.delivery_display_name || order.delivery_location || order.deliveryLocation || ''
         };
     }
@@ -288,7 +289,11 @@ class LogisticsService {
             ${order.paymentOption ? `
                 <div class="detail-row">
                     <div class="detail-label">Payment Option:</div>
-                    <div class="detail-value">${this.formatPaymentOption(order.paymentOption)}</div>
+                    <div class="detail-value">${order.paymentOption === 'inhouse-mpesa' && order.paymentReference 
+                        ? `inhouse; mpesa code: ${order.paymentReference}` 
+                        : this.formatPaymentOption(order.paymentOption)}${order.paymentOption === 'mpesa' && order.paymentReference && order.paymentOption !== 'inhouse-mpesa' 
+                        ? ` (Code: ${order.paymentReference})` 
+                        : ''}</div>
                 </div>
             ` : ''}
             <div class="detail-row">
