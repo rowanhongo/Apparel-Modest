@@ -606,10 +606,8 @@ class CatalogueService {
             
             const productId = this.getAttribute('data-product-id');
             if (productId) {
-                // Small delay to ensure UI updates properly on mobile
-                setTimeout(() => {
-                    actionFn(productId);
-                }, 50);
+                // Execute immediately - no delay needed
+                actionFn(productId);
             }
         };
         
@@ -618,19 +616,43 @@ class CatalogueService {
         editButtons.forEach(btn => {
             // Remove any existing listeners by cloning and replacing
             const newBtn = btn.cloneNode(true);
-            btn.parentNode.replaceChild(newBtn, btn);
+            const parent = btn.parentNode;
+            parent.replaceChild(newBtn, btn);
             
-            // Ensure button is properly styled for mobile interaction
+            // Ensure button container and button are properly styled for mobile interaction
+            if (parent && parent.style) {
+                parent.style.position = 'relative';
+                parent.style.zIndex = '100';
+                parent.style.pointerEvents = 'auto';
+            }
+            
             newBtn.style.position = 'relative';
-            newBtn.style.zIndex = '100';
+            newBtn.style.zIndex = '101';
             newBtn.style.pointerEvents = 'auto';
             newBtn.style.touchAction = 'manipulation';
+            newBtn.style.cursor = 'pointer';
+            newBtn.style.webkitTouchCallout = 'none';
+            newBtn.style.webkitUserSelect = 'none';
+            
+            // Remove inline event handlers that might interfere
+            newBtn.removeAttribute('onmouseover');
+            newBtn.removeAttribute('onmouseout');
+            newBtn.removeAttribute('ontouchstart');
+            newBtn.removeAttribute('ontouchend');
             
             // Add touchstart to provide immediate feedback
             newBtn.addEventListener('touchstart', function(e) {
                 e.stopPropagation();
+                e.stopImmediatePropagation();
                 this.style.transform = 'scale(0.95)';
-            }, { passive: true });
+                this.style.background = 'rgba(65, 70, 63, 0.1)';
+                this.style.color = '#41463F';
+            }, { passive: false, capture: true });
+            
+            // Add touchmove to prevent scrolling when touching button
+            newBtn.addEventListener('touchmove', function(e) {
+                e.stopPropagation();
+            }, { passive: false, capture: true });
             
             // Add touchend event (primary for mobile)
             newBtn.addEventListener('touchend', function(e) {
@@ -638,8 +660,10 @@ class CatalogueService {
                 e.stopPropagation();
                 e.stopImmediatePropagation();
                 this.style.transform = '';
+                this.style.background = '';
+                this.style.color = '';
                 handleButtonAction.call(this, e, self.editProduct.bind(self));
-            }, { passive: false });
+            }, { passive: false, capture: true });
             
             // Add click event (for desktop and as fallback)
             newBtn.addEventListener('click', function(e) {
@@ -647,7 +671,7 @@ class CatalogueService {
                 e.stopPropagation();
                 e.stopImmediatePropagation();
                 handleButtonAction.call(this, e, self.editProduct.bind(self));
-            });
+            }, { capture: true });
         });
 
         // Delete buttons
@@ -655,19 +679,43 @@ class CatalogueService {
         deleteButtons.forEach(btn => {
             // Remove any existing listeners by cloning and replacing
             const newBtn = btn.cloneNode(true);
-            btn.parentNode.replaceChild(newBtn, btn);
+            const parent = btn.parentNode;
+            parent.replaceChild(newBtn, btn);
             
-            // Ensure button is properly styled for mobile interaction
+            // Ensure button container and button are properly styled for mobile interaction
+            if (parent && parent.style) {
+                parent.style.position = 'relative';
+                parent.style.zIndex = '100';
+                parent.style.pointerEvents = 'auto';
+            }
+            
             newBtn.style.position = 'relative';
-            newBtn.style.zIndex = '100';
+            newBtn.style.zIndex = '101';
             newBtn.style.pointerEvents = 'auto';
             newBtn.style.touchAction = 'manipulation';
+            newBtn.style.cursor = 'pointer';
+            newBtn.style.webkitTouchCallout = 'none';
+            newBtn.style.webkitUserSelect = 'none';
+            
+            // Remove inline event handlers that might interfere
+            newBtn.removeAttribute('onmouseover');
+            newBtn.removeAttribute('onmouseout');
+            newBtn.removeAttribute('ontouchstart');
+            newBtn.removeAttribute('ontouchend');
             
             // Add touchstart to provide immediate feedback
             newBtn.addEventListener('touchstart', function(e) {
                 e.stopPropagation();
+                e.stopImmediatePropagation();
                 this.style.transform = 'scale(0.95)';
-            }, { passive: true });
+                this.style.background = 'rgba(244, 67, 54, 0.1)';
+                this.style.color = '#F44336';
+            }, { passive: false, capture: true });
+            
+            // Add touchmove to prevent scrolling when touching button
+            newBtn.addEventListener('touchmove', function(e) {
+                e.stopPropagation();
+            }, { passive: false, capture: true });
             
             // Add touchend event (primary for mobile)
             newBtn.addEventListener('touchend', function(e) {
@@ -675,8 +723,10 @@ class CatalogueService {
                 e.stopPropagation();
                 e.stopImmediatePropagation();
                 this.style.transform = '';
+                this.style.background = '';
+                this.style.color = '';
                 handleButtonAction.call(this, e, self.deleteProduct.bind(self));
-            }, { passive: false });
+            }, { passive: false, capture: true });
             
             // Add click event (for desktop and as fallback)
             newBtn.addEventListener('click', function(e) {
@@ -684,7 +734,7 @@ class CatalogueService {
                 e.stopPropagation();
                 e.stopImmediatePropagation();
                 handleButtonAction.call(this, e, self.deleteProduct.bind(self));
-            });
+            }, { capture: true });
         });
     }
 
