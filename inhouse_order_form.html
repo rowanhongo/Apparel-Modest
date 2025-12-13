@@ -1382,7 +1382,7 @@
             }
             searchResults.innerHTML = results.map(product => `
                 <div class="search-result-item" data-id="${product.id}">
-                    <img src="${product.image}" alt="${product.name}" class="result-image">
+                    <img src="${product.image}" alt="${product.name}" class="result-image" onerror="this.src='https://via.placeholder.com/400'">
                     <div class="result-info">
                         <div class="result-name">${product.name}</div>
                         <div class="result-price">KES ${product.price.toLocaleString()}</div>
@@ -1438,7 +1438,16 @@
             'Navy blue': '#000080',
             'Blackcurrant': '#2E1837',
             'Royal purple': '#7851A9',
-            'Teal Blue': '#008080'
+            'Teal Blue': '#008080',
+            'Jungle green': '#29AB87',
+            'Olive green': '#6B8E23',
+            'Lime green': '#32CD32',
+            'Off white': '#FAF9F6',
+            'Cream': '#FFFDD0',
+            'Light brown': '#CD853F',
+            'Peach': '#FFCBA4',
+            'Champagne': '#F7E7CE',
+            'Rose pink': '#FFC0CB'
         };
 
         function displayColorOptions(colors) {
@@ -1453,8 +1462,9 @@
             colorGrid.innerHTML = allColors.map(colorName => {
                 const hexColor = colorMap[colorName];
                 
-                // For white, add a border to make it visible
-                const borderStyle = colorName.toLowerCase() === 'white' 
+                // For white and light colors, add a border to make them visible
+                const lightColors = ['white', 'off white', 'cream', 'champagne'];
+                const borderStyle = lightColors.includes(colorName.toLowerCase()) 
                     ? 'border: 3px solid rgba(0, 0, 0, 0.2);' 
                     : '';
                 
