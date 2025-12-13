@@ -8099,13 +8099,17 @@
                 'Maroon': '#800000', 'Burgundy': '#800020', 'Hot pink': '#FF69B4',
                 'Baby pink': '#FFB6C1', 'Chocolate brown': '#7B3F00', 'Beige': '#F5F5DC',
                 'Mustard yellow': '#FFDB58', 'Royal blue': '#4169E1', 'Navy blue': '#000080',
-                'Blackcurrant': '#2E1837', 'Royal purple': '#7851A9', 'Teal Blue': '#008080'
+                'Blackcurrant': '#2E1837', 'Royal purple': '#7851A9', 'Teal Blue': '#008080',
+                'Jungle green': '#29AB87', 'Olive green': '#6B8E23', 'Lime green': '#32CD32',
+                'Off white': '#FAF9F6', 'Cream': '#FFFDD0', 'Light brown': '#CD853F',
+                'Peach': '#FFCBA4', 'Champagne': '#F7E7CE', 'Rose pink': '#FFC0CB'
             };
 
             function displayInhouseColors() {
                 colorGrid.innerHTML = Object.keys(colorMap).map(colorName => {
                     const hex = colorMap[colorName];
-                    const borderStyle = colorName === 'White' ? 'border: 2px solid rgba(0,0,0,0.2);' : '';
+                    const lightColors = ['White', 'Off white', 'Cream', 'Champagne'];
+                    const borderStyle = lightColors.includes(colorName) ? 'border: 2px solid rgba(0,0,0,0.2);' : '';
                     return `<div class="inhouse-color-option" data-color="${colorName}" style="background-color: ${hex}; ${borderStyle}" title="${colorName}"></div>`;
                 }).join('');
                 colorOptionsDiv.style.display = 'block';
