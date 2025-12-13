@@ -184,6 +184,7 @@
             pointer-events: auto;
             -webkit-overflow-scrolling: touch;
             touch-action: pan-y;
+            will-change: transform;
         }
 
         .search-results.active {
@@ -203,6 +204,8 @@
             touch-action: manipulation;
             -webkit-tap-highlight-color: transparent;
             min-height: 44px;
+            position: relative;
+            z-index: 1;
         }
 
         .search-result-item:hover,
@@ -214,10 +217,18 @@
         .result-image {
             width: 60px;
             height: 60px;
+            min-width: 60px;
+            min-height: 60px;
             object-fit: cover;
             border-radius: 8px;
             margin-right: 14px;
             background: rgba(0, 0, 0, 0.02);
+            display: block;
+            flex-shrink: 0;
+            -webkit-user-drag: none;
+            user-select: none;
+            -webkit-tap-highlight-color: transparent;
+            pointer-events: none;
         }
 
         .result-info {
@@ -1384,10 +1395,15 @@
         const handleProductSelection = function(e) {
             e.preventDefault();
             e.stopPropagation();
+            e.stopImmediatePropagation();
+            
             const item = e.target.closest('.search-result-item');
             if (item) {
                 const productId = String(item.dataset.id); // Keep as string (UUID)
-                selectProduct(productId);
+                // Small delay to ensure UI updates properly on mobile
+                setTimeout(() => {
+                    selectProduct(productId);
+                }, 50);
             }
         };
 
@@ -1396,8 +1412,20 @@
         
         // Add touch event support for mobile devices
         searchResults.addEventListener('touchend', function(e) {
+            // Reset background on all items
+            searchResults.querySelectorAll('.search-result-item').forEach(item => {
+                item.style.background = '';
+            });
             handleProductSelection(e);
         }, { passive: false });
+        
+        // Also add touchstart for better mobile responsiveness
+        searchResults.addEventListener('touchstart', function(e) {
+            const item = e.target.closest('.search-result-item');
+            if (item) {
+                item.style.background = 'linear-gradient(90deg, rgba(246, 211, 101, 0.15) 0%, rgba(253, 160, 133, 0.15) 100%)';
+            }
+        }, { passive: true });
 
         // Function to clear selected product
         function clearSelectedProduct() {
@@ -1454,15 +1482,28 @@
                 searchResults.classList.add('active');
                 return;
             }
-            searchResults.innerHTML = results.map(product => `
+            searchResults.innerHTML = results.map(product => {
+                // Ensure image URL is valid and add loading/error handling
+                const imageUrl = product.image || 'https://via.placeholder.com/400';
+                const placeholderUrl = 'data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' width=\'60\' height=\'60\'%3E%3Crect fill=\'%23f0f0f0\' width=\'60\' height=\'60\'/%3E%3Ctext fill=\'%23999\' x=\'50%25\' y=\'50%25\' text-anchor=\'middle\' dy=\'.3em\' font-size=\'10\'%3ENo Image%3C/text%3E%3C/svg%3E';
+                
+                return `
                 <div class="search-result-item" data-id="${product.id}">
-                    <img src="${product.image}" alt="${product.name}" class="result-image" onerror="this.src='https://via.placeholder.com/400'">
+                    <img src="${imageUrl}" 
+                         alt="${product.name}" 
+                         class="result-image" 
+                         loading="lazy"
+                         decoding="async"
+                         onerror="this.onerror=null; this.src='${placeholderUrl}';"
+                         onload="this.style.opacity='1';"
+                         style="opacity: 0; transition: opacity 0.3s ease;">
                     <div class="result-info">
                         <div class="result-name">${product.name}</div>
                         <div class="result-price">KES ${product.price.toLocaleString()}</div>
                     </div>
                 </div>
-            `).join('');
+            `;
+            }).join('');
             searchResults.classList.add('active');
         }
 
