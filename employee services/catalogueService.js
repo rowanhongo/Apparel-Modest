@@ -594,6 +594,9 @@ class CatalogueService {
      * Attach event handlers to edit and delete buttons
      */
     attachProductActionHandlers() {
+        // Store reference to this for event handlers
+        const self = this;
+        
         // Edit buttons
         const editButtons = this.grid.querySelectorAll('.edit-product-btn');
         editButtons.forEach(btn => {
@@ -601,12 +604,12 @@ class CatalogueService {
             const newBtn = btn.cloneNode(true);
             btn.parentNode.replaceChild(newBtn, btn);
             
-            newBtn.addEventListener('click', (e) => {
+            newBtn.addEventListener('click', function(e) {
                 e.preventDefault();
                 e.stopPropagation();
                 const productId = newBtn.getAttribute('data-product-id');
                 if (productId) {
-                    this.editProduct(productId);
+                    self.editProduct(productId);
                 }
             });
         });
@@ -618,12 +621,12 @@ class CatalogueService {
             const newBtn = btn.cloneNode(true);
             btn.parentNode.replaceChild(newBtn, btn);
             
-            newBtn.addEventListener('click', (e) => {
+            newBtn.addEventListener('click', function(e) {
                 e.preventDefault();
                 e.stopPropagation();
                 const productId = newBtn.getAttribute('data-product-id');
                 if (productId) {
-                    this.deleteProduct(productId);
+                    self.deleteProduct(productId);
                 }
             });
         });
