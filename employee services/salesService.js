@@ -116,28 +116,58 @@ class SalesService {
         let comments = order.comments || order.notes || '';
         if (comments && comments.includes('Measurements:')) {
             // Parse measurements from comments string
-            // Format: "Measurements: Size=SS 6, Bust=32, Waist=25, Hips=36"
-            // Or: "some text\nMeasurements: Size=SS 6, Bust=32, Waist=25, Hips=36"
-            // Try multiple regex patterns to handle different formats
-            // Pattern 1: Standard format with proper spacing
-            let measurementsMatch = comments.match(/Measurements:\s*Size=([^,\n\r]+?),\s*Bust=([^,\n\r]+?),\s*Waist=([^,\n\r]+?),\s*Hips=([^\n\r]+?)(?:\n|$)/i);
+            // Format 1 (standard): "Measurements: Size=SS 6, Bust=32, Waist=25, Hips=36"
+            // Format 2 (in-house): "Measurements: Height=N/A, Bust=38, High Waist=32, Hips=43"
+            // Or: "some text\nMeasurements: ..."
             
-            // Pattern 2: More flexible, handles any spacing
-            if (!measurementsMatch) {
-                measurementsMatch = comments.match(/Measurements:.*?Size=([^,\n\r]+?)[,\s]+Bust=([^,\n\r]+?)[,\s]+Waist=([^,\n\r]+?)[,\s]+Hips=([^\n\r]+?)(?:\n|$)/i);
-            }
+            // Pattern 1: In-house format with Height and High Waist (handle any text before "Measurements:")
+            let measurementsMatch = comments.match(/Measurements:\s*Height=([^,\n\r]+?),\s*Bust=([^,\n\r]+?),\s*High\s+Waist=([^,\n\r]+?),\s*Hips=([^\n\r]+?)(?:\n|$)/i);
             
-            // Pattern 3: Very flexible, just find the values
-            if (!measurementsMatch) {
-                measurementsMatch = comments.match(/Size=([^,\n\r]+?)[,\s]+Bust=([^,\n\r]+?)[,\s]+Waist=([^,\n\r]+?)[,\s]+Hips=([^\n\r]+?)(?:\n|$)/i);
+            if (measurementsMatch && measurementsMatch.length >= 5) {
+                // In-house format: Height, Bust, High Waist, Hips
+                measurements.size = measurementsMatch[1].trim(); // Use Height as size (or could be N/A)
+                measurements.bust = measurementsMatch[2].trim();
+                measurements.waist = measurementsMatch[3].trim(); // High Waist becomes waist
+                measurements.hips = measurementsMatch[4].trim();
+            } else {
+                // Pattern 2: Standard format with Size and Waist
+                measurementsMatch = comments.match(/Measurements:\s*Size=([^,\n\r]+?),\s*Bust=([^,\n\r]+?),\s*Waist=([^,\n\r]+?),\s*Hips=([^\n\r]+?)(?:\n|$)/i);
+                
+                // Pattern 3: More flexible, handles any spacing
+                if (!measurementsMatch) {
+                    measurementsMatch = comments.match(/Measurements:.*?Size=([^,\n\r]+?)[,\s]+Bust=([^,\n\r]+?)[,\s]+Waist=([^,\n\r]+?)[,\s]+Hips=([^\n\r]+?)(?:\n|$)/i);
+                }
+                
+                // Pattern 4: Very flexible, just find the values (standard format)
+                if (!measurementsMatch) {
+                    measurementsMatch = comments.match(/Size=([^,\n\r]+?)[,\s]+Bust=([^,\n\r]+?)[,\s]+Waist=([^,\n\r]+?)[,\s]+Hips=([^\n\r]+?)(?:\n|$)/i);
+                }
+                
+                // Pattern 5: Very flexible, just find the values (in-house format)
+                if (!measurementsMatch) {
+                    measurementsMatch = comments.match(/Height=([^,\n\r]+?)[,\s]+Bust=([^,\n\r]+?)[,\s]+High\s+Waist=([^,\n\r]+?)[,\s]+Hips=([^\n\r]+?)(?:\n|$)/i);
+                }
+                
+                if (measurementsMatch && measurementsMatch.length >= 5) {
+                    // Check if it's in-house format (has Height) or standard format (has Size)
+                    const firstMatch = measurementsMatch[0];
+                    if (firstMatch.includes('Height=')) {
+                        // In-house format
+                        measurements.size = measurementsMatch[1].trim();
+                        measurements.bust = measurementsMatch[2].trim();
+                        measurements.waist = measurementsMatch[3].trim();
+                        measurements.hips = measurementsMatch[4].trim();
+                    } else {
+                        // Standard format
+                        measurements.size = measurementsMatch[1].trim();
+                        measurements.bust = measurementsMatch[2].trim();
+                        measurements.waist = measurementsMatch[3].trim();
+                        measurements.hips = measurementsMatch[4].trim();
+                    }
+                }
             }
             
             if (measurementsMatch && measurementsMatch.length >= 5) {
-                measurements.size = measurementsMatch[1].trim();
-                measurements.bust = measurementsMatch[2].trim();
-                measurements.waist = measurementsMatch[3].trim();
-                measurements.hips = measurementsMatch[4].trim();
-                
                 // Remove measurements line from comments (handle both single line and multi-line)
                 comments = comments.replace(/\n?Measurements:.*$/m, '').trim();
                 // Also remove if it's at the end of a line
