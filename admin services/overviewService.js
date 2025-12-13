@@ -15,6 +15,7 @@ class OverviewService {
             ordersToday: 0
         };
         this.supabase = null;
+        this.ordersChannel = null; // Realtime subscription channel
     }
 
     /**
@@ -30,6 +31,9 @@ class OverviewService {
 
         // Load all data
         await this.loadOverviewData();
+        
+        // Set up realtime subscription for orders
+        this.setupOrdersRealtime();
     }
 
     /**
@@ -370,6 +374,55 @@ class OverviewService {
                 labels: [],
                 values: []
             };
+        }
+    }
+
+    /**
+     * Set up realtime subscription for orders table (all statuses for admin overview)
+     */
+    setupOrdersRealtime() {
+        if (!this.supabase) {
+            console.warn('Supabase client not available for realtime subscription');
+            return;
+        }
+
+        // Clean up existing subscription if any
+        if (this.ordersChannel) {
+            this.supabase.removeChannel(this.ordersChannel);
+        }
+
+        // Create new channel for orders table (all statuses)
+        this.ordersChannel = this.supabase
+            .channel('orders-all-changes-overview')
+            .on(
+                'postgres_changes',
+                {
+                    event: '*', // Listen to all events (INSERT, UPDATE, DELETE)
+                    schema: 'public',
+                    table: 'orders'
+                },
+                (payload) => {
+                    console.log('Orders realtime event (admin overview):', payload.eventType, payload);
+                    // Reload overview data when any order change occurs
+                    this.loadOverviewData();
+                }
+            )
+            .subscribe((status) => {
+                if (status === 'SUBSCRIBED') {
+                    console.log('✅ Subscribed to orders realtime changes (admin overview)');
+                } else if (status === 'CHANNEL_ERROR') {
+                    console.error('❌ Error subscribing to orders realtime (admin overview)');
+                }
+            });
+    }
+
+    /**
+     * Clean up realtime subscriptions
+     */
+    cleanup() {
+        if (this.ordersChannel && this.supabase) {
+            this.supabase.removeChannel(this.ordersChannel);
+            this.ordersChannel = null;
         }
     }
 

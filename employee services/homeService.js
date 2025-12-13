@@ -12,6 +12,7 @@ class HomeService {
             afterSales: 0
         };
         this.supabase = null;
+        this.ordersChannel = null; // Realtime subscription channel
     }
 
     /**
@@ -27,6 +28,9 @@ class HomeService {
 
         // Load data from database
         await this.loadDashboardData();
+        
+        // Set up realtime subscription for orders
+        this.setupOrdersRealtime();
     }
 
     /**
@@ -118,6 +122,55 @@ class HomeService {
         } catch (error) {
             console.error('Error in fetchStats:', error);
             return { sales: 0, production: 0, logistics: 0, afterSales: 0 };
+        }
+    }
+
+    /**
+     * Set up realtime subscription for orders table (all statuses for dashboard stats)
+     */
+    setupOrdersRealtime() {
+        if (!this.supabase) {
+            console.warn('Supabase client not available for realtime subscription');
+            return;
+        }
+
+        // Clean up existing subscription if any
+        if (this.ordersChannel) {
+            this.supabase.removeChannel(this.ordersChannel);
+        }
+
+        // Create new channel for orders table (all statuses)
+        this.ordersChannel = this.supabase
+            .channel('orders-all-changes-dashboard')
+            .on(
+                'postgres_changes',
+                {
+                    event: '*', // Listen to all events (INSERT, UPDATE, DELETE)
+                    schema: 'public',
+                    table: 'orders'
+                },
+                (payload) => {
+                    console.log('Orders realtime event (dashboard):', payload.eventType, payload);
+                    // Reload dashboard data when any order change occurs
+                    this.loadDashboardData();
+                }
+            )
+            .subscribe((status) => {
+                if (status === 'SUBSCRIBED') {
+                    console.log('✅ Subscribed to orders realtime changes (dashboard)');
+                } else if (status === 'CHANNEL_ERROR') {
+                    console.error('❌ Error subscribing to orders realtime (dashboard)');
+                }
+            });
+    }
+
+    /**
+     * Clean up realtime subscriptions
+     */
+    cleanup() {
+        if (this.ordersChannel && this.supabase) {
+            this.supabase.removeChannel(this.ordersChannel);
+            this.ordersChannel = null;
         }
     }
 

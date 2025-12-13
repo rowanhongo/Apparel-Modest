@@ -1316,6 +1316,44 @@
             }
         }
 
+        // Set up realtime subscription for products table
+        let productsChannel = null;
+        function setupProductsRealtime() {
+            if (!supabaseClient) {
+                console.warn('Supabase client not available for realtime subscription');
+                return;
+            }
+
+            // Clean up existing subscription if any
+            if (productsChannel) {
+                supabaseClient.removeChannel(productsChannel);
+            }
+
+            // Create new channel for products table
+            productsChannel = supabaseClient
+                .channel('products-changes-fashion')
+                .on(
+                    'postgres_changes',
+                    {
+                        event: '*', // Listen to all events (INSERT, UPDATE, DELETE)
+                        schema: 'public',
+                        table: 'products'
+                    },
+                    (payload) => {
+                        console.log('Products realtime event (fashion form):', payload.eventType);
+                        // Reload products when any change occurs
+                        loadProductsFromDatabase();
+                    }
+                )
+                .subscribe((status) => {
+                    if (status === 'SUBSCRIBED') {
+                        console.log('✅ Subscribed to products realtime changes (fashion form)');
+                    } else if (status === 'CHANNEL_ERROR') {
+                        console.error('❌ Error subscribing to products realtime (fashion form)');
+                    }
+                });
+        }
+
         // Use event delegation on searchResults container (set up once)
         searchResults.addEventListener('click', (e) => {
             const item = e.target.closest('.search-result-item');
@@ -1353,6 +1391,8 @@
             // Wait for Supabase library and environment variables to be fully loaded
             await waitForSupabase(() => {
                 initializeSupabase();
+                // Set up realtime subscription for products
+                setupProductsRealtime();
             });
         });
 

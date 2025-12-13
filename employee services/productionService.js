@@ -9,6 +9,7 @@ class ProductionService {
         this.container = null;
         this.onOrderUpdateCallback = null;
         this.supabase = null;
+        this.ordersChannel = null; // Realtime subscription channel
     }
 
     /**
@@ -50,6 +51,9 @@ class ProductionService {
 
         // Load orders from database
         await this.loadOrdersFromDatabase();
+        
+        // Set up realtime subscription for orders
+        this.setupOrdersRealtime();
     }
 
     /**
@@ -398,6 +402,56 @@ class ProductionService {
             'apple-pay': 'Apple Pay'
         };
         return options[option] || option;
+    }
+
+    /**
+     * Set up realtime subscription for orders table (in_progress status)
+     */
+    setupOrdersRealtime() {
+        if (!this.supabase) {
+            console.warn('Supabase client not available for realtime subscription');
+            return;
+        }
+
+        // Clean up existing subscription if any
+        if (this.ordersChannel) {
+            this.supabase.removeChannel(this.ordersChannel);
+        }
+
+        // Create new channel for orders table with status 'in_progress'
+        this.ordersChannel = this.supabase
+            .channel('orders-in-progress-changes')
+            .on(
+                'postgres_changes',
+                {
+                    event: '*', // Listen to all events (INSERT, UPDATE, DELETE)
+                    schema: 'public',
+                    table: 'orders',
+                    filter: 'status=eq.in_progress' // Only listen to in_progress orders
+                },
+                (payload) => {
+                    console.log('Orders realtime event (production):', payload.eventType, payload);
+                    // Reload orders when any change occurs
+                    this.loadOrdersFromDatabase();
+                }
+            )
+            .subscribe((status) => {
+                if (status === 'SUBSCRIBED') {
+                    console.log('✅ Subscribed to orders realtime changes (production - in_progress)');
+                } else if (status === 'CHANNEL_ERROR') {
+                    console.error('❌ Error subscribing to orders realtime (production)');
+                }
+            });
+    }
+
+    /**
+     * Clean up realtime subscriptions
+     */
+    cleanup() {
+        if (this.ordersChannel && this.supabase) {
+            this.supabase.removeChannel(this.ordersChannel);
+            this.ordersChannel = null;
+        }
     }
 
     /**

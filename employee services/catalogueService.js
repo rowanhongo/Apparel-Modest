@@ -17,6 +17,7 @@ class CatalogueService {
         this.uploadText = null;
         this.supabase = null;
         this.currentImageFile = null; // Store file for Cloudinary upload
+        this.productsChannel = null; // Realtime subscription channel
     }
 
     /**
@@ -41,6 +42,9 @@ class CatalogueService {
 
         // Load products from database
         await this.loadProductsFromDatabase();
+        
+        // Set up realtime subscription for products
+        this.setupProductsRealtime();
     }
 
 
@@ -207,7 +211,7 @@ class CatalogueService {
     async handleFormSubmit() {
         const name = document.getElementById('product-name')?.value.trim();
         const category = document.getElementById('product-category')?.value;
-        const description = document.getElementById('product-description')?.value.trim();
+        const description = null; // Description field removed - always set to null
         const tags = document.getElementById('product-tags')?.value.trim();
         const stock = parseInt(document.getElementById('product-stock')?.value) || 0;
         const price = parseFloat(document.getElementById('product-price')?.value) || 0;
@@ -380,7 +384,7 @@ class CatalogueService {
         this.editingProductId = idString;
         document.getElementById('product-name').value = product.name || '';
         document.getElementById('product-category').value = product.category || '';
-        document.getElementById('product-description').value = product.description || '';
+        // Description field removed - no longer needed
         document.getElementById('product-tags').value = product.tags || '';
         document.getElementById('product-stock').value = product.stock || 0;
         document.getElementById('product-price').value = product.price || 0;
@@ -412,13 +416,65 @@ class CatalogueService {
         }
 
         try {
+            // First, check if there are any orders referencing this product
+            const { data: orders, error: ordersError } = await this.supabase
+                .from('orders')
+                .select('id, status')
+                .eq('product_id', idString)
+                .limit(1);
+
+            if (ordersError) {
+                console.error('Error checking orders:', ordersError);
+            }
+
+            if (orders && orders.length > 0) {
+                // Count total orders for this product
+                const { count } = await this.supabase
+                    .from('orders')
+                    .select('*', { count: 'exact', head: true })
+                    .eq('product_id', idString);
+
+                const orderCount = count || orders.length;
+                alert(
+                    `❌ Cannot delete this product!\n\n` +
+                    `This product has ${orderCount} order(s) associated with it. ` +
+                    `Deleting it would violate database integrity.\n\n` +
+                    `Options:\n` +
+                    `1. Keep the product (recommended) - preserves order history\n` +
+                    `2. Update database constraint in Supabase to allow deletion\n\n` +
+                    `To allow deletion, you need to update the foreign key constraint in Supabase:\n` +
+                    `Go to Supabase Dashboard > Table Editor > orders table > Foreign Keys > ` +
+                    `Edit "orders_product_id_fkey" and change "On delete" to "CASCADE" or "SET NULL"`
+                );
+                return;
+            }
+
+            // No orders found, safe to delete
             const { error } = await this.supabase
                 .from('products')
                 .delete()
                 .eq('id', idString);
 
             if (error) {
-                throw error;
+                // Check if it's a foreign key constraint error
+                if (error.message && error.message.includes('foreign key constraint')) {
+                    alert(
+                        `❌ Cannot delete this product!\n\n` +
+                        `This product is referenced by existing orders. ` +
+                        `To allow deletion, update the foreign key constraint in Supabase:\n\n` +
+                        `1. Go to Supabase Dashboard\n` +
+                        `2. Navigate to Table Editor > orders table\n` +
+                        `3. Click on Foreign Keys tab\n` +
+                        `4. Find "orders_product_id_fkey"\n` +
+                        `5. Edit and change "On delete" action to:\n` +
+                        `   - "CASCADE" (deletes orders when product is deleted)\n` +
+                        `   - "SET NULL" (sets product_id to null when product is deleted)\n\n` +
+                        `⚠️ Warning: CASCADE will delete all orders for this product!`
+                    );
+                } else {
+                    throw error;
+                }
+                return;
             }
 
             // Remove from local products array
@@ -571,6 +627,56 @@ class CatalogueService {
                 }
             });
         });
+    }
+
+    /**
+     * Set up realtime subscription for products table
+     */
+    setupProductsRealtime() {
+        if (!this.supabase) {
+            console.warn('Supabase client not available for realtime subscription');
+            return;
+        }
+
+        // Clean up existing subscription if any
+        if (this.productsChannel) {
+            this.supabase.removeChannel(this.productsChannel);
+        }
+
+        // Create new channel for products table
+        this.productsChannel = this.supabase
+            .channel('products-changes')
+            .on(
+                'postgres_changes',
+                {
+                    event: '*', // Listen to all events (INSERT, UPDATE, DELETE)
+                    schema: 'public',
+                    table: 'products'
+                },
+                (payload) => {
+                    console.log('Products realtime event:', payload.eventType, payload);
+                    
+                    // Reload products when any change occurs
+                    this.loadProductsFromDatabase();
+                }
+            )
+            .subscribe((status) => {
+                if (status === 'SUBSCRIBED') {
+                    console.log('✅ Subscribed to products realtime changes');
+                } else if (status === 'CHANNEL_ERROR') {
+                    console.error('❌ Error subscribing to products realtime');
+                }
+            });
+    }
+
+    /**
+     * Clean up realtime subscriptions
+     */
+    cleanup() {
+        if (this.productsChannel && this.supabase) {
+            this.supabase.removeChannel(this.productsChannel);
+            this.productsChannel = null;
+        }
     }
 
     /**

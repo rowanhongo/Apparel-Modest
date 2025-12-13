@@ -9,6 +9,7 @@ class AfterSalesService {
         this.filteredOrders = [];
         this.tableBody = null;
         this.supabase = null;
+        this.ordersChannel = null; // Realtime subscription channel
         this.filters = {
             date: '',
             item: '',
@@ -39,6 +40,9 @@ class AfterSalesService {
         
         // Populate filter dropdowns with actual data
         this.populateFilterDropdowns();
+        
+        // Set up realtime subscription for orders
+        this.setupOrdersRealtime();
     }
 
     /**
@@ -317,6 +321,56 @@ class AfterSalesService {
      */
     getFilters() {
         return { ...this.filters };
+    }
+
+    /**
+     * Set up realtime subscription for orders table (completed status)
+     */
+    setupOrdersRealtime() {
+        if (!this.supabase) {
+            console.warn('Supabase client not available for realtime subscription');
+            return;
+        }
+
+        // Clean up existing subscription if any
+        if (this.ordersChannel) {
+            this.supabase.removeChannel(this.ordersChannel);
+        }
+
+        // Create new channel for orders table with status 'completed'
+        this.ordersChannel = this.supabase
+            .channel('orders-completed-changes')
+            .on(
+                'postgres_changes',
+                {
+                    event: '*', // Listen to all events (INSERT, UPDATE, DELETE)
+                    schema: 'public',
+                    table: 'orders',
+                    filter: 'status=eq.completed' // Only listen to completed orders
+                },
+                (payload) => {
+                    console.log('Orders realtime event (after sales):', payload.eventType, payload);
+                    // Reload orders when any change occurs
+                    this.loadOrdersFromDatabase();
+                }
+            )
+            .subscribe((status) => {
+                if (status === 'SUBSCRIBED') {
+                    console.log('✅ Subscribed to orders realtime changes (after sales - completed)');
+                } else if (status === 'CHANNEL_ERROR') {
+                    console.error('❌ Error subscribing to orders realtime (after sales)');
+                }
+            });
+    }
+
+    /**
+     * Clean up realtime subscriptions
+     */
+    cleanup() {
+        if (this.ordersChannel && this.supabase) {
+            this.supabase.removeChannel(this.ordersChannel);
+            this.ordersChannel = null;
+        }
     }
 }
 
