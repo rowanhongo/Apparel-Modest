@@ -289,11 +289,11 @@ class LogisticsService {
             ${order.paymentOption ? `
                 <div class="detail-row">
                     <div class="detail-label">Payment Option:</div>
-                    <div class="detail-value">${order.paymentOption === 'inhouse-mpesa' && order.paymentReference 
-                        ? `inhouse; mpesa code: ${order.paymentReference}` 
-                        : this.formatPaymentOption(order.paymentOption)}${order.paymentOption === 'mpesa' && order.paymentReference && order.paymentOption !== 'inhouse-mpesa' 
-                        ? ` (Code: ${order.paymentReference})` 
-                        : ''}</div>
+                    <div class="detail-value">${order.paymentOption === 'mpesa' && order.paymentReference && order.paymentReference.startsWith('INHOUSE-')
+                        ? `inhouse; mpesa code: ${order.paymentReference.replace('INHOUSE-', '')}` 
+                        : order.paymentOption === 'mpesa' && order.paymentReference
+                        ? `${this.formatPaymentOption(order.paymentOption)} (Code: ${order.paymentReference})`
+                        : this.formatPaymentOption(order.paymentOption)}</div>
                 </div>
             ` : ''}
             <div class="detail-row">
