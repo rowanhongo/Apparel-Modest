@@ -565,13 +565,13 @@ class CatalogueService {
                             ${statusDisplay}
                         </span>
                         <div style="display: flex; gap: 8px;">
-                            <button class="edit-product-btn" data-product-id="${productId}" style="background: transparent; border: none; cursor: pointer; padding: 4px; color: rgba(65, 70, 63, 0.7); transition: all 0.2s; border-radius: 4px;" title="Edit Product" onmouseover="this.style.background='rgba(65, 70, 63, 0.1)'; this.style.color='#41463F';" onmouseout="this.style.background='transparent'; this.style.color='rgba(65, 70, 63, 0.7)';">
-                                <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <button class="edit-product-btn" data-product-id="${productId}" style="background: transparent; border: none; cursor: pointer; padding: 12px; min-width: 44px; min-height: 44px; color: rgba(65, 70, 63, 0.7); transition: all 0.2s; border-radius: 4px; touch-action: manipulation; user-select: none; -webkit-tap-highlight-color: transparent; display: flex; align-items: center; justify-content: center; position: relative; z-index: 10;" title="Edit Product" onmouseover="this.style.background='rgba(65, 70, 63, 0.1)'; this.style.color='#41463F';" onmouseout="this.style.background='transparent'; this.style.color='rgba(65, 70, 63, 0.7)';" ontouchstart="this.style.background='rgba(65, 70, 63, 0.1)'; this.style.color='#41463F';" ontouchend="this.style.background='transparent'; this.style.color='rgba(65, 70, 63, 0.7)';">
+                                <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="pointer-events: none;">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
                                 </svg>
                             </button>
-                            <button class="delete-product-btn" data-product-id="${productId}" style="background: transparent; border: none; cursor: pointer; padding: 4px; color: rgba(244, 67, 54, 0.7); transition: all 0.2s; border-radius: 4px;" title="Delete Product" onmouseover="this.style.background='rgba(244, 67, 54, 0.1)'; this.style.color='#F44336';" onmouseout="this.style.background='transparent'; this.style.color='rgba(244, 67, 54, 0.7)';">
-                                <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <button class="delete-product-btn" data-product-id="${productId}" style="background: transparent; border: none; cursor: pointer; padding: 12px; min-width: 44px; min-height: 44px; color: rgba(244, 67, 54, 0.7); transition: all 0.2s; border-radius: 4px; touch-action: manipulation; user-select: none; -webkit-tap-highlight-color: transparent; display: flex; align-items: center; justify-content: center; position: relative; z-index: 10;" title="Delete Product" onmouseover="this.style.background='rgba(244, 67, 54, 0.1)'; this.style.color='#F44336';" onmouseout="this.style.background='transparent'; this.style.color='rgba(244, 67, 54, 0.7)';" ontouchstart="this.style.background='rgba(244, 67, 54, 0.1)'; this.style.color='#F44336';" ontouchend="this.style.background='transparent'; this.style.color='rgba(244, 67, 54, 0.7)';">
+                                <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="pointer-events: none;">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
                                 </svg>
                             </button>
@@ -597,6 +597,16 @@ class CatalogueService {
         // Store reference to this for event handlers
         const self = this;
         
+        // Helper function to handle button action (works for both click and touch)
+        const handleButtonAction = function(e, actionFn) {
+            e.preventDefault();
+            e.stopPropagation();
+            const productId = this.getAttribute('data-product-id');
+            if (productId) {
+                actionFn(productId);
+            }
+        };
+        
         // Edit buttons
         const editButtons = this.grid.querySelectorAll('.edit-product-btn');
         editButtons.forEach(btn => {
@@ -604,14 +614,15 @@ class CatalogueService {
             const newBtn = btn.cloneNode(true);
             btn.parentNode.replaceChild(newBtn, btn);
             
+            // Add click event (for desktop)
             newBtn.addEventListener('click', function(e) {
-                e.preventDefault();
-                e.stopPropagation();
-                const productId = newBtn.getAttribute('data-product-id');
-                if (productId) {
-                    self.editProduct(productId);
-                }
+                handleButtonAction.call(this, e, self.editProduct.bind(self));
             });
+            
+            // Add touchend event (for mobile) - more reliable than click on mobile
+            newBtn.addEventListener('touchend', function(e) {
+                handleButtonAction.call(this, e, self.editProduct.bind(self));
+            }, { passive: false });
         });
 
         // Delete buttons
@@ -621,14 +632,15 @@ class CatalogueService {
             const newBtn = btn.cloneNode(true);
             btn.parentNode.replaceChild(newBtn, btn);
             
+            // Add click event (for desktop)
             newBtn.addEventListener('click', function(e) {
-                e.preventDefault();
-                e.stopPropagation();
-                const productId = newBtn.getAttribute('data-product-id');
-                if (productId) {
-                    self.deleteProduct(productId);
-                }
+                handleButtonAction.call(this, e, self.deleteProduct.bind(self));
             });
+            
+            // Add touchend event (for mobile) - more reliable than click on mobile
+            newBtn.addEventListener('touchend', function(e) {
+                handleButtonAction.call(this, e, self.deleteProduct.bind(self));
+            }, { passive: false });
         });
     }
 
