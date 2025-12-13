@@ -2218,11 +2218,35 @@
                     // After a moment, if no results, just save the address
                     setTimeout(() => {
                         if (!selectedLocation.lat || !selectedLocation.lng) {
-                            // No coordinates found, save address only
+                            // No coordinates found, save as manual entry
+                            selectedLocation = { lat: null, lng: null, displayName: manualAddress };
                             document.getElementById('deliveryDisplayName').value = manualAddress;
+                            document.getElementById('deliveryLatitude').value = '';
+                            document.getElementById('deliveryLongitude').value = '';
+                            
+                            // Show in search bar (primary location)
+                            const locationSearch = document.getElementById('locationSearch');
+                            if (locationSearch) {
+                                locationSearch.value = manualAddress;
+                            }
+                            const clearBtn = document.getElementById('clearLocationSearch');
+                            if (clearBtn) {
+                                clearBtn.style.display = 'flex';
+                            }
+                            
+                            // Show selected location info
                             document.getElementById('selectedLocationInfo').style.display = 'block';
                             document.getElementById('selectedLocationText').textContent = manualAddress;
-                            alert('Address saved. You can also click on the map to set coordinates.');
+                        } else {
+                            // Coordinates found, show in search bar
+                            const locationSearch = document.getElementById('locationSearch');
+                            if (locationSearch) {
+                                locationSearch.value = selectedLocation.displayName.split(',')[0];
+                            }
+                            const clearBtn = document.getElementById('clearLocationSearch');
+                            if (clearBtn) {
+                                clearBtn.style.display = 'flex';
+                            }
                         }
                         
                         // Hide manual entry fields
@@ -2459,9 +2483,10 @@
                 const deliveryLongitude = document.getElementById('deliveryLongitude').value;
                 const deliveryDisplayName = document.getElementById('deliveryDisplayName').value;
                 
-                if (!deliveryLatitude || !deliveryLongitude) {
-                    alert('Please select a delivery location on the map. You can search for a place or click on the map to set the location.');
-                return;
+                // Accept either coordinates OR manual entry (displayName)
+                if (!deliveryDisplayName && (!deliveryLatitude || !deliveryLongitude)) {
+                    alert('Please select a delivery location on the map or enter a location manually');
+                    return;
                 }
             }
             

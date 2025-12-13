@@ -324,6 +324,9 @@ class ReturnsService {
                     <div class="product-name">Phone: ${returnItem.customerNumber}</div>
                     <div class="product-name">Item: ${returnItem.clothItem}</div>
                     <div class="product-color" style="margin-top: 8px; display: block;">${returnItem.comment}</div>
+                    <div class="product-name" style="margin-top: 8px; font-size: 12px; color: #718096;">
+                        Return Date: ${returnItem.date || 'N/A'}
+                    </div>
                 </div>
             </div>
             <div class="return-status">

@@ -8285,21 +8285,44 @@
                         return;
                     }
                     
-                    // Try to geocode
+                    // Try to geocode first
                     searchInhouseLocation(address);
                     
+                    // Wait a bit for geocoding, then save manually if no coordinates found
                     setTimeout(() => {
                         if (!inhouseSelectedLocation.lat || !inhouseSelectedLocation.lng) {
-                            // Save address only
+                            // No coordinates found, save as manual entry
+                            inhouseSelectedLocation = { lat: null, lng: null, displayName: address };
                             document.getElementById('inhouse-dash-deliveryDisplayName').value = address;
+                            document.getElementById('inhouse-dash-deliveryLatitude').value = '';
+                            document.getElementById('inhouse-dash-deliveryLongitude').value = '';
+                            
+                            // Show in search bar (primary location)
+                            if (locationSearch) {
+                                locationSearch.value = address;
+                            }
+                            if (clearLocationSearch) {
+                                clearLocationSearch.style.display = 'flex';
+                            }
+                            
+                            // Show selected location info
                             const selectedLocationInfo = document.getElementById('inhouse-dash-selectedLocationInfo');
                             const selectedLocationText = document.getElementById('inhouse-dash-selectedLocationText');
                             if (selectedLocationInfo && selectedLocationText) {
                                 selectedLocationText.textContent = address;
                                 selectedLocationInfo.style.display = 'block';
                             }
-                            alert('Address saved. You can also click on the map to set coordinates.');
+                        } else {
+                            // Coordinates found, show in search bar
+                            if (locationSearch) {
+                                locationSearch.value = inhouseSelectedLocation.displayName.split(',')[0];
+                            }
+                            if (clearLocationSearch) {
+                                clearLocationSearch.style.display = 'flex';
+                            }
                         }
+                        
+                        // Hide manual entry fields
                         manualEntryFields.style.display = 'none';
                         manualAddress.value = '';
                     }, 2000);
@@ -8411,10 +8434,16 @@
                 }
 
                 const deliveryOptionValue = deliveryOption.value;
-                if ((deliveryOptionValue === 'uber' || deliveryOptionValue === 'pickup-mtaani' || deliveryOptionValue === 'courier') && 
-                    (!inhouseSelectedLocation.lat || !inhouseSelectedLocation.lng)) {
-                    alert('Please select a delivery location on the map');
-                    return;
+                if ((deliveryOptionValue === 'uber' || deliveryOptionValue === 'pickup-mtaani' || deliveryOptionValue === 'courier')) {
+                    const deliveryDisplayName = document.getElementById('inhouse-dash-deliveryDisplayName').value;
+                    const deliveryLatitude = document.getElementById('inhouse-dash-deliveryLatitude').value;
+                    const deliveryLongitude = document.getElementById('inhouse-dash-deliveryLongitude').value;
+                    
+                    // Accept either coordinates OR manual entry (displayName)
+                    if (!deliveryDisplayName && (!deliveryLatitude || !deliveryLongitude)) {
+                        alert('Please select a delivery location on the map or enter a location manually');
+                        return;
+                    }
                 }
 
                 const mpesaCode = document.getElementById('inhouse-dash-mpesaCode').value.trim();
