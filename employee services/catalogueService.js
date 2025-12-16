@@ -396,11 +396,111 @@ class CatalogueService {
             this.showImagePreview(product.image_url || product.image);
         }
 
-        // Scroll to form
+        // Scroll to top of form
         const formPanel = document.getElementById('add-product-panel');
         if (formPanel) {
-            formPanel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            // Scroll to top of the page first, then to the form
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+            setTimeout(() => {
+                formPanel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }, 100);
         }
+
+        // Show popup notification
+        this.showEditNotification();
+    }
+
+    /**
+     * Show notification popup when editing a product
+     */
+    showEditNotification() {
+        // Remove existing notification if any
+        const existingNotification = document.getElementById('edit-product-notification');
+        if (existingNotification) {
+            existingNotification.remove();
+        }
+
+        // Create notification element
+        const notification = document.createElement('div');
+        notification.id = 'edit-product-notification';
+        notification.style.cssText = `
+            position: fixed;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: #1B4D3E;
+            color: white;
+            padding: 16px 24px;
+            border-radius: 12px;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+            z-index: 10000;
+            font-size: 15px;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            animation: slideDown 0.3s ease-out;
+            max-width: 90%;
+            text-align: center;
+        `;
+
+        // Add animation
+        const style = document.createElement('style');
+        style.textContent = `
+            @keyframes slideDown {
+                from {
+                    opacity: 0;
+                    transform: translateX(-50%) translateY(-20px);
+                }
+                to {
+                    opacity: 1;
+                    transform: translateX(-50%) translateY(0);
+                }
+            }
+            @keyframes slideUp {
+                from {
+                    opacity: 1;
+                    transform: translateX(-50%) translateY(0);
+                }
+                to {
+                    opacity: 0;
+                    transform: translateX(-50%) translateY(-20px);
+                }
+            }
+        `;
+        if (!document.getElementById('edit-notification-styles')) {
+            style.id = 'edit-notification-styles';
+            document.head.appendChild(style);
+        }
+
+        notification.innerHTML = `
+            <svg width="24" height="24" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="flex-shrink: 0;">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
+            </svg>
+            <span>You can now edit the product details above</span>
+        `;
+
+        document.body.appendChild(notification);
+
+        // Auto remove after 4 seconds
+        setTimeout(() => {
+            notification.style.animation = 'slideUp 0.3s ease-out';
+            setTimeout(() => {
+                if (notification.parentNode) {
+                    notification.remove();
+                }
+            }, 300);
+        }, 4000);
+
+        // Also allow manual close on click
+        notification.addEventListener('click', () => {
+            notification.style.animation = 'slideUp 0.3s ease-out';
+            setTimeout(() => {
+                if (notification.parentNode) {
+                    notification.remove();
+                }
+            }, 300);
+        });
     }
 
     /**
