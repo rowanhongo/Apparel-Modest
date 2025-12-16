@@ -396,18 +396,40 @@ class CatalogueService {
             this.showImagePreview(product.image_url || product.image);
         }
 
-        // Scroll to top of form
-        const formPanel = document.getElementById('add-product-panel');
-        if (formPanel) {
-            // Scroll to top of the page first, then to the form
-            window.scrollTo({ top: 0, behavior: 'smooth' });
-            setTimeout(() => {
-                formPanel.scrollIntoView({ behavior: 'smooth', block: 'start' });
-            }, 100);
-        }
-
-        // Show popup notification
+        // Show popup notification first (before scrolling)
         this.showEditNotification();
+
+        // Scroll to top of form - improved timing and reliability
+        // Use requestAnimationFrame for better browser compatibility
+        requestAnimationFrame(() => {
+            const formPanel = document.getElementById('add-product-panel');
+            if (formPanel) {
+                // Get the form panel's position
+                const rect = formPanel.getBoundingClientRect();
+                const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
+                const formTop = rect.top + scrollTop;
+                
+                // Scroll to top of the page first
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+                
+                // Then scroll to form after ensuring page has scrolled
+                setTimeout(() => {
+                    // Recalculate position after initial scroll
+                    const newRect = formPanel.getBoundingClientRect();
+                    const newScrollTop = window.pageYOffset || document.documentElement.scrollTop;
+                    const newFormTop = newRect.top + newScrollTop;
+                    const scrollPosition = Math.max(0, newFormTop - 20); // 20px offset from top
+                    
+                    window.scrollTo({ 
+                        top: scrollPosition,
+                        behavior: 'smooth' 
+                    });
+                }, 300);
+            } else {
+                // Fallback: just scroll to top if form panel not found
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+            }
+        });
     }
 
     /**
@@ -433,7 +455,7 @@ class CatalogueService {
             padding: 16px 24px;
             border-radius: 12px;
             box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
-            z-index: 10000;
+            z-index: 99999;
             font-size: 15px;
             font-weight: 600;
             display: flex;
@@ -442,6 +464,7 @@ class CatalogueService {
             animation: slideDown 0.3s ease-out;
             max-width: 90%;
             text-align: center;
+            pointer-events: auto;
         `;
 
         // Add animation
@@ -480,26 +503,44 @@ class CatalogueService {
             <span>You can now edit the product details above</span>
         `;
 
-        document.body.appendChild(notification);
-
-        // Auto remove after 4 seconds
-        setTimeout(() => {
-            notification.style.animation = 'slideUp 0.3s ease-out';
-            setTimeout(() => {
-                if (notification.parentNode) {
-                    notification.remove();
+        // Ensure body exists and append notification
+        if (document.body) {
+            document.body.appendChild(notification);
+        } else {
+            // Fallback: wait for body to be available
+            const checkBody = setInterval(() => {
+                if (document.body) {
+                    document.body.appendChild(notification);
+                    clearInterval(checkBody);
                 }
-            }, 300);
-        }, 4000);
+            }, 10);
+        }
+
+        // Force reflow to ensure notification is visible
+        notification.offsetHeight;
+
+        // Auto remove after 5 seconds (increased visibility time)
+        setTimeout(() => {
+            if (notification.parentNode) {
+                notification.style.animation = 'slideUp 0.3s ease-out';
+                setTimeout(() => {
+                    if (notification.parentNode) {
+                        notification.remove();
+                    }
+                }, 300);
+            }
+        }, 5000);
 
         // Also allow manual close on click
         notification.addEventListener('click', () => {
-            notification.style.animation = 'slideUp 0.3s ease-out';
-            setTimeout(() => {
-                if (notification.parentNode) {
-                    notification.remove();
-                }
-            }, 300);
+            if (notification.parentNode) {
+                notification.style.animation = 'slideUp 0.3s ease-out';
+                setTimeout(() => {
+                    if (notification.parentNode) {
+                        notification.remove();
+                    }
+                }, 300);
+            }
         });
     }
 
