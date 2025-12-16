@@ -564,14 +564,14 @@ class CatalogueService {
                         <span style="display: inline-block; padding: 4px 12px; border-radius: 12px; font-size: 12px; font-weight: 600; ${statusStyle}">
                             ${statusDisplay}
                         </span>
-                        <div style="display: flex; gap: 8px;">
-                            <button class="edit-product-btn" data-product-id="${productId}" style="background: transparent; border: none; cursor: pointer; padding: 4px; color: rgba(65, 70, 63, 0.7); transition: all 0.2s; border-radius: 4px;" title="Edit Product" onmouseover="this.style.background='rgba(65, 70, 63, 0.1)'; this.style.color='#41463F';" onmouseout="this.style.background='transparent'; this.style.color='rgba(65, 70, 63, 0.7)';">
-                                <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <div style="display: flex; gap: 8px; position: relative; z-index: 100; pointer-events: auto;">
+                            <button class="edit-product-btn" data-product-id="${productId}" style="background: transparent; border: none; cursor: pointer; padding: 12px; min-width: 44px; min-height: 44px; color: rgba(65, 70, 63, 0.7); transition: all 0.2s; border-radius: 4px; touch-action: manipulation; user-select: none; -webkit-tap-highlight-color: transparent; display: flex; align-items: center; justify-content: center; position: relative; z-index: 100; pointer-events: auto;" title="Edit Product" onmouseover="this.style.background='rgba(65, 70, 63, 0.1)'; this.style.color='#41463F';" onmouseout="this.style.background='transparent'; this.style.color='rgba(65, 70, 63, 0.7)';">
+                                <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="pointer-events: none; position: relative; z-index: -1;">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
                                 </svg>
                             </button>
-                            <button class="delete-product-btn" data-product-id="${productId}" style="background: transparent; border: none; cursor: pointer; padding: 4px; color: rgba(244, 67, 54, 0.7); transition: all 0.2s; border-radius: 4px;" title="Delete Product" onmouseover="this.style.background='rgba(244, 67, 54, 0.1)'; this.style.color='#F44336';" onmouseout="this.style.background='transparent'; this.style.color='rgba(244, 67, 54, 0.7)';">
-                                <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <button class="delete-product-btn" data-product-id="${productId}" style="background: transparent; border: none; cursor: pointer; padding: 12px; min-width: 44px; min-height: 44px; color: rgba(244, 67, 54, 0.7); transition: all 0.2s; border-radius: 4px; touch-action: manipulation; user-select: none; -webkit-tap-highlight-color: transparent; display: flex; align-items: center; justify-content: center; position: relative; z-index: 100; pointer-events: auto;" title="Delete Product" onmouseover="this.style.background='rgba(244, 67, 54, 0.1)'; this.style.color='#F44336';" onmouseout="this.style.background='transparent'; this.style.color='rgba(244, 67, 54, 0.7)';">
+                                <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="pointer-events: none; position: relative; z-index: -1;">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
                                 </svg>
                             </button>
@@ -594,38 +594,147 @@ class CatalogueService {
      * Attach event handlers to edit and delete buttons
      */
     attachProductActionHandlers() {
+        // Store reference to this for event handlers
+        const self = this;
+        
+        // Helper function to handle button action (works for both click and touch)
+        const handleButtonAction = function(e, actionFn) {
+            // Prevent default and stop propagation to avoid conflicts
+            e.preventDefault();
+            e.stopPropagation();
+            e.stopImmediatePropagation();
+            
+            const productId = this.getAttribute('data-product-id');
+            if (productId) {
+                // Execute immediately - no delay needed
+                actionFn(productId);
+            }
+        };
+        
         // Edit buttons
         const editButtons = this.grid.querySelectorAll('.edit-product-btn');
         editButtons.forEach(btn => {
-            // Remove any existing listeners by replacing the button
+            // Remove any existing listeners by cloning and replacing
             const newBtn = btn.cloneNode(true);
-            btn.parentNode.replaceChild(newBtn, btn);
+            const parent = btn.parentNode;
+            parent.replaceChild(newBtn, btn);
             
-            newBtn.addEventListener('click', (e) => {
+            // Ensure button container and button are properly styled for mobile interaction
+            if (parent && parent.style) {
+                parent.style.position = 'relative';
+                parent.style.zIndex = '100';
+                parent.style.pointerEvents = 'auto';
+            }
+            
+            newBtn.style.position = 'relative';
+            newBtn.style.zIndex = '101';
+            newBtn.style.pointerEvents = 'auto';
+            newBtn.style.touchAction = 'manipulation';
+            newBtn.style.cursor = 'pointer';
+            newBtn.style.webkitTouchCallout = 'none';
+            newBtn.style.webkitUserSelect = 'none';
+            
+            // Remove inline event handlers that might interfere
+            newBtn.removeAttribute('onmouseover');
+            newBtn.removeAttribute('onmouseout');
+            newBtn.removeAttribute('ontouchstart');
+            newBtn.removeAttribute('ontouchend');
+            
+            // Add touchstart to provide immediate feedback
+            newBtn.addEventListener('touchstart', function(e) {
+                e.stopPropagation();
+                e.stopImmediatePropagation();
+                this.style.transform = 'scale(0.95)';
+                this.style.background = 'rgba(65, 70, 63, 0.1)';
+                this.style.color = '#41463F';
+            }, { passive: false, capture: true });
+            
+            // Add touchmove to prevent scrolling when touching button
+            newBtn.addEventListener('touchmove', function(e) {
+                e.stopPropagation();
+            }, { passive: false, capture: true });
+            
+            // Add touchend event (primary for mobile)
+            newBtn.addEventListener('touchend', function(e) {
                 e.preventDefault();
                 e.stopPropagation();
-                const productId = newBtn.getAttribute('data-product-id');
-                if (productId) {
-                    this.editProduct(productId);
-                }
-            });
+                e.stopImmediatePropagation();
+                this.style.transform = '';
+                this.style.background = '';
+                this.style.color = '';
+                handleButtonAction.call(this, e, self.editProduct.bind(self));
+            }, { passive: false, capture: true });
+            
+            // Add click event (for desktop and as fallback)
+            newBtn.addEventListener('click', function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+                e.stopImmediatePropagation();
+                handleButtonAction.call(this, e, self.editProduct.bind(self));
+            }, { capture: true });
         });
 
         // Delete buttons
         const deleteButtons = this.grid.querySelectorAll('.delete-product-btn');
         deleteButtons.forEach(btn => {
-            // Remove any existing listeners by replacing the button
+            // Remove any existing listeners by cloning and replacing
             const newBtn = btn.cloneNode(true);
-            btn.parentNode.replaceChild(newBtn, btn);
+            const parent = btn.parentNode;
+            parent.replaceChild(newBtn, btn);
             
-            newBtn.addEventListener('click', (e) => {
+            // Ensure button container and button are properly styled for mobile interaction
+            if (parent && parent.style) {
+                parent.style.position = 'relative';
+                parent.style.zIndex = '100';
+                parent.style.pointerEvents = 'auto';
+            }
+            
+            newBtn.style.position = 'relative';
+            newBtn.style.zIndex = '101';
+            newBtn.style.pointerEvents = 'auto';
+            newBtn.style.touchAction = 'manipulation';
+            newBtn.style.cursor = 'pointer';
+            newBtn.style.webkitTouchCallout = 'none';
+            newBtn.style.webkitUserSelect = 'none';
+            
+            // Remove inline event handlers that might interfere
+            newBtn.removeAttribute('onmouseover');
+            newBtn.removeAttribute('onmouseout');
+            newBtn.removeAttribute('ontouchstart');
+            newBtn.removeAttribute('ontouchend');
+            
+            // Add touchstart to provide immediate feedback
+            newBtn.addEventListener('touchstart', function(e) {
+                e.stopPropagation();
+                e.stopImmediatePropagation();
+                this.style.transform = 'scale(0.95)';
+                this.style.background = 'rgba(244, 67, 54, 0.1)';
+                this.style.color = '#F44336';
+            }, { passive: false, capture: true });
+            
+            // Add touchmove to prevent scrolling when touching button
+            newBtn.addEventListener('touchmove', function(e) {
+                e.stopPropagation();
+            }, { passive: false, capture: true });
+            
+            // Add touchend event (primary for mobile)
+            newBtn.addEventListener('touchend', function(e) {
                 e.preventDefault();
                 e.stopPropagation();
-                const productId = newBtn.getAttribute('data-product-id');
-                if (productId) {
-                    this.deleteProduct(productId);
-                }
-            });
+                e.stopImmediatePropagation();
+                this.style.transform = '';
+                this.style.background = '';
+                this.style.color = '';
+                handleButtonAction.call(this, e, self.deleteProduct.bind(self));
+            }, { passive: false, capture: true });
+            
+            // Add click event (for desktop and as fallback)
+            newBtn.addEventListener('click', function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+                e.stopImmediatePropagation();
+                handleButtonAction.call(this, e, self.deleteProduct.bind(self));
+            }, { capture: true });
         });
     }
 

@@ -162,6 +162,23 @@
 
         .search-container {
             position: relative;
+            z-index: 1;
+        }
+        
+        .search-results-backdrop {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 9999;
+            backdrop-filter: blur(2px);
+        }
+        
+        .search-results-backdrop.active {
+            display: block;
         }
 
         .search-results {
@@ -169,21 +186,51 @@
             top: 100%;
             left: 0;
             right: 0;
-            background: rgba(255, 255, 255, 0.95);
+            background: rgba(255, 255, 255, 0.98);
             backdrop-filter: blur(20px);
             border: 1.5px solid rgba(0, 0, 0, 0.08);
             border-radius: 12px;
             margin-top: 6px;
-            max-height: 320px;
+            max-height: 70vh;
             overflow-y: auto;
+            overflow-x: hidden;
             box-shadow: 0 12px 40px rgba(0, 0, 0, 0.12);
-            z-index: 1000;
+            z-index: 10000;
             display: none;
             pointer-events: auto;
+            -webkit-overflow-scrolling: touch;
+            touch-action: pan-y;
+            will-change: transform;
+        }
+        
+        @media (max-width: 640px) {
+            .search-results {
+                position: fixed;
+                top: auto !important;
+                bottom: 0 !important;
+                left: 0 !important;
+                right: 0 !important;
+                width: 100% !important;
+                max-width: 100% !important;
+                max-height: 60vh !important;
+                margin-top: 0 !important;
+                border-radius: 20px 20px 0 0 !important;
+                box-shadow: 0 -8px 32px rgba(0, 0, 0, 0.2) !important;
+                animation: slideUp 0.3s ease-out;
+            }
+            
+            @keyframes slideUp {
+                from {
+                    transform: translateY(100%);
+                }
+                to {
+                    transform: translateY(0);
+                }
+            }
         }
 
         .search-results.active {
-            display: block;
+            display: block !important;
         }
 
         .search-result-item {
@@ -196,9 +243,15 @@
             user-select: none;
             -webkit-user-select: none;
             pointer-events: auto;
+            touch-action: manipulation;
+            -webkit-tap-highlight-color: transparent;
+            min-height: 44px;
+            position: relative;
+            z-index: 1;
         }
 
-        .search-result-item:hover {
+        .search-result-item:hover,
+        .search-result-item:active {
             background: linear-gradient(90deg, rgba(246, 211, 101, 0.1) 0%, rgba(253, 160, 133, 0.1) 100%);
             transform: translateX(4px);
         }
@@ -206,10 +259,18 @@
         .result-image {
             width: 60px;
             height: 60px;
+            min-width: 60px;
+            min-height: 60px;
             object-fit: cover;
             border-radius: 8px;
             margin-right: 14px;
             background: rgba(0, 0, 0, 0.02);
+            display: block;
+            flex-shrink: 0;
+            -webkit-user-drag: none;
+            user-select: none;
+            -webkit-tap-highlight-color: transparent;
+            pointer-events: none;
         }
 
         .result-info {
@@ -252,8 +313,10 @@
             position: absolute;
             top: 12px;
             right: 12px;
-            width: 32px;
-            height: 32px;
+            width: 44px;
+            height: 44px;
+            min-width: 44px;
+            min-height: 44px;
             border-radius: 50%;
             background: rgba(255, 255, 255, 0.9);
             border: 1.5px solid rgba(0, 0, 0, 0.1);
@@ -263,9 +326,14 @@
             justify-content: center;
             transition: all 0.3s ease;
             box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+            touch-action: manipulation;
+            user-select: none;
+            -webkit-tap-highlight-color: transparent;
+            z-index: 10;
         }
 
-        .selected-product-close:hover {
+        .selected-product-close:hover,
+        .selected-product-close:active {
             background: rgba(253, 160, 133, 0.2);
             border-color: #fda085;
             transform: scale(1.1);
@@ -361,24 +429,30 @@
 
         .color-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(40px, 1fr));
+            grid-template-columns: repeat(auto-fill, minmax(44px, 1fr));
             gap: 12px;
             margin-top: 10px;
             justify-items: center;
         }
 
         .color-option {
-            width: 40px;
-            height: 40px;
+            width: 44px;
+            height: 44px;
+            min-width: 44px;
+            min-height: 44px;
             border-radius: 50%;
             cursor: pointer;
             transition: all 0.3s ease;
             border: 3px solid rgba(0, 0, 0, 0.1);
             position: relative;
             box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+            touch-action: manipulation;
+            user-select: none;
+            -webkit-tap-highlight-color: transparent;
         }
 
-        .color-option:hover {
+        .color-option:hover,
+        .color-option:active {
             transform: scale(1.15);
             box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
             z-index: 10;
@@ -669,8 +743,14 @@
             }
 
             .color-option {
-                width: 38px;
-                height: 38px;
+                width: 44px;
+                height: 44px;
+                min-width: 44px;
+                min-height: 44px;
+            }
+            
+            .color-grid {
+                grid-template-columns: repeat(auto-fill, minmax(44px, 1fr));
             }
 
             /* Make select boxes smaller and more compact on mobile */
@@ -736,9 +816,34 @@
                 box-sizing: border-box;
             }
 
-            /* Fix search results positioning */
+            /* Fix search results positioning on mobile */
+            .search-container {
+                position: relative !important;
+                z-index: 10000 !important;
+            }
+            
             .search-results {
-                max-width: calc(100vw - 20px) !important;
+                max-width: calc(100vw - 40px) !important;
+                left: 0 !important;
+                right: 0 !important;
+                z-index: 10000 !important;
+                position: absolute !important;
+                max-height: 50vh !important;
+                -webkit-overflow-scrolling: touch !important;
+            }
+            
+            .form-group {
+                position: relative;
+                z-index: 1;
+            }
+            
+            /* Ensure search results are not clipped */
+            .form-content {
+                overflow: visible !important;
+            }
+            
+            .container {
+                overflow: visible !important;
             }
 
              /* Map container mobile - smaller on mobile */
@@ -751,7 +856,11 @@
              }
 
             #locationSuggestions {
-                max-width: calc(100vw - 20px) !important;
+                max-width: calc(100vw - 40px) !important;
+                z-index: 10000 !important;
+                position: absolute !important;
+                max-height: 50vh !important;
+                -webkit-overflow-scrolling: touch !important;
             }
         }
 
@@ -901,6 +1010,7 @@
                 <label for="productSearch">Search Item <span class="required">*</span></label>
                 <div class="search-container">
                     <input type="text" id="productSearch" placeholder="Type to search items..." autocomplete="off">
+                    <div class="search-results-backdrop" id="searchResultsBackdrop"></div>
                     <div class="search-results" id="searchResults"></div>
                 </div>
                 
@@ -1034,13 +1144,15 @@
                         <div style="position: relative;">
                             <input type="text" id="locationSearch" placeholder="Type a place name (e.g., Nairobi, Mombasa, Westlands...)" 
                                    style="width: 100%; padding: 12px 40px 12px 16px; border: 1.5px solid rgba(0, 0, 0, 0.08); background: rgba(255, 255, 255, 0.9); border-radius: 10px; font-size: 14px;">
-                            <button type="button" id="clearLocationSearch" style="position: absolute; right: 8px; top: 50%; transform: translateY(-50%); background: transparent; border: none; color: #718096; cursor: pointer; padding: 0; display: none; align-items: center; justify-content: center; font-size: 20px; line-height: 1; width: 24px; height: 24px; border-radius: 50%; transition: all 0.2s;" 
+                            <button type="button" id="clearLocationSearch" style="position: absolute; right: 8px; top: 50%; transform: translateY(-50%); background: transparent; border: none; color: #718096; cursor: pointer; padding: 8px; display: none; align-items: center; justify-content: center; font-size: 20px; line-height: 1; min-width: 44px; min-height: 44px; width: 44px; height: 44px; border-radius: 50%; transition: all 0.2s; touch-action: manipulation; user-select: none; -webkit-tap-highlight-color: transparent; z-index: 10;" 
                                     onmouseover="this.style.background='rgba(0,0,0,0.05)'; this.style.color='#2d3748';" 
                                     onmouseout="this.style.background='transparent'; this.style.color='#718096';"
+                                    ontouchstart="this.style.background='rgba(0,0,0,0.05)'; this.style.color='#2d3748';"
+                                    ontouchend="this.style.background='transparent'; this.style.color='#718096';"
                                     aria-label="Clear search">
                                 ×
                             </button>
-                            <div id="locationSuggestions" style="position: absolute; top: 100%; left: 0; right: 0; background: white; border: 1.5px solid rgba(0, 0, 0, 0.08); border-radius: 10px; margin-top: 4px; max-height: 200px; overflow-y: auto; z-index: 1000; display: none; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);"></div>
+                            <div id="locationSuggestions" style="position: absolute; top: 100%; left: 0; right: 0; background: white; border: 1.5px solid rgba(0, 0, 0, 0.08); border-radius: 10px; margin-top: 4px; max-height: 200px; overflow-y: auto; overflow-x: hidden; z-index: 10000; display: none; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1); -webkit-overflow-scrolling: touch; touch-action: pan-y;"></div>
                         </div>
                     </div>
                     <!-- Manual entry option - moved above map -->
@@ -1322,16 +1434,47 @@
                 });
         }
 
-        // Use event delegation on searchResults container (set up once)
-        searchResults.addEventListener('click', (e) => {
+        // Helper function to handle product selection (works for both click and touch)
+        const handleProductSelection = function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            e.stopImmediatePropagation();
+            
+            const item = e.target.closest('.search-result-item');
+            const backdrop = document.getElementById('searchResultsBackdrop');
+            if (item) {
+                const productId = String(item.dataset.id); // Keep as string (UUID)
+                // Hide search results and backdrop
+                searchResults.classList.remove('active');
+                if (backdrop) {
+                    backdrop.classList.remove('active');
+                }
+                // Small delay to ensure UI updates properly on mobile
+                setTimeout(() => {
+                    selectProduct(productId);
+                }, 50);
+            }
+        };
+
+        // Use event delegation on searchResults container for click (desktop)
+        searchResults.addEventListener('click', handleProductSelection);
+        
+        // Add touch event support for mobile devices
+        searchResults.addEventListener('touchend', function(e) {
+            // Reset background on all items
+            searchResults.querySelectorAll('.search-result-item').forEach(item => {
+                item.style.background = '';
+            });
+            handleProductSelection(e);
+        }, { passive: false });
+        
+        // Also add touchstart for better mobile responsiveness
+        searchResults.addEventListener('touchstart', function(e) {
             const item = e.target.closest('.search-result-item');
             if (item) {
-                e.preventDefault();
-                e.stopPropagation();
-                const productId = String(item.dataset.id); // Keep as string (UUID)
-                selectProduct(productId);
+                item.style.background = 'linear-gradient(90deg, rgba(246, 211, 101, 0.15) 0%, rgba(253, 160, 133, 0.15) 100%)';
             }
-        });
+        }, { passive: true });
 
         // Function to clear selected product
         function clearSelectedProduct() {
@@ -1346,14 +1489,22 @@
 
         // Initialize on page load
         document.addEventListener('DOMContentLoaded', async () => {
-            // Set up clear button event listener
+            // Set up clear button event listener (desktop and mobile)
             const clearBtn = document.getElementById('clearProductBtn');
             if (clearBtn) {
+                // Desktop click
                 clearBtn.addEventListener('click', (e) => {
                     e.preventDefault();
                     e.stopPropagation();
                     clearSelectedProduct();
                 });
+                
+                // Mobile touch
+                clearBtn.addEventListener('touchend', (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    clearSelectedProduct();
+                }, { passive: false });
             }
 
             // Wait for Supabase library and environment variables to be fully loaded
@@ -1366,8 +1517,12 @@
 
         searchInput.addEventListener('input', (e) => {
             const query = e.target.value.toLowerCase().trim();
+            const backdrop = document.getElementById('searchResultsBackdrop');
             if (query.length === 0) {
                 searchResults.classList.remove('active');
+                if (backdrop) {
+                    backdrop.classList.remove('active');
+                }
                 return;
             }
             const filtered = products.filter(p => p.name.toLowerCase().includes(query));
@@ -1375,21 +1530,43 @@
         });
 
         function displaySearchResults(results) {
+            const backdrop = document.getElementById('searchResultsBackdrop');
             if (results.length === 0) {
                 searchResults.innerHTML = '<div class="no-results">No items found</div>';
                 searchResults.classList.add('active');
+                if (backdrop && window.innerWidth <= 640) {
+                    backdrop.classList.add('active');
+                }
                 return;
             }
-            searchResults.innerHTML = results.map(product => `
+            searchResults.innerHTML = results.map(product => {
+                // Ensure image URL is valid and add loading/error handling
+                const imageUrl = product.image || 'https://via.placeholder.com/400';
+                const placeholderUrl = 'data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' width=\'60\' height=\'60\'%3E%3Crect fill=\'%23f0f0f0\' width=\'60\' height=\'60\'/%3E%3Ctext fill=\'%23999\' x=\'50%25\' y=\'50%25\' text-anchor=\'middle\' dy=\'.3em\' font-size=\'10\'%3ENo Image%3C/text%3E%3C/svg%3E';
+                
+                return `
                 <div class="search-result-item" data-id="${product.id}">
-                    <img src="${product.image}" alt="${product.name}" class="result-image">
+                    <img src="${imageUrl}" 
+                         alt="${product.name}" 
+                         class="result-image" 
+                         loading="lazy"
+                         decoding="async"
+                         onerror="this.onerror=null; this.src='${placeholderUrl}';"
+                         onload="this.style.opacity='1';"
+                         style="opacity: 0; transition: opacity 0.3s ease;">
                     <div class="result-info">
                         <div class="result-name">${product.name}</div>
                         <div class="result-price">KES ${product.price.toLocaleString()}</div>
                     </div>
                 </div>
-            `).join('');
+            `;
+            }).join('');
             searchResults.classList.add('active');
+            
+            // Show backdrop on mobile
+            if (backdrop && window.innerWidth <= 640) {
+                backdrop.classList.add('active');
+            }
         }
 
         function selectProduct(productId) {
@@ -1438,7 +1615,16 @@
             'Navy blue': '#000080',
             'Blackcurrant': '#2E1837',
             'Royal purple': '#7851A9',
-            'Teal Blue': '#008080'
+            'Teal Blue': '#008080',
+            'Jungle green': '#29AB87',
+            'Olive green': '#6B8E23',
+            'Lime green': '#32CD32',
+            'Off white': '#FAF9F6',
+            'Cream': '#FFFDD0',
+            'Light brown': '#CD853F',
+            'Peach': '#FFCBA4',
+            'Champagne': '#F7E7CE',
+            'Rose pink': '#FFC0CB'
         };
 
         function displayColorOptions(colors) {
@@ -1453,8 +1639,9 @@
             colorGrid.innerHTML = allColors.map(colorName => {
                 const hexColor = colorMap[colorName];
                 
-                // For white, add a border to make it visible
-                const borderStyle = colorName.toLowerCase() === 'white' 
+                // For white and light colors, add a border to make them visible
+                const lightColors = ['white', 'off white', 'cream', 'champagne'];
+                const borderStyle = lightColors.includes(colorName.toLowerCase()) 
                     ? 'border: 3px solid rgba(0, 0, 0, 0.2);' 
                     : '';
                 
@@ -1469,16 +1656,31 @@
             
             colorOptionsDiv.classList.add('active');
             
+            // Helper function to handle color selection (works for both click and touch)
+            const handleColorSelection = function(option) {
+                document.querySelectorAll('.color-option').forEach(o => o.classList.remove('selected'));
+                option.classList.add('selected');
+                selectedColor = option.dataset.color;
+                
+                // Update selected color display
+                const selectedColorDisplay = document.getElementById('selectedColorDisplay');
+                selectedColorDisplay.textContent = `Colour: ${selectedColor}`;
+            };
+            
             document.querySelectorAll('.color-option').forEach(option => {
-                option.addEventListener('click', () => {
-                    document.querySelectorAll('.color-option').forEach(o => o.classList.remove('selected'));
-                    option.classList.add('selected');
-                    selectedColor = option.dataset.color;
-                    
-                    // Update selected color display
-                    const selectedColorDisplay = document.getElementById('selectedColorDisplay');
-                    selectedColorDisplay.textContent = `Colour: ${selectedColor}`;
+                // Desktop click
+                option.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    handleColorSelection(option);
                 });
+                
+                // Mobile touch
+                option.addEventListener('touchend', (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    handleColorSelection(option);
+                }, { passive: false });
             });
         }
 
@@ -2056,9 +2258,11 @@
                          data-lat="${result.lat}" 
                          data-lng="${result.lon}" 
                          data-name="${displayName.replace(/"/g, '&quot;')}"
-                         style="padding: 12px 16px; cursor: pointer; border-bottom: 1px solid rgba(0, 0, 0, 0.05); transition: background 0.2s;"
+                         style="padding: 14px 16px; min-height: 44px; cursor: pointer; border-bottom: 1px solid rgba(0, 0, 0, 0.05); transition: background 0.2s; touch-action: manipulation; user-select: none; -webkit-tap-highlight-color: transparent;"
                          onmouseover="this.style.background='rgba(246, 211, 101, 0.1)'"
-                         onmouseout="this.style.background='white'">
+                         onmouseout="this.style.background='white'"
+                         ontouchstart="this.style.background='rgba(246, 211, 101, 0.1)'"
+                         ontouchend="this.style.background='white'">
                         <div style="font-size: 14px; font-weight: 600; color: #2d3748; margin-bottom: 4px; display: flex; align-items: center;">
                             ${primaryName}${typeLabel}
                         </div>
@@ -2067,27 +2271,42 @@
                 `;
             }).join('');
 
-            // Add click handlers
+            // Helper function to handle location selection (works for both click and touch)
+            const handleLocationSelection = function(item) {
+                const lat = parseFloat(item.dataset.lat);
+                const lng = parseFloat(item.dataset.lng);
+                const name = item.dataset.name;
+                
+                setLocationMarker(lat, lng, name);
+                // Show primary name in search box, not full address
+                const primaryName = name.split(',')[0];
+                const locationSearch = document.getElementById('locationSearch');
+                locationSearch.value = primaryName;
+                
+                // Show clear button
+                const clearBtn = document.getElementById('clearLocationSearch');
+                if (clearBtn) {
+                    clearBtn.style.display = 'flex';
+                }
+                
+                suggestionsDiv.style.display = 'none';
+            };
+
+            // Add click and touch handlers
             suggestionsDiv.querySelectorAll('.location-suggestion').forEach(item => {
-                item.addEventListener('click', function() {
-                    const lat = parseFloat(this.dataset.lat);
-                    const lng = parseFloat(this.dataset.lng);
-                    const name = this.dataset.name;
-                    
-                    setLocationMarker(lat, lng, name);
-                    // Show primary name in search box, not full address
-                    const primaryName = name.split(',')[0];
-                    const locationSearch = document.getElementById('locationSearch');
-                    locationSearch.value = primaryName;
-                    
-                    // Show clear button
-                    const clearBtn = document.getElementById('clearLocationSearch');
-                    if (clearBtn) {
-                        clearBtn.style.display = 'flex';
-                    }
-                    
-                    suggestionsDiv.style.display = 'none';
+                // Desktop click
+                item.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    handleLocationSelection(this);
                 });
+                
+                // Mobile touch
+                item.addEventListener('touchend', function(e) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    handleLocationSelection(this);
+                }, { passive: false });
             });
 
             suggestionsDiv.style.display = 'block';
@@ -2115,17 +2334,31 @@
                     }
                 });
 
-                // Hide suggestions when clicking outside
+                // Helper function to check if click/touch is outside location search area
+                const isOutsideLocationSearch = function(target) {
+                    return !target.closest('#locationSearch') && 
+                           !target.closest('#locationSuggestions') && 
+                           !target.closest('#clearLocationSearch');
+                };
+                
+                // Hide suggestions when clicking outside (desktop)
                 document.addEventListener('click', function(e) {
-                    if (!e.target.closest('#locationSearch') && !e.target.closest('#locationSuggestions') && !e.target.closest('#clearLocationSearch')) {
+                    if (isOutsideLocationSearch(e.target)) {
                         document.getElementById('locationSuggestions').style.display = 'none';
                     }
                 });
+                
+                // Hide suggestions when touching outside (mobile)
+                document.addEventListener('touchend', function(e) {
+                    if (isOutsideLocationSearch(e.target)) {
+                        document.getElementById('locationSuggestions').style.display = 'none';
+                    }
+                }, { passive: true });
             }
             
-            // Clear location search button
+            // Clear location search button (desktop and mobile)
             if (clearLocationSearch) {
-                clearLocationSearch.addEventListener('click', function(e) {
+                const handleClearLocation = function(e) {
                     e.preventDefault();
                     e.stopPropagation();
                     locationSearch.value = '';
@@ -2139,11 +2372,13 @@
                         marker = null;
                     }
                     selectedLocation = { lat: null, lng: null, displayName: null };
-                    document.getElementById('deliveryLatitude').value = '';
-                    document.getElementById('deliveryLongitude').value = '';
-                    document.getElementById('deliveryDisplayName').value = '';
-                    document.getElementById('selectedLocationInfo').style.display = 'none';
-                });
+                };
+                
+                // Desktop click
+                clearLocationSearch.addEventListener('click', handleClearLocation);
+                
+                // Mobile touch
+                clearLocationSearch.addEventListener('touchend', handleClearLocation, { passive: false });
             }
             
             // Manual entry toggle
@@ -2153,26 +2388,44 @@
             const cancelManualEntry = document.getElementById('cancelManualEntry');
             
             if (toggleManualEntry) {
-                toggleManualEntry.addEventListener('click', function() {
+                const handleToggleManual = function() {
                     const isVisible = manualEntryFields.style.display !== 'none';
                     if (!isVisible) {
                         manualEntryFields.style.display = 'block';
                         toggleManualEntry.textContent = '📍 Can\'t find your location? Enter manually';
                     }
-                });
+                };
+                
+                // Desktop click
+                toggleManualEntry.addEventListener('click', handleToggleManual);
+                
+                // Mobile touch
+                toggleManualEntry.addEventListener('touchend', function(e) {
+                    e.preventDefault();
+                    handleToggleManual();
+                }, { passive: false });
             }
             
             // Cancel manual entry button
             if (cancelManualEntry) {
-                cancelManualEntry.addEventListener('click', function() {
+                const handleCancelManual = function() {
                     manualEntryFields.style.display = 'none';
                     document.getElementById('manualAddress').value = '';
                     toggleManualEntry.textContent = '📍 Can\'t find your location? Enter manually';
-                });
+                };
+                
+                // Desktop click
+                cancelManualEntry.addEventListener('click', handleCancelManual);
+                
+                // Mobile touch
+                cancelManualEntry.addEventListener('touchend', function(e) {
+                    e.preventDefault();
+                    handleCancelManual();
+                }, { passive: false });
             }
             
             if (saveManualLocation) {
-                saveManualLocation.addEventListener('click', function() {
+                const handleSaveManual = function() {
                     const manualAddress = document.getElementById('manualAddress').value.trim();
                     
                     if (!manualAddress) {
@@ -2222,7 +2475,16 @@
                         document.getElementById('manualAddress').value = '';
                         toggleManualEntry.textContent = '📍 Can\'t find your location? Enter manually';
                     }, 2000);
-                });
+                };
+                
+                // Desktop click
+                saveManualLocation.addEventListener('click', handleSaveManual);
+                
+                // Mobile touch
+                saveManualLocation.addEventListener('touchend', function(e) {
+                    e.preventDefault();
+                    handleSaveManual();
+                }, { passive: false });
             }
             
             // Pre-initialize map in background for faster loading
@@ -2287,16 +2549,51 @@
             }
         });
 
-        document.addEventListener('click', (e) => {
-            // Don't close if clicking on search input, search results, or any search result item
-            const isSearchInput = searchInput.contains(e.target);
-            const isSearchResults = searchResults.contains(e.target);
-            const isSearchResultItem = e.target.closest('.search-result-item');
+        // Helper function to check if click/touch is outside search area
+        const isOutsideSearchArea = function(target) {
+            const isSearchInput = searchInput && (searchInput === target || searchInput.contains(target));
+            const isSearchResults = searchResults && (searchResults === target || searchResults.contains(target));
+            const isSearchResultItem = target && target.closest && target.closest('.search-result-item');
+            const isSearchContainer = target && target.closest && target.closest('.search-container');
             
-            if (!isSearchInput && !isSearchResults && !isSearchResultItem) {
+            return !isSearchInput && !isSearchResults && !isSearchResultItem && !isSearchContainer;
+        };
+
+        // Close search results when clicking outside (desktop)
+        document.addEventListener('click', (e) => {
+            const backdrop = document.getElementById('searchResultsBackdrop');
+            if (isOutsideSearchArea(e.target) && !e.target.closest('.search-results-backdrop')) {
                 searchResults.classList.remove('active');
+                if (backdrop) {
+                    backdrop.classList.remove('active');
+                }
             }
         });
+        
+        // Close search results when touching outside (mobile)
+        document.addEventListener('touchend', (e) => {
+            const backdrop = document.getElementById('searchResultsBackdrop');
+            if (isOutsideSearchArea(e.target) && !e.target.closest('.search-results-backdrop')) {
+                searchResults.classList.remove('active');
+                if (backdrop) {
+                    backdrop.classList.remove('active');
+                }
+            }
+        }, { passive: true });
+        
+        // Close search results when clicking backdrop
+        const backdrop = document.getElementById('searchResultsBackdrop');
+        if (backdrop) {
+            backdrop.addEventListener('click', () => {
+                searchResults.classList.remove('active');
+                backdrop.classList.remove('active');
+            });
+            backdrop.addEventListener('touchend', (e) => {
+                e.preventDefault();
+                searchResults.classList.remove('active');
+                backdrop.classList.remove('active');
+            }, { passive: false });
+        }
 
 
         document.getElementById('orderForm').addEventListener('submit', async (e) => {

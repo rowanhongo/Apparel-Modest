@@ -163,23 +163,43 @@
         .search-container {
             position: relative;
         }
+        
+        .search-results-backdrop {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 9999;
+            backdrop-filter: blur(2px);
+        }
+        
+        .search-results-backdrop.active {
+            display: block;
+        }
 
         .search-results {
             position: absolute;
             top: 100%;
             left: 0;
             right: 0;
-            background: rgba(255, 255, 255, 0.95);
+            background: rgba(255, 255, 255, 0.98);
             backdrop-filter: blur(20px);
             border: 1.5px solid rgba(0, 0, 0, 0.08);
             border-radius: 12px;
             margin-top: 6px;
-            max-height: 320px;
+            max-height: 70vh;
             overflow-y: auto;
+            overflow-x: hidden;
             box-shadow: 0 12px 40px rgba(0, 0, 0, 0.12);
-            z-index: 1000;
+            z-index: 10000;
             display: none;
             pointer-events: auto;
+            -webkit-overflow-scrolling: touch;
+            touch-action: pan-y;
+            will-change: transform;
         }
 
         .search-results.active {
@@ -196,6 +216,11 @@
             user-select: none;
             -webkit-user-select: none;
             pointer-events: auto;
+            touch-action: manipulation;
+            -webkit-tap-highlight-color: transparent;
+            min-height: 44px;
+            position: relative;
+            z-index: 1;
         }
 
         .search-result-item:hover {
@@ -206,10 +231,18 @@
         .result-image {
             width: 60px;
             height: 60px;
+            min-width: 60px;
+            min-height: 60px;
             object-fit: cover;
             border-radius: 8px;
             margin-right: 14px;
             background: rgba(0, 0, 0, 0.02);
+            display: block;
+            flex-shrink: 0;
+            -webkit-user-drag: none;
+            user-select: none;
+            -webkit-tap-highlight-color: transparent;
+            pointer-events: none;
         }
 
         .result-info {
@@ -901,6 +934,7 @@
                 <label for="productSearch">Search Item <span class="required">*</span></label>
                 <div class="search-container">
                     <input type="text" id="productSearch" placeholder="Type to search items..." autocomplete="off">
+                    <div class="search-results-backdrop" id="searchResultsBackdrop"></div>
                     <div class="search-results" id="searchResults"></div>
                 </div>
                 
@@ -1354,16 +1388,47 @@
                 });
         }
 
-        // Use event delegation on searchResults container (set up once)
-        searchResults.addEventListener('click', (e) => {
+        // Helper function to handle product selection (works for both click and touch)
+        const handleProductSelection = function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            e.stopImmediatePropagation();
+            
+            const item = e.target.closest('.search-result-item');
+            const backdrop = document.getElementById('searchResultsBackdrop');
+            if (item) {
+                const productId = String(item.dataset.id); // Keep as string (UUID)
+                // Hide search results and backdrop
+                searchResults.classList.remove('active');
+                if (backdrop) {
+                    backdrop.classList.remove('active');
+                }
+                // Small delay to ensure UI updates properly on mobile
+                setTimeout(() => {
+                    selectProduct(productId);
+                }, 50);
+            }
+        };
+
+        // Use event delegation on searchResults container for click (desktop)
+        searchResults.addEventListener('click', handleProductSelection);
+        
+        // Add touch event support for mobile devices
+        searchResults.addEventListener('touchend', function(e) {
+            // Reset background on all items
+            searchResults.querySelectorAll('.search-result-item').forEach(item => {
+                item.style.background = '';
+            });
+            handleProductSelection(e);
+        }, { passive: false });
+        
+        // Also add touchstart for better mobile responsiveness
+        searchResults.addEventListener('touchstart', function(e) {
             const item = e.target.closest('.search-result-item');
             if (item) {
-                e.preventDefault();
-                e.stopPropagation();
-                const productId = String(item.dataset.id); // Keep as string (UUID)
-                selectProduct(productId);
+                item.style.background = 'linear-gradient(90deg, rgba(246, 211, 101, 0.15) 0%, rgba(253, 160, 133, 0.15) 100%)';
             }
-        });
+        }, { passive: true });
 
         // Function to clear selected product
         function clearSelectedProduct() {
@@ -1398,8 +1463,12 @@
 
         searchInput.addEventListener('input', (e) => {
             const query = e.target.value.toLowerCase().trim();
+            const backdrop = document.getElementById('searchResultsBackdrop');
             if (query.length === 0) {
                 searchResults.classList.remove('active');
+                if (backdrop) {
+                    backdrop.classList.remove('active');
+                }
                 return;
             }
             const filtered = products.filter(p => p.name.toLowerCase().includes(query));
@@ -1407,21 +1476,43 @@
         });
 
         function displaySearchResults(results) {
+            const backdrop = document.getElementById('searchResultsBackdrop');
             if (results.length === 0) {
                 searchResults.innerHTML = '<div class="no-results">No items found</div>';
                 searchResults.classList.add('active');
+                if (backdrop && window.innerWidth <= 640) {
+                    backdrop.classList.add('active');
+                }
                 return;
             }
-            searchResults.innerHTML = results.map(product => `
+            searchResults.innerHTML = results.map(product => {
+                // Ensure image URL is valid and add loading/error handling
+                const imageUrl = product.image || 'https://via.placeholder.com/400';
+                const placeholderUrl = 'data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' width=\'60\' height=\'60\'%3E%3Crect fill=\'%23f0f0f0\' width=\'60\' height=\'60\'/%3E%3Ctext fill=\'%23999\' x=\'50%25\' y=\'50%25\' text-anchor=\'middle\' dy=\'.3em\' font-size=\'10\'%3ENo Image%3C/text%3E%3C/svg%3E';
+                
+                return `
                 <div class="search-result-item" data-id="${product.id}">
-                    <img src="${product.image}" alt="${product.name}" class="result-image">
+                    <img src="${imageUrl}" 
+                         alt="${product.name}" 
+                         class="result-image" 
+                         loading="lazy"
+                         decoding="async"
+                         onerror="this.onerror=null; this.src='${placeholderUrl}';"
+                         onload="this.style.opacity='1';"
+                         style="opacity: 0; transition: opacity 0.3s ease;">
                     <div class="result-info">
                         <div class="result-name">${product.name}</div>
                         <div class="result-price">KES ${product.price.toLocaleString()}</div>
                     </div>
                 </div>
-            `).join('');
+            `;
+            }).join('');
             searchResults.classList.add('active');
+            
+            // Show backdrop on mobile
+            if (backdrop && window.innerWidth <= 640) {
+                backdrop.classList.add('active');
+            }
         }
 
         function selectProduct(productId) {
@@ -1470,7 +1561,16 @@
             'Navy blue': '#000080',
             'Blackcurrant': '#2E1837',
             'Royal purple': '#7851A9',
-            'Teal Blue': '#008080'
+            'Teal Blue': '#008080',
+            'Jungle green': '#29AB87',
+            'Olive green': '#6B8E23',
+            'Lime green': '#32CD32',
+            'Off white': '#FAF9F6',
+            'Cream': '#FFFDD0',
+            'Light brown': '#CD853F',
+            'Peach': '#FFCBA4',
+            'Champagne': '#F7E7CE',
+            'Rose pink': '#FFC0CB'
         };
 
         function displayColorOptions(colors) {
@@ -1485,8 +1585,9 @@
             colorGrid.innerHTML = allColors.map(colorName => {
                 const hexColor = colorMap[colorName];
                 
-                // For white, add a border to make it visible
-                const borderStyle = colorName.toLowerCase() === 'white' 
+                // For white and light colors, add a border to make them visible
+                const lightColors = ['white', 'off white', 'cream', 'champagne'];
+                const borderStyle = lightColors.includes(colorName.toLowerCase()) 
                     ? 'border: 3px solid rgba(0, 0, 0, 0.2);' 
                     : '';
                 
@@ -2376,16 +2477,51 @@
             });
         }
 
-        document.addEventListener('click', (e) => {
-            // Don't close if clicking on search input, search results, or any search result item
-            const isSearchInput = searchInput.contains(e.target);
-            const isSearchResults = searchResults.contains(e.target);
-            const isSearchResultItem = e.target.closest('.search-result-item');
+        // Helper function to check if click/touch is outside search area
+        const isOutsideSearchArea = function(target) {
+            const isSearchInput = searchInput && (searchInput === target || searchInput.contains(target));
+            const isSearchResults = searchResults && (searchResults === target || searchResults.contains(target));
+            const isSearchResultItem = target && target.closest && target.closest('.search-result-item');
+            const isSearchContainer = target && target.closest && target.closest('.search-container');
             
-            if (!isSearchInput && !isSearchResults && !isSearchResultItem) {
+            return !isSearchInput && !isSearchResults && !isSearchResultItem && !isSearchContainer;
+        };
+
+        // Close search results when clicking outside (desktop)
+        document.addEventListener('click', (e) => {
+            const backdrop = document.getElementById('searchResultsBackdrop');
+            if (isOutsideSearchArea(e.target) && !e.target.closest('.search-results-backdrop')) {
                 searchResults.classList.remove('active');
+                if (backdrop) {
+                    backdrop.classList.remove('active');
+                }
             }
         });
+        
+        // Close search results when touching outside (mobile)
+        document.addEventListener('touchend', (e) => {
+            const backdrop = document.getElementById('searchResultsBackdrop');
+            if (isOutsideSearchArea(e.target) && !e.target.closest('.search-results-backdrop')) {
+                searchResults.classList.remove('active');
+                if (backdrop) {
+                    backdrop.classList.remove('active');
+                }
+            }
+        }, { passive: true });
+        
+        // Close search results when clicking backdrop
+        const backdrop = document.getElementById('searchResultsBackdrop');
+        if (backdrop) {
+            backdrop.addEventListener('click', () => {
+                searchResults.classList.remove('active');
+                backdrop.classList.remove('active');
+            });
+            backdrop.addEventListener('touchend', (e) => {
+                e.preventDefault();
+                searchResults.classList.remove('active');
+                backdrop.classList.remove('active');
+            }, { passive: false });
+        }
 
 
         document.getElementById('orderForm').addEventListener('submit', async (e) => {

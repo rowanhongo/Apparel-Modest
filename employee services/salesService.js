@@ -256,17 +256,26 @@ class SalesService {
             </div>
             <div class="order-actions">
                 <button class="btn btn-accept" data-action="accept" data-id="${order.id}">Accept</button>
+                <button class="btn btn-deny" data-action="reject" data-id="${order.id}">Reject</button>
             </div>
         `;
 
         // Note: Click handler for expanding is now handled via event delegation in init()
         // Add button click handlers (stop propagation to prevent toggle)
         const acceptBtn = bubble.querySelector('[data-action="accept"]');
+        const rejectBtn = bubble.querySelector('[data-action="reject"]');
         
         if (acceptBtn) {
             acceptBtn.addEventListener('click', (e) => {
                 e.stopPropagation();
                 this.acceptOrder(order.id);
+            });
+        }
+
+        if (rejectBtn) {
+            rejectBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                this.denyOrder(order.id);
             });
         }
 
@@ -571,4 +580,3 @@ class SalesService {
 if (typeof module !== 'undefined' && module.exports) {
     module.exports = SalesService;
 }
-
