@@ -4512,7 +4512,7 @@
                             height: 100%;
                         }
 
-                        /* Mobile responsive styles for in-house search - matching customer form exactly */
+                        /* Mobile responsive styles for in-house search - results appear under search bar like desktop */
                         @media (max-width: 640px) {
                             #inhouse-order-form-container .inhouse-search-container {
                                 position: relative !important;
@@ -4520,46 +4520,13 @@
                             }
                             
                             #inhouse-order-form-container .inhouse-search-results {
-                                position: fixed !important;
-                                top: auto !important;
-                                bottom: 0 !important;
-                                left: 0 !important;
-                                right: 0 !important;
-                                width: 100% !important;
-                                max-width: 100% !important;
-                                max-height: 60vh !important;
-                                margin-top: 0 !important;
-                                border-radius: 20px 20px 0 0 !important;
-                                box-shadow: 0 -8px 32px rgba(0, 0, 0, 0.2) !important;
-                                animation: inhouseSlideUp 0.3s ease-out;
-                                -webkit-overflow-scrolling: touch !important;
-                                touch-action: pan-y;
-                            }
-                            
-                            @keyframes inhouseSlideUp {
-                                from {
-                                    transform: translateY(100%);
-                                }
-                                to {
-                                    transform: translateY(0);
-                                }
+                                position: absolute !important;
+                                max-height: 50vh !important;
                             }
 
-                            /* Add backdrop for mobile search results */
+                            /* Hide backdrop on mobile since results appear under search bar */
                             #inhouse-order-form-container .inhouse-search-backdrop {
-                                display: none;
-                                position: fixed;
-                                top: 0;
-                                left: 0;
-                                right: 0;
-                                bottom: 0;
-                                background: rgba(0, 0, 0, 0.5);
-                                z-index: 9999;
-                                backdrop-filter: blur(4px);
-                            }
-
-                            #inhouse-order-form-container .inhouse-search-backdrop.active {
-                                display: block;
+                                display: none !important;
                             }
                         }
                     </style>
@@ -8141,9 +8108,7 @@
                 if (filtered.length === 0) {
                     searchResults.innerHTML = '<div class="no-results" style="padding: 16px; text-align: center; color: #718096;">No items found</div>';
                     searchResults.classList.add('active');
-                    if (searchBackdrop && window.innerWidth <= 640) {
-                        searchBackdrop.classList.add('active');
-                    }
+                    // Backdrop not needed since results appear under search bar
                     return;
                 }
                 searchResults.innerHTML = filtered.map(product => {
@@ -8169,10 +8134,7 @@
                 `;
                 }).join('');
                 searchResults.classList.add('active');
-                // Show backdrop on mobile - matching customer form breakpoint
-                if (searchBackdrop && window.innerWidth <= 640) {
-                    searchBackdrop.classList.add('active');
-                }
+                // Backdrop not needed since results appear under search bar
             });
 
             // Product selection
