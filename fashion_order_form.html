@@ -494,6 +494,9 @@
             font-size: 14px;
             transition: all 0.3s ease;
             font-family: inherit;
+            pointer-events: auto !important;
+            z-index: 1;
+            position: relative;
         }
 
         .custom-size-field input:focus {
@@ -505,6 +508,12 @@
 
         .custom-size-field input:invalid {
             border-color: #fc8181;
+        }
+
+        .custom-size-input {
+            pointer-events: auto !important;
+            z-index: 1;
+            position: relative;
         }
 
         .clothing-type-selector {
@@ -1474,6 +1483,7 @@
                 });
             }
 
+
             // Wait for Supabase library and environment variables to be fully loaded
             await waitForSupabase(() => {
                 initializeSupabase();
@@ -1623,21 +1633,36 @@
             
             colorOptionsDiv.classList.add('active');
             
+            // Helper function to handle color selection (works for both click and touch)
+            const handleColorSelection = function(option) {
+                document.querySelectorAll('.color-option').forEach(o => o.classList.remove('selected'));
+                option.classList.add('selected');
+                selectedColor = option.dataset.color;
+                
+                // Update selected color display
+                const selectedColorDisplay = document.getElementById('selectedColorDisplay');
+                selectedColorDisplay.textContent = `Colour: ${selectedColor}`;
+                
+                // Show "Add to Cart" button when color is selected
+                if (addToCartBtn) {
+                    addToCartBtn.style.display = 'block';
+                }
+            };
+            
             document.querySelectorAll('.color-option').forEach(option => {
-                option.addEventListener('click', () => {
-                    document.querySelectorAll('.color-option').forEach(o => o.classList.remove('selected'));
-                    option.classList.add('selected');
-                    selectedColor = option.dataset.color;
-                    
-                    // Update selected color display
-                    const selectedColorDisplay = document.getElementById('selectedColorDisplay');
-                    selectedColorDisplay.textContent = `Colour: ${selectedColor}`;
-                    
-                    // Show "Add to Cart" button when color is selected
-                    if (addToCartBtn) {
-                        addToCartBtn.style.display = 'block';
-                    }
+                // Desktop click
+                option.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    handleColorSelection(option);
                 });
+                
+                // Mobile touch
+                option.addEventListener('touchend', (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    handleColorSelection(option);
+                }, { passive: false });
             });
         }
         
@@ -1729,6 +1754,15 @@
                 customBust.required = true;
                 customWaist.required = true;
                 customHips.required = true;
+                // Ensure inputs are enabled and can receive focus
+                customHeight.disabled = false;
+                customBust.disabled = false;
+                customWaist.disabled = false;
+                customHips.disabled = false;
+                customHeight.style.pointerEvents = 'auto';
+                customBust.style.pointerEvents = 'auto';
+                customWaist.style.pointerEvents = 'auto';
+                customHips.style.pointerEvents = 'auto';
             } else {
                 customInput.style.display = 'none';
                 customHeight.required = false;
@@ -2516,49 +2550,67 @@
                     console.warn('Leaflet.js not loaded after 5 seconds');
                 }
             }, 100);
-        });
-
-        // Delivery option - show location input for delivery options that need it
-        document.getElementById('deliveryOption').addEventListener('change', function() {
-            const deliveryLocationInput = document.getElementById('deliveryLocationInput');
-            const storeLocationMessage = document.getElementById('storeLocationMessage');
             
-            if (this.value === 'uber' || this.value === 'pickup-mtaani' || this.value === 'courier') {
-                deliveryLocationInput.style.display = 'block';
-                storeLocationMessage.style.display = 'none';
-                
-                // Ensure map container is visible and has dimensions
-                const mapContainer = document.getElementById('mapContainer');
-                if (mapContainer) {
-                    mapContainer.style.display = 'block';
-                    mapContainer.style.width = '100%';
-                    mapContainer.style.height = '400px';
-                }
-                
-                // Show map immediately (it's already pre-initialized)
-                setTimeout(() => {
-                    initializeMap();
-                }, 50); // Much faster since map is pre-loaded
-            } else if (this.value === 'in-store-pickup') {
-                deliveryLocationInput.style.display = 'none';
-                storeLocationMessage.style.display = 'block';
-                
-                // Reset location data
-                selectedLocation = { lat: null, lng: null, displayName: null };
-                document.getElementById('deliveryLatitude').value = '';
-                document.getElementById('deliveryLongitude').value = '';
-                document.getElementById('deliveryDisplayName').value = '';
-                document.getElementById('selectedLocationInfo').style.display = 'none';
-            } else {
-                deliveryLocationInput.style.display = 'none';
-                storeLocationMessage.style.display = 'none';
-                
-                // Reset location data
-                selectedLocation = { lat: null, lng: null, displayName: null };
-                document.getElementById('deliveryLatitude').value = '';
-                document.getElementById('deliveryLongitude').value = '';
-                document.getElementById('deliveryDisplayName').value = '';
-                document.getElementById('selectedLocationInfo').style.display = 'none';
+            // Delivery option - show location input for delivery options that need it
+            const deliveryOption = document.getElementById('deliveryOption');
+            if (deliveryOption) {
+                deliveryOption.addEventListener('change', function() {
+                    const deliveryLocationInput = document.getElementById('deliveryLocationInput');
+                    const storeLocationMessage = document.getElementById('storeLocationMessage');
+                    
+                    if (!deliveryLocationInput || !storeLocationMessage) {
+                        console.error('Delivery location elements not found');
+                        return;
+                    }
+                    
+                    if (this.value === 'uber' || this.value === 'pickup-mtaani' || this.value === 'courier') {
+                        deliveryLocationInput.style.display = 'block';
+                        storeLocationMessage.style.display = 'none';
+                        
+                        // Ensure map container is visible and has dimensions
+                        const mapContainer = document.getElementById('mapContainer');
+                        if (mapContainer) {
+                            mapContainer.style.display = 'block';
+                            mapContainer.style.width = '100%';
+                            mapContainer.style.height = '400px';
+                        }
+                        
+                        // Show map immediately (it's already pre-initialized)
+                        setTimeout(() => {
+                            initializeMap();
+                        }, 50); // Much faster since map is pre-loaded
+                    } else if (this.value === 'in-store-pickup') {
+                        deliveryLocationInput.style.display = 'none';
+                        storeLocationMessage.style.display = 'block';
+                        
+                        // Reset location data
+                        selectedLocation = { lat: null, lng: null, displayName: null };
+                        const deliveryLatitude = document.getElementById('deliveryLatitude');
+                        const deliveryLongitude = document.getElementById('deliveryLongitude');
+                        const deliveryDisplayName = document.getElementById('deliveryDisplayName');
+                        const selectedLocationInfo = document.getElementById('selectedLocationInfo');
+                        
+                        if (deliveryLatitude) deliveryLatitude.value = '';
+                        if (deliveryLongitude) deliveryLongitude.value = '';
+                        if (deliveryDisplayName) deliveryDisplayName.value = '';
+                        if (selectedLocationInfo) selectedLocationInfo.style.display = 'none';
+                    } else {
+                        deliveryLocationInput.style.display = 'none';
+                        storeLocationMessage.style.display = 'none';
+                        
+                        // Reset location data
+                        selectedLocation = { lat: null, lng: null, displayName: null };
+                        const deliveryLatitude = document.getElementById('deliveryLatitude');
+                        const deliveryLongitude = document.getElementById('deliveryLongitude');
+                        const deliveryDisplayName = document.getElementById('deliveryDisplayName');
+                        const selectedLocationInfo = document.getElementById('selectedLocationInfo');
+                        
+                        if (deliveryLatitude) deliveryLatitude.value = '';
+                        if (deliveryLongitude) deliveryLongitude.value = '';
+                        if (deliveryDisplayName) deliveryDisplayName.value = '';
+                        if (selectedLocationInfo) selectedLocationInfo.style.display = 'none';
+                    }
+                });
             }
         });
 
