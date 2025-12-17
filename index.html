@@ -558,6 +558,15 @@
             border-right: 1px solid rgba(224, 216, 201, 0.2) !important;
             z-index: 10003;
             padding: 30px 0;
+            pointer-events: auto;
+        }
+        
+        /* Ensure admin nav links are clickable */
+        #admin-sidebar .nav-link {
+            pointer-events: auto !important;
+            cursor: pointer;
+            position: relative;
+            z-index: 1;
         }
 
         /* Admin Main Content - Match employee dashboard structure */
@@ -1778,11 +1787,21 @@
                 transform: translateX(-100%);
                 width: 260px !important;
                 transition: transform 0.3s ease;
-                z-index: 1000;
+                z-index: 10003 !important;
+                pointer-events: auto !important;
             }
 
             #admin-sidebar.mobile-open {
                 transform: translateX(0);
+                z-index: 10003 !important;
+                pointer-events: auto !important;
+            }
+            
+            /* Ensure admin nav links are clickable on mobile */
+            #admin-sidebar.mobile-open .nav-link {
+                pointer-events: auto !important;
+                z-index: 1;
+                position: relative;
             }
 
             #admin-dashboard-page main {
@@ -7408,18 +7427,42 @@
             adminMobileOverlay.addEventListener('click', closeAdminMobileSidebar);
         }
 
-        // Add event listeners for admin navigation
+        // Add event listeners for admin navigation - use event delegation
+        const adminSidebar = document.getElementById('admin-sidebar');
+        if (adminSidebar) {
+            adminSidebar.addEventListener('click', (e) => {
+                const navLink = e.target.closest('.nav-link');
+                if (navLink) {
+                    e.stopPropagation();
+                    e.preventDefault();
+                    const pageId = navLink.getAttribute('data-page');
+                    if (pageId) {
+                        showAdminPage(pageId);
+                        
+                        // Close mobile sidebar after navigation
+                        if (window.innerWidth <= 768) {
+                            closeAdminMobileSidebar();
+                        }
+                    }
+                }
+            });
+        }
+        
+        // Also keep the original event listeners as backup
         document.addEventListener('DOMContentLoaded', () => {
             const adminNavLinks = document.querySelectorAll('#admin-dashboard-page .nav-link');
             adminNavLinks.forEach(link => {
                 link.addEventListener('click', (e) => {
+                    e.stopPropagation();
                     e.preventDefault();
                     const pageId = link.getAttribute('data-page');
-                    showAdminPage(pageId);
-                    
-                    // Close mobile sidebar after navigation
-                    if (window.innerWidth <= 768) {
-                        closeAdminMobileSidebar();
+                    if (pageId) {
+                        showAdminPage(pageId);
+                        
+                        // Close mobile sidebar after navigation
+                        if (window.innerWidth <= 768) {
+                            closeAdminMobileSidebar();
+                        }
                     }
                 });
             });
