@@ -269,9 +269,10 @@ class ProductionService {
         const items = order.items || [order]; // Fallback to single item if items array doesn't exist
         const isMultiItem = items.length > 1;
         
-        // Generate items HTML with horizontal images
+        // Generate items HTML - use same format for both single and multi-item for consistency
         let itemsHTML = '';
         if (isMultiItem) {
+            // Multi-item: horizontal scrollable row
             itemsHTML = `
                 <div style="margin-bottom: 12px; padding-bottom: 12px; border-bottom: 1px solid rgba(0,0,0,0.1);">
                     <div style="display: flex; gap: 12px; overflow-x: auto; padding-bottom: 8px;">
@@ -287,19 +288,28 @@ class ProductionService {
                     </div>
                 </div>
             `;
+        } else {
+            // Single-item: use same layout structure as multi-item for consistency
+            itemsHTML = `
+                <div style="margin-bottom: 12px; padding-bottom: 12px; border-bottom: 1px solid rgba(0,0,0,0.1);">
+                    <div style="display: flex; gap: 12px; padding-bottom: 8px;">
+                        <div style="flex-shrink: 0; text-align: center; min-width: 100px;">
+                            <img src="${items[0].productImage}" alt="${items[0].productName}" 
+                                 style="width: 80px; height: 80px; object-fit: cover; border-radius: 8px; margin-bottom: 6px; border: 2px solid rgba(27, 77, 62, 0.2);">
+                            <div style="font-size: 12px; font-weight: 600; color: #2d3748; margin-bottom: 2px;">${items[0].productName}</div>
+                            <div style="font-size: 11px; color: #718096; margin-bottom: 2px;">Color: ${items[0].color}</div>
+                            <div style="font-size: 12px; font-weight: 600; color: #1B4D3E;">KES ${items[0].price.toLocaleString()}</div>
+                        </div>
+                    </div>
+                </div>
+            `;
         }
         
         bubble.innerHTML = `
             <div class="order-header">
-                ${!isMultiItem ? `<img src="${order.productImage}" alt="${order.productName}" class="order-image">` : ''}
-                <div class="order-info" style="${isMultiItem ? 'width: 100%;' : ''}">
+                <div class="order-info" style="width: 100%;">
                     <div class="customer-name">${order.customerName}</div>
-                    ${!isMultiItem ? `
-                        <div class="product-name">${order.productName}</div>
-                        <span class="product-color">Colour: ${order.color}</span>
-                    ` : `
-                        <div class="product-name" style="margin-top: 4px;">${items.length} Item${items.length > 1 ? 's' : ''}</div>
-                    `}
+                    <div class="product-name" style="margin-top: 4px;">${isMultiItem ? `${items.length} Item${items.length > 1 ? 's' : ''}` : items[0].productName}</div>
                 </div>
             </div>
             ${itemsHTML}
