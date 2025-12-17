@@ -179,14 +179,41 @@ class LogisticsService {
         // Format date
         const orderDate = order.created_at ? new Date(order.created_at).toISOString().split('T')[0] : '';
 
+        // Process items from JSONB column (new approach) or fallback to single item
+        let items = [];
+        
+        // Check if order has items stored as JSONB array
+        if (order.items && Array.isArray(order.items) && order.items.length > 0) {
+            console.log(`📦 Processing ${order.items.length} items from JSONB for order ${order.id}`);
+            items = order.items.map(item => ({
+                productName: item.product_name || 'Unknown Product',
+                productImage: item.product_image || 'https://via.placeholder.com/400',
+                color: item.color || '',
+                price: item.price || 0,
+                measurements: item.measurements || {}
+            }));
+            console.log(`✅ Created ${items.length} items for order ${order.id}:`, items.map(i => i.productName));
+        } else {
+            // Fallback to single item (backward compatibility for old orders)
+            console.log(`ℹ️ No items array found for order ${order.id}, using single item fallback`);
+            items = [{
+                productName: order.products?.name || order.product_name || 'Unknown Product',
+                productImage: order.products?.image_url || order.product_image || order.image_url || 'https://via.placeholder.com/400',
+                color: order.color || '',
+                price: order.price || 0,
+                measurements: measurements
+            }];
+        }
+
         return {
             id: order.id,
             customerName: order.customers?.name || order.customer_name || 'Unknown Customer',
             phone: order.customers?.phone || order.phone || '',
-            productName: order.products?.name || order.product_name || 'Unknown Product',
-            productImage: order.products?.image_url || order.product_image || order.image_url || 'https://via.placeholder.com/400',
-            color: order.color || '',
-            price: order.price || 0,
+            productName: items[0]?.productName || 'Unknown Product', // First item for backward compatibility
+            productImage: items[0]?.productImage || 'https://via.placeholder.com/400', // First item for backward compatibility
+            color: items[0]?.color || '', // First item for backward compatibility
+            price: order.price || 0, // Total price
+            items: items, // Array of all items
             measurements: measurements,
             comments: comments,
             date: orderDate,
@@ -237,15 +264,45 @@ class LogisticsService {
     createOrderBubble(order) {
         const bubble = document.createElement('div');
         bubble.className = 'order-bubble';
+        
+        // Check if order has multiple items
+        const items = order.items || [order]; // Fallback to single item if items array doesn't exist
+        const isMultiItem = items.length > 1;
+        
+        // Generate items HTML with horizontal images
+        let itemsHTML = '';
+        if (isMultiItem) {
+            itemsHTML = `
+                <div style="margin-bottom: 12px; padding-bottom: 12px; border-bottom: 1px solid rgba(0,0,0,0.1);">
+                    <div style="display: flex; gap: 12px; overflow-x: auto; padding-bottom: 8px;">
+                        ${items.map(item => `
+                            <div style="flex-shrink: 0; text-align: center; min-width: 100px;">
+                                <img src="${item.productImage}" alt="${item.productName}" 
+                                     style="width: 80px; height: 80px; object-fit: cover; border-radius: 8px; margin-bottom: 6px; border: 2px solid rgba(27, 77, 62, 0.2);">
+                                <div style="font-size: 12px; font-weight: 600; color: #2d3748; margin-bottom: 2px;">${item.productName}</div>
+                                <div style="font-size: 11px; color: #718096; margin-bottom: 2px;">Color: ${item.color}</div>
+                                <div style="font-size: 12px; font-weight: 600; color: #1B4D3E;">KES ${item.price.toLocaleString()}</div>
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+            `;
+        }
+        
         bubble.innerHTML = `
             <div class="order-header">
-                <img src="${order.productImage}" alt="${order.productName}" class="order-image">
-                <div class="order-info">
+                ${!isMultiItem ? `<img src="${order.productImage}" alt="${order.productName}" class="order-image">` : ''}
+                <div class="order-info" style="${isMultiItem ? 'width: 100%;' : ''}">
                     <div class="customer-name">${order.customerName}</div>
-                    <div class="product-name">${order.productName}</div>
-                    <span class="product-color">Colour: ${order.color}</span>
+                    ${!isMultiItem ? `
+                        <div class="product-name">${order.productName}</div>
+                        <span class="product-color">Colour: ${order.color}</span>
+                    ` : `
+                        <div class="product-name" style="margin-top: 4px;">${items.length} Item${items.length > 1 ? 's' : ''}</div>
+                    `}
                 </div>
             </div>
+            ${itemsHTML}
             <div class="order-details" id="details-${order.id}">
                 ${this.renderOrderDetails(order)}
             </div>
@@ -273,13 +330,22 @@ class LogisticsService {
      * @returns {string} HTML string for order details
      */
     renderOrderDetails(order) {
+        const items = order.items || [order];
+        const isMultiItem = items.length > 1;
+        
         return `
             <div class="detail-row">
                 <div class="detail-label">Phone:</div>
                 <div class="detail-value">${order.phone}</div>
             </div>
+            ${isMultiItem ? `
+                <div class="detail-row">
+                    <div class="detail-label">Items:</div>
+                    <div class="detail-value">${items.length} item${items.length > 1 ? 's' : ''}</div>
+                </div>
+            ` : ''}
             <div class="detail-row">
-                <div class="detail-label">Price:</div>
+                <div class="detail-label">${isMultiItem ? 'Total Price:' : 'Price:'}</div>
                 <div class="detail-value">KES ${order.price.toLocaleString()}</div>
             </div>
             <div class="detail-row">
