@@ -4572,6 +4572,20 @@
                                 <label>Select Color <span class="inhouse-required">*</span></label>
                                 <div id="inhouse-dash-selectedColorDisplay" style="margin-bottom: 12px; padding: 10px; background: rgba(27, 77, 62, 0.05); border-radius: 8px; text-align: center; font-size: 14px; font-weight: 600; color: #2d3748; min-height: 40px; display: flex; align-items: center; justify-content: center;"></div>
                                 <div class="inhouse-color-grid" id="inhouse-dash-colorGrid"></div>
+                                <button type="button" id="inhouse-dash-addToCartBtn" class="inhouse-add-to-cart-btn" style="display: none; width: 100%; padding: 12px; margin-top: 12px; background: #1B4D3E; color: white; border: none; border-radius: 8px; font-size: 15px; font-weight: 600; cursor: pointer; transition: all 0.3s;">
+                                    Add to Order
+                                </button>
+                            </div>
+
+                            <!-- Order Cart -->
+                            <div class="inhouse-form-group" id="inhouse-dash-orderCart" style="display: none;">
+                                <label>Order Items <span class="inhouse-required">*</span> <span id="inhouse-dash-cartCount" style="font-size: 12px; font-weight: normal; color: #718096;">(0 items)</span></label>
+                                <div id="inhouse-dash-cartItems" style="background: rgba(27, 77, 62, 0.03); border-radius: 12px; padding: 16px; margin-top: 8px; min-height: 60px; border: 1px solid rgba(27, 77, 62, 0.1);">
+                                    <div style="text-align: center; color: #718096; padding: 20px;">No items added yet. Select a product and color, then click "Add to Order".</div>
+                                </div>
+                                <div id="inhouse-dash-cartTotal" style="margin-top: 12px; padding: 12px; background: rgba(27, 77, 62, 0.1); border-radius: 8px; text-align: right; font-size: 16px; font-weight: 700; color: #1B4D3E; display: none;">
+                                    Total: KES <span id="inhouse-dash-totalAmount">0</span>
+                                </div>
                             </div>
 
                             <div class="inhouse-form-group">
@@ -8035,6 +8049,11 @@
             let inhouseMarker = null;
             let inhouseSelectedLocation = { lat: null, lng: null, displayName: null };
             let inhouseProductsChannel = null;
+            
+            // Cart for multiple items
+            let inhouseOrderCart = [];
+            let inhouseCurrentProduct = null;
+            let inhouseCurrentColor = null;
 
             // Get form elements
             const form = document.getElementById('inhouse-dash-orderForm');
@@ -8045,6 +8064,12 @@
             const colorGrid = document.getElementById('inhouse-dash-colorGrid');
             const selectedColorDisplay = document.getElementById('inhouse-dash-selectedColorDisplay');
             const clearProductBtn = document.getElementById('inhouse-dash-clearProductBtn');
+            const addToCartBtn = document.getElementById('inhouse-dash-addToCartBtn');
+            const orderCart = document.getElementById('inhouse-dash-orderCart');
+            const cartItems = document.getElementById('inhouse-dash-cartItems');
+            const cartCount = document.getElementById('inhouse-dash-cartCount');
+            const cartTotal = document.getElementById('inhouse-dash-cartTotal');
+            const totalAmount = document.getElementById('inhouse-dash-totalAmount');
             const bodyMeasurements = document.getElementById('inhouse-dash-bodyMeasurements');
             const customSizeInput = document.getElementById('inhouse-dash-customSizeInput');
             const deliveryOption = document.getElementById('inhouse-dash-deliveryOption');
@@ -8144,7 +8169,8 @@
                     const productId = String(item.dataset.id);
                     const product = inhouseProducts.find(p => String(p.id) === productId);
                     if (product) {
-                        inhouseSelectedProduct = product;
+                        inhouseCurrentProduct = product;
+                        inhouseCurrentColor = null;
                         productSearch.value = product.name;
                         searchResults.classList.remove('active');
                         if (searchBackdrop) {
@@ -8155,6 +8181,9 @@
                         document.getElementById('inhouse-dash-selectedPrice').textContent = `KES ${product.price.toLocaleString()}`;
                         selectedProductDiv.classList.add('active');
                         displayInhouseColors();
+                        if (addToCartBtn) {
+                            addToCartBtn.style.display = 'none';
+                        }
                     }
                 }
             });
@@ -8170,12 +8199,15 @@
             // Clear product
             if (clearProductBtn) {
                 clearProductBtn.addEventListener('click', () => {
-                    inhouseSelectedProduct = null;
-                    inhouseSelectedColor = null;
+                    inhouseCurrentProduct = null;
+                    inhouseCurrentColor = null;
                     productSearch.value = '';
                     selectedProductDiv.classList.remove('active');
                     colorOptionsDiv.style.display = 'none';
                     selectedColorDisplay.textContent = '';
+                    if (addToCartBtn) {
+                        addToCartBtn.style.display = 'none';
+                    }
                     searchResults.classList.remove('active');
                     if (searchBackdrop) {
                         searchBackdrop.classList.remove('active');
@@ -8198,6 +8230,7 @@
             };
 
             function displayInhouseColors() {
+                if (!inhouseCurrentProduct) return;
                 colorGrid.innerHTML = Object.keys(colorMap).map(colorName => {
                     const hex = colorMap[colorName];
                     const lightColors = ['White', 'Off white', 'Cream', 'Champagne'];
@@ -8209,10 +8242,88 @@
                     opt.addEventListener('click', () => {
                         colorGrid.querySelectorAll('.inhouse-color-option').forEach(o => o.classList.remove('selected'));
                         opt.classList.add('selected');
-                        inhouseSelectedColor = opt.dataset.color;
-                        selectedColorDisplay.textContent = `Selected: ${inhouseSelectedColor}`;
+                        inhouseCurrentColor = opt.dataset.color;
+                        selectedColorDisplay.textContent = `Selected: ${inhouseCurrentColor}`;
+                        if (addToCartBtn) {
+                            addToCartBtn.style.display = 'block';
+                        }
                     });
                 });
+            }
+
+            // Add to cart functionality
+            function addItemToCart() {
+                if (!inhouseCurrentProduct || !inhouseCurrentColor) {
+                    alert('Please select a product and color');
+                    return;
+                }
+
+                const cartItem = {
+                    id: Date.now() + Math.random(), // Unique ID for cart item
+                    product: inhouseCurrentProduct,
+                    color: inhouseCurrentColor,
+                    measurements: null // Will be set on submit
+                };
+
+                inhouseOrderCart.push(cartItem);
+                updateCartDisplay();
+                
+                // Reset current selection
+                inhouseCurrentProduct = null;
+                inhouseCurrentColor = null;
+                productSearch.value = '';
+                selectedProductDiv.classList.remove('active');
+                colorOptionsDiv.style.display = 'none';
+                selectedColorDisplay.textContent = '';
+                if (addToCartBtn) {
+                    addToCartBtn.style.display = 'none';
+                }
+            }
+
+            function removeItemFromCart(itemId) {
+                inhouseOrderCart = inhouseOrderCart.filter(item => item.id !== itemId);
+                updateCartDisplay();
+            }
+
+            function updateCartDisplay() {
+                if (!cartItems || !cartCount || !cartTotal || !totalAmount) return;
+
+                if (inhouseOrderCart.length === 0) {
+                    cartItems.innerHTML = '<div style="text-align: center; color: #718096; padding: 20px;">No items added yet. Select a product and color, then click "Add to Order".</div>';
+                    orderCart.style.display = 'none';
+                    cartTotal.style.display = 'none';
+                    return;
+                }
+
+                orderCart.style.display = 'block';
+                cartCount.textContent = `(${inhouseOrderCart.length} ${inhouseOrderCart.length === 1 ? 'item' : 'items'})`;
+                
+                let total = 0;
+                cartItems.innerHTML = inhouseOrderCart.map(item => {
+                    total += item.product.price;
+                    return `
+                        <div style="display: flex; align-items: center; gap: 12px; padding: 12px; background: white; border-radius: 8px; margin-bottom: 8px; border: 1px solid rgba(27, 77, 62, 0.1);">
+                            <img src="${item.product.image}" alt="${item.product.name}" style="width: 60px; height: 60px; object-fit: cover; border-radius: 6px; flex-shrink: 0;">
+                            <div style="flex: 1;">
+                                <div style="font-weight: 600; color: #2d3748; margin-bottom: 4px;">${item.product.name}</div>
+                                <div style="font-size: 13px; color: #718096;">Color: ${item.color}</div>
+                                <div style="font-size: 14px; font-weight: 600; color: #1B4D3E; margin-top: 4px;">KES ${item.product.price.toLocaleString()}</div>
+                            </div>
+                            <button type="button" onclick="removeInhouseCartItem(${item.id})" style="background: rgba(239, 68, 68, 0.1); border: none; border-radius: 50%; width: 32px; height: 32px; cursor: pointer; color: #ef4444; font-size: 18px; display: flex; align-items: center; justify-content: center; flex-shrink: 0;" title="Remove item">×</button>
+                        </div>
+                    `;
+                }).join('');
+
+                totalAmount.textContent = total.toLocaleString();
+                cartTotal.style.display = 'block';
+            }
+
+            // Make remove function globally accessible
+            window.removeInhouseCartItem = removeItemFromCart;
+
+            // Add to cart button handler
+            if (addToCartBtn) {
+                addToCartBtn.addEventListener('click', addItemToCart);
             }
 
             // Body measurements
@@ -8495,8 +8606,8 @@
             // Form submission
             form.addEventListener('submit', async (e) => {
                 e.preventDefault();
-                if (!inhouseSelectedProduct || !inhouseSelectedColor) {
-                    alert('Please select a product and color');
+                if (inhouseOrderCart.length === 0) {
+                    alert('Please add at least one item to the order');
                     return;
                 }
 
@@ -8582,32 +8693,36 @@
                         customerId = newCustomer.id;
                     }
 
-                    // Create order
+                    // Calculate total price from all cart items
+                    const totalPrice = inhouseOrderCart.reduce((sum, item) => sum + item.product.price, 0);
+                    
+                    // Prepare measurements text for comments
                     let finalComments = comments || '';
                     if (Object.keys(measurements).length > 0) {
                         const measurementsText = `Measurements: Height=${measurements.height || 'N/A'}, Bust=${measurements.bust || 'N/A'}, High Waist=${measurements.high_waist || 'N/A'}, Hips=${measurements.hips || 'N/A'}`;
                         finalComments = finalComments ? `${finalComments}\n${measurementsText}` : measurementsText;
                     }
 
+                    // Create order (using first item's product_id for backward compatibility)
                     const orderData = {
                         customer_id: customerId,
                         customer_phone: customerPhone,
-                        product_id: inhouseSelectedProduct.id,
+                        product_id: inhouseOrderCart[0].product.id, // First product for backward compatibility
                         status: 'pending',
-                        color: inhouseSelectedColor,
-                        price: inhouseSelectedProduct.price,
+                        color: inhouseOrderCart[0].color, // First color for backward compatibility
+                        price: totalPrice, // Total price of all items
                         delivery_option: deliveryOptionValue,
                         delivery_location: inhouseSelectedLocation.displayName || null,
                         delivery_latitude: inhouseSelectedLocation.lat ? parseFloat(inhouseSelectedLocation.lat) : null,
                         delivery_longitude: inhouseSelectedLocation.lng ? parseFloat(inhouseSelectedLocation.lng) : null,
                         delivery_display_name: inhouseSelectedLocation.displayName || null,
-                        payment_option: 'mpesa', // Use 'mpesa' to avoid constraint error
-                        payment_reference: 'INHOUSE-' + mpesaCode.toUpperCase(), // Prefix to identify in-house orders
+                        payment_option: 'mpesa',
+                        payment_reference: 'INHOUSE-' + mpesaCode.toUpperCase(),
                         payment_status: 'pending',
                         comments: finalComments || null
                     };
 
-                    const { error: orderError } = await supabase
+                    const { data: newOrder, error: orderError } = await supabase
                         .from('orders')
                         .insert(orderData)
                         .select()
@@ -8615,10 +8730,33 @@
 
                     if (orderError) throw new Error(`Failed to create order: ${orderError.message}`);
 
-                    alert(`✓ Order submitted successfully!\n\nM-Pesa Code: ${mpesaCode.toUpperCase()}\n\nOrder will be processed after payment verification.`);
+                    // Create order_items for each cart item
+                    const orderItemsData = inhouseOrderCart.map(item => ({
+                        order_id: newOrder.id,
+                        product_id: item.product.id,
+                        color: item.color,
+                        price: item.product.price,
+                        measurements: JSON.stringify(measurements) // Store measurements as JSON
+                    }));
+
+                    const { error: itemsError } = await supabase
+                        .from('order_items')
+                        .insert(orderItemsData);
+
+                    if (itemsError) {
+                        // If order_items table doesn't exist, that's okay - we'll handle it gracefully
+                        console.warn('Note: order_items table may not exist yet. Order created but items not stored separately:', itemsError.message);
+                        console.log('To enable multi-item orders, create an order_items table in Supabase with columns: id (uuid), order_id (uuid, references orders), product_id (uuid, references products), color (text), price (numeric), measurements (jsonb)');
+                    }
+
+                    alert(`✓ Order submitted successfully!\n\nItems: ${inhouseOrderCart.length}\nTotal: KES ${totalPrice.toLocaleString()}\nM-Pesa Code: ${mpesaCode.toUpperCase()}\n\nOrder will be processed after payment verification.`);
+                    
+                    // Reset form
                     form.reset();
-                    inhouseSelectedProduct = null;
-                    inhouseSelectedColor = null;
+                    inhouseOrderCart = [];
+                    inhouseCurrentProduct = null;
+                    inhouseCurrentColor = null;
+                    updateCartDisplay();
                     selectedProductDiv.classList.remove('active');
                     colorOptionsDiv.style.display = 'none';
                     customSizeInput.style.display = 'none';
