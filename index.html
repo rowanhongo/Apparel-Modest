@@ -556,7 +556,7 @@
             height: 100vh;
             overflow-y: auto;
             border-right: 1px solid rgba(224, 216, 201, 0.2) !important;
-            z-index: 40;
+            z-index: 10003;
             padding: 30px 0;
         }
 
@@ -687,6 +687,7 @@
             height: 100vh;
             overflow-y: auto;
             border-right: 1px solid rgba(224, 216, 201, 0.2) !important;
+            z-index: 10003;
         }
 
         .logo {
@@ -1506,7 +1507,7 @@
                 right: 0;
                 bottom: 0;
                 background: rgba(0, 0, 0, 0.5);
-                z-index: 999;
+                z-index: 10002;
             }
 
             .sidebar-overlay.active {
@@ -4331,6 +4332,7 @@
                         }
                         #inhouse-order-form-container .inhouse-search-container {
                             position: relative;
+                            z-index: 10002;
                         }
                         #inhouse-order-form-container .inhouse-search-backdrop {
                             display: none;
@@ -4340,7 +4342,7 @@
                             right: 0;
                             bottom: 0;
                             background: rgba(0, 0, 0, 0.5);
-                            z-index: 9999;
+                            z-index: 10001;
                             backdrop-filter: blur(2px);
                         }
                         #inhouse-order-form-container .inhouse-search-backdrop.active {
@@ -4360,12 +4362,13 @@
                             overflow-y: auto;
                             overflow-x: hidden;
                             box-shadow: 0 12px 40px rgba(0, 0, 0, 0.12);
-                            z-index: 10001;
+                            z-index: 10002;
                             display: none;
                             pointer-events: auto;
                             -webkit-overflow-scrolling: touch;
                             touch-action: pan-y;
                             will-change: transform;
+                            min-width: 100%;
                         }
                         #inhouse-order-form-container .inhouse-search-results.active {
                             display: block !important;
@@ -4541,21 +4544,40 @@
                                 overflow: visible !important;
                             }
                             
+                            #inhouse-order-form-container {
+                                overflow: visible !important;
+                            }
+                            
+                            #inhouse-order-form-container .inhouse-form-wrapper,
+                            #inhouse-order-form-container .inhouse-form-content,
+                            #inhouse-order-form-container .inhouse-form-group {
+                                overflow: visible !important;
+                            }
+                            
                             #inhouse-order-form-container .inhouse-search-container {
                                 position: relative !important;
-                                z-index: 10001 !important;
+                                z-index: 10002 !important;
                             }
                             
                             #inhouse-order-form-container .inhouse-search-results {
-                                position: absolute !important;
-                                max-width: calc(100vw - 20px) !important;
+                                position: fixed !important;
+                                max-width: calc(100vw - 40px) !important;
                                 max-height: 70vh !important;
-                                z-index: 10001 !important;
+                                z-index: 10002 !important;
                                 background: rgba(255, 255, 255, 0.98) !important;
                                 backdrop-filter: blur(20px) !important;
                                 border: 1.5px solid rgba(0, 0, 0, 0.08) !important;
                                 border-radius: 12px !important;
                                 box-shadow: 0 12px 40px rgba(0, 0, 0, 0.12) !important;
+                                left: 20px !important;
+                                right: 20px !important;
+                                top: auto !important;
+                                bottom: auto !important;
+                            }
+                            
+                            /* Calculate position dynamically via JavaScript */
+                            #inhouse-order-form-container .inhouse-search-results.positioned {
+                                position: fixed !important;
                             }
                             
                             #inhouse-order-form-container .inhouse-search-results:not(.active) {
@@ -4676,15 +4698,15 @@
                                             <input type="text" id="inhouse-dash-customHeight" placeholder="e.g., 6'5" style="width: 100%; padding: 10px; border: 1.5px solid rgba(0,0,0,0.1); border-radius: 6px;" maxlength="4" inputmode="numeric">
                                         </div>
                                         <div>
-                                            <label style="font-size: 12px; font-weight: 600; color: #4a5568; margin-bottom: 6px; display: block;">Bust <span class="inhouse-required">*</span></label>
+                                            <label style="font-size: 12px; font-weight: 600; color: #4a5568; margin-bottom: 6px; display: block;">Bust (cm) <span class="inhouse-required">*</span></label>
                                             <input type="number" id="inhouse-dash-customBust" min="0" placeholder="e.g., 42" style="width: 100%; padding: 10px; border: 1.5px solid rgba(0,0,0,0.1); border-radius: 6px;">
                                         </div>
                                         <div>
-                                            <label style="font-size: 12px; font-weight: 600; color: #4a5568; margin-bottom: 6px; display: block;">High Waist <span class="inhouse-required">*</span></label>
+                                            <label style="font-size: 12px; font-weight: 600; color: #4a5568; margin-bottom: 6px; display: block;">High Waist (cm) <span class="inhouse-required">*</span></label>
                                             <input type="number" id="inhouse-dash-customWaist" min="0" placeholder="e.g., 34" style="width: 100%; padding: 10px; border: 1.5px solid rgba(0,0,0,0.1); border-radius: 6px;">
                                         </div>
                                         <div>
-                                            <label style="font-size: 12px; font-weight: 600; color: #4a5568; margin-bottom: 6px; display: block;">Hips <span class="inhouse-required">*</span></label>
+                                            <label style="font-size: 12px; font-weight: 600; color: #4a5568; margin-bottom: 6px; display: block;">Hips (cm) <span class="inhouse-required">*</span></label>
                                             <input type="number" id="inhouse-dash-customHips" min="0" placeholder="e.g., 46" style="width: 100%; padding: 10px; border: 1.5px solid rgba(0,0,0,0.1); border-radius: 6px;">
                                         </div>
                                     </div>
@@ -4934,7 +4956,7 @@
             </aside>
 
             <!-- Mobile overlay -->
-            <div id="admin-mobile-overlay" class="fixed inset-0 bg-background/80 backdrop-blur-sm z-30 hidden"></div>
+            <div id="admin-mobile-overlay" class="fixed inset-0 bg-background/80 backdrop-blur-sm hidden" style="z-index: 10002;"></div>
 
             <!-- Main content -->
             <main>
@@ -6394,6 +6416,18 @@
             const sidebar = document.getElementById('sidebar');
             const sidebarOverlay = document.getElementById('sidebar-overlay');
             
+            // Close search popup when sidebar opens
+            const searchResults = document.getElementById('inhouse-dash-searchResults');
+            const searchBackdrop = document.getElementById('inhouse-dash-searchBackdrop');
+            if (searchResults) {
+                searchResults.classList.remove('active');
+                searchResults.style.display = 'none';
+            }
+            if (searchBackdrop) {
+                searchBackdrop.classList.remove('active');
+                searchBackdrop.style.display = 'none';
+            }
+            
             if (sidebar && sidebarOverlay) {
                 sidebar.classList.toggle('mobile-open');
                 sidebarOverlay.classList.toggle('active');
@@ -7292,6 +7326,18 @@
             const adminMobileOverlay = document.getElementById('admin-mobile-overlay');
             const adminMenuIcon = document.getElementById('admin-menu-icon');
             const adminCloseIcon = document.getElementById('admin-close-icon');
+            
+            // Close search popup when sidebar opens
+            const searchResults = document.getElementById('inhouse-dash-searchResults');
+            const searchBackdrop = document.getElementById('inhouse-dash-searchBackdrop');
+            if (searchResults) {
+                searchResults.classList.remove('active');
+                searchResults.style.display = 'none';
+            }
+            if (searchBackdrop) {
+                searchBackdrop.classList.remove('active');
+                searchBackdrop.style.display = 'none';
+            }
             
             if (adminSidebar && adminMobileOverlay) {
                 const isOpen = adminSidebar.classList.contains('mobile-open');
@@ -8368,12 +8414,41 @@
                     </div>
                 `;
                 }).join('');
+                
+                // Force show the popup
+                searchResults.style.display = 'block';
+                searchResults.style.visibility = 'visible';
+                searchResults.style.opacity = '1';
                 searchResults.classList.add('active');
+                
+                // On mobile, position the popup relative to the search input using fixed positioning
+                if (window.innerWidth <= 640) {
+                    const searchInput = productSearch;
+                    const inputRect = searchInput.getBoundingClientRect();
+                    searchResults.style.position = 'fixed';
+                    searchResults.style.top = (inputRect.bottom + 6) + 'px';
+                    searchResults.style.left = '20px';
+                    searchResults.style.right = '20px';
+                    searchResults.style.width = 'calc(100vw - 40px)';
+                    searchResults.classList.add('positioned');
+                }
                 
                 // Show backdrop on mobile (matching customer form behavior)
                 if (searchBackdrop && window.innerWidth <= 640) {
+                    searchBackdrop.style.display = 'block';
                     searchBackdrop.classList.add('active');
                 }
+                
+                // Debug log
+                console.log('🔍 Search results shown:', {
+                    resultsCount: filtered.length,
+                    hasActiveClass: searchResults.classList.contains('active'),
+                    display: window.getComputedStyle(searchResults).display,
+                    visibility: window.getComputedStyle(searchResults).visibility,
+                    zIndex: window.getComputedStyle(searchResults).zIndex,
+                    position: window.getComputedStyle(searchResults).position,
+                    top: window.getComputedStyle(searchResults).top
+                });
             });
 
             // Product selection
