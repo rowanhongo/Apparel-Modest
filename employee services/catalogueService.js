@@ -444,59 +444,72 @@ class CatalogueService {
             existingNotification.remove();
         }
 
-        // Create notification element
-        const notification = document.createElement('div');
-        notification.id = 'edit-product-notification';
-        notification.style.cssText = `
-            position: fixed;
-            top: 20px;
-            left: 50%;
-            transform: translateX(-50%);
-            background: #1B4D3E;
-            color: white;
-            padding: 16px 24px;
-            border-radius: 12px;
-            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
-            z-index: 99999;
-            font-size: 15px;
-            font-weight: 600;
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            animation: slideDown 0.3s ease-out;
-            max-width: 90%;
-            text-align: center;
-            pointer-events: auto;
-        `;
-
-        // Add animation
-        const style = document.createElement('style');
-        style.textContent = `
-            @keyframes slideDown {
-                from {
-                    opacity: 0;
-                    transform: translateX(-50%) translateY(-20px);
-                }
-                to {
-                    opacity: 1;
-                    transform: translateX(-50%) translateY(0);
-                }
-            }
-            @keyframes slideUp {
-                from {
-                    opacity: 1;
-                    transform: translateX(-50%) translateY(0);
-                }
-                to {
-                    opacity: 0;
-                    transform: translateX(-50%) translateY(-20px);
-                }
-            }
-        `;
+        // Add animation styles if not already present
         if (!document.getElementById('edit-notification-styles')) {
+            const style = document.createElement('style');
             style.id = 'edit-notification-styles';
+            style.textContent = `
+                @keyframes editNotificationSlideDown {
+                    from {
+                        opacity: 0;
+                        transform: translateX(-50%) translateY(-30px);
+                    }
+                    to {
+                        opacity: 1;
+                        transform: translateX(-50%) translateY(0);
+                    }
+                }
+                @keyframes editNotificationSlideUp {
+                    from {
+                        opacity: 1;
+                        transform: translateX(-50%) translateY(0);
+                    }
+                    to {
+                        opacity: 0;
+                        transform: translateX(-50%) translateY(-30px);
+                    }
+                }
+                #edit-product-notification {
+                    animation: editNotificationSlideDown 0.4s ease-out forwards;
+                }
+                #edit-product-notification.removing {
+                    animation: editNotificationSlideUp 0.3s ease-out forwards;
+                }
+            `;
             document.head.appendChild(style);
         }
+
+        // Create notification element with very high z-index and proper positioning
+        const notification = document.createElement('div');
+        notification.id = 'edit-product-notification';
+        
+        // Use inline styles to ensure they're not overridden
+        Object.assign(notification.style, {
+            position: 'fixed',
+            top: '20px',
+            left: '50%',
+            transform: 'translateX(-50%)',
+            background: '#1B4D3E',
+            color: 'white',
+            padding: '16px 24px',
+            borderRadius: '12px',
+            boxShadow: '0 8px 32px rgba(0, 0, 0, 0.3)',
+            zIndex: '999999', // Very high z-index to ensure it's on top
+            fontSize: '15px',
+            fontWeight: '600',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '12px',
+            maxWidth: '90%',
+            minWidth: '280px',
+            textAlign: 'center',
+            pointerEvents: 'auto',
+            cursor: 'pointer',
+            userSelect: 'none',
+            WebkitUserSelect: 'none',
+            MozUserSelect: 'none',
+            msUserSelect: 'none'
+        });
 
         notification.innerHTML = `
             <svg width="24" height="24" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="flex-shrink: 0;">
@@ -505,45 +518,59 @@ class CatalogueService {
             <span>You can now edit "${productName}"</span>
         `;
 
-        // Ensure body exists and append notification
+        // Always append to body to avoid clipping by parent containers
+        // This ensures the notification is always visible regardless of overflow settings
         if (document.body) {
             document.body.appendChild(notification);
+            
+            // Force reflow and ensure visibility
+            void notification.offsetHeight;
+            
+            // Log for debugging
+            console.log('✅ Edit notification created:', productName, 'Position:', notification.getBoundingClientRect());
         } else {
-            // Fallback: wait for body to be available
+            // Wait for body to be available
             const checkBody = setInterval(() => {
                 if (document.body) {
                     document.body.appendChild(notification);
+                    void notification.offsetHeight;
+                    console.log('✅ Edit notification created (delayed):', productName);
                     clearInterval(checkBody);
                 }
             }, 10);
         }
 
-        // Force reflow to ensure notification is visible
-        notification.offsetHeight;
-
-        // Auto remove after 5 seconds (increased visibility time)
+        // Auto remove after 6 seconds
         setTimeout(() => {
-            if (notification.parentNode) {
-                notification.style.animation = 'slideUp 0.3s ease-out';
-                setTimeout(() => {
-                    if (notification.parentNode) {
-                        notification.remove();
-                    }
-                }, 300);
-            }
-        }, 5000);
+            this.removeNotification(notification);
+        }, 6000);
 
         // Also allow manual close on click
         notification.addEventListener('click', () => {
-            if (notification.parentNode) {
-                notification.style.animation = 'slideUp 0.3s ease-out';
-                setTimeout(() => {
-                    if (notification.parentNode) {
-                        notification.remove();
-                    }
-                }, 300);
-            }
+            this.removeNotification(notification);
         });
+    }
+
+    /**
+     * Animate notification in
+     */
+    animateNotificationIn(notification) {
+        // Force reflow
+        void notification.offsetHeight;
+    }
+
+    /**
+     * Remove notification with animation
+     */
+    removeNotification(notification) {
+        if (!notification || !notification.parentNode) return;
+        
+        notification.classList.add('removing');
+        setTimeout(() => {
+            if (notification && notification.parentNode) {
+                notification.remove();
+            }
+        }, 300);
     }
 
     /**
@@ -557,32 +584,80 @@ class CatalogueService {
             return;
         }
 
-        // Use scrollIntoView for better mobile compatibility
-        // This is more reliable than manual scroll calculations
-        requestAnimationFrame(() => {
-            formPanel.scrollIntoView({ 
-                behavior: 'smooth', 
-                block: 'start',
-                inline: 'nearest'
-            });
-            
-            // Additional scroll adjustment for mobile to ensure form is fully visible
-            setTimeout(() => {
-                const rect = formPanel.getBoundingClientRect();
-                const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
-                const currentTop = rect.top + scrollTop;
-                
-                // On mobile, add extra offset to account for fixed headers/sticky elements
-                const isMobile = window.innerWidth <= 768;
-                const offset = isMobile ? 40 : 20; // Larger offset on mobile for better visibility
-                const targetPosition = Math.max(0, currentTop - offset);
-                
-                window.scrollTo({ 
-                    top: targetPosition,
-                    behavior: 'smooth' 
+        const isMobile = window.innerWidth <= 768;
+        
+        // On mobile, the form is reordered to be first, so we need a different approach
+        if (isMobile) {
+            // For mobile: scroll to the top of the catalogue section first
+            const catalogueSection = document.getElementById('catalogue');
+            if (catalogueSection) {
+                // Scroll to catalogue section first
+                catalogueSection.scrollIntoView({ 
+                    behavior: 'smooth', 
+                    block: 'start',
+                    inline: 'nearest'
                 });
-            }, 100);
-        });
+                
+                // Then scroll to form with proper offset
+                setTimeout(() => {
+                    const rect = formPanel.getBoundingClientRect();
+                    const scrollTop = window.pageYOffset || document.documentElement.scrollTop || window.scrollY;
+                    const currentTop = rect.top + scrollTop;
+                    
+                    // Account for any fixed headers/navbars (usually around 60-80px on mobile)
+                    const headerOffset = 60;
+                    const targetPosition = Math.max(0, currentTop - headerOffset);
+                    
+                    window.scrollTo({ 
+                        top: targetPosition,
+                        behavior: 'smooth' 
+                    });
+                    
+                    // Final check - ensure form is visible
+                    setTimeout(() => {
+                        const finalRect = formPanel.getBoundingClientRect();
+                        if (finalRect.top < 0 || finalRect.top > window.innerHeight) {
+                            // Form still not visible, try again with scrollIntoView
+                            formPanel.scrollIntoView({ 
+                                behavior: 'smooth', 
+                                block: 'start',
+                                inline: 'nearest'
+                            });
+                        }
+                    }, 300);
+                }, 200);
+            } else {
+                // Fallback: direct scroll to form
+                formPanel.scrollIntoView({ 
+                    behavior: 'smooth', 
+                    block: 'start',
+                    inline: 'nearest'
+                });
+            }
+        } else {
+            // Desktop: use scrollIntoView with offset
+            requestAnimationFrame(() => {
+                formPanel.scrollIntoView({ 
+                    behavior: 'smooth', 
+                    block: 'start',
+                    inline: 'nearest'
+                });
+                
+                // Fine-tune position after scroll
+                setTimeout(() => {
+                    const rect = formPanel.getBoundingClientRect();
+                    const scrollTop = window.pageYOffset || document.documentElement.scrollTop || window.scrollY;
+                    const currentTop = rect.top + scrollTop;
+                    const offset = 20;
+                    const targetPosition = Math.max(0, currentTop - offset);
+                    
+                    window.scrollTo({ 
+                        top: targetPosition,
+                        behavior: 'smooth' 
+                    });
+                }, 100);
+            });
+        }
     }
 
     /**
