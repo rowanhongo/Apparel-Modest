@@ -1056,19 +1056,19 @@
                     <div class="custom-size-grid">
                         <div class="custom-size-field">
                             <label for="customHeight">Height <span class="required">*</span></label>
-                            <input type="text" id="customHeight" placeholder="e.g., 6'5" maxlength="4" inputmode="numeric" required>
+                            <input type="text" id="customHeight" placeholder="e.g., 6'5" maxlength="4" inputmode="numeric">
                         </div>
                         <div class="custom-size-field">
                             <label for="customBust">Bust (cm) <span class="required">*</span></label>
-                            <input type="number" id="customBust" min="0" step="1" placeholder="e.g., 42" required>
+                            <input type="number" id="customBust" min="0" step="1" placeholder="e.g., 42">
                         </div>
                         <div class="custom-size-field">
                             <label for="customWaist">High Waist (cm) <span class="required">*</span></label>
-                            <input type="number" id="customWaist" min="0" step="1" placeholder="e.g., 34" required>
+                            <input type="number" id="customWaist" min="0" step="1" placeholder="e.g., 34">
                         </div>
                         <div class="custom-size-field">
                             <label for="customHips">Hips (cm) <span class="required">*</span></label>
-                            <input type="number" id="customHips" min="0" step="1" placeholder="e.g., 46" required>
+                            <input type="number" id="customHips" min="0" step="1" placeholder="e.g., 46">
                         </div>
                     </div>
                 </div>
@@ -1473,6 +1473,16 @@
 
         // Initialize on page load
         document.addEventListener('DOMContentLoaded', async () => {
+            // Ensure custom size fields are not required on page load (they're hidden)
+            const customHeight = document.getElementById('customHeight');
+            const customBust = document.getElementById('customBust');
+            const customWaist = document.getElementById('customWaist');
+            const customHips = document.getElementById('customHips');
+            if (customHeight) customHeight.required = false;
+            if (customBust) customBust.required = false;
+            if (customWaist) customWaist.required = false;
+            if (customHips) customHips.required = false;
+            
             // Set up clear button event listener
             const clearBtn = document.getElementById('clearProductBtn');
             if (clearBtn) {
@@ -1750,10 +1760,13 @@
             
             if (this.value === 'custom') {
                 customInput.style.display = 'block';
-                customHeight.required = true;
-                customBust.required = true;
-                customWaist.required = true;
-                customHips.required = true;
+                // Set required AFTER showing to avoid validation errors
+                setTimeout(() => {
+                    customHeight.required = true;
+                    customBust.required = true;
+                    customWaist.required = true;
+                    customHips.required = true;
+                }, 0);
                 // Ensure inputs are enabled and can receive focus
                 customHeight.disabled = false;
                 customBust.disabled = false;
@@ -1764,11 +1777,12 @@
                 customWaist.style.pointerEvents = 'auto';
                 customHips.style.pointerEvents = 'auto';
             } else {
-                customInput.style.display = 'none';
+                // Remove required BEFORE hiding to avoid validation errors
                 customHeight.required = false;
                 customBust.required = false;
                 customWaist.required = false;
                 customHips.required = false;
+                customInput.style.display = 'none';
                 customHeight.value = '';
                 customBust.value = '';
                 customWaist.value = '';
@@ -2947,10 +2961,8 @@
 
                 console.log(`📦 Creating order with ${itemsArray.length} items stored as JSONB:`, itemsArray.map(i => ({ product_name: i.product_name, color: i.color, price: i.price })));
 
-                // Calculate total price from all cart items
-                const totalPrice = orderCart.reduce((sum, item) => sum + item.product.price, 0);
-
                 // Save order with items stored as JSONB (multi-item support)
+                // Note: totalPrice is already calculated above for payment
                 const { data: newOrder, error: orderError } = await supabaseClient
                     .from('orders')
                     .insert({
@@ -2978,8 +2990,7 @@
                     throw new Error(`Failed to create order: ${orderError.message}`);
                 }
 
-                // Calculate total for alert
-                const totalPrice = orderCart.reduce((sum, item) => sum + item.product.price, 0);
+                // Use the totalPrice already calculated above
                 alert(`✓ Payment successful!\n✓ Order submitted successfully!\n\nItems: ${orderCart.length}\nTotal: KES ${totalPrice.toLocaleString()}\nPayment Reference: ${paymentReference}\n\nYou can freely exit.`);
                 
                 // Reset form and cart
