@@ -82,64 +82,9 @@ class SalesService {
                 return;
             }
 
-            // Fetch order_items for all orders (if table exists)
-            let orderItemsMap = {};
-            if (orders && orders.length > 0) {
-                const orderIds = orders.map(o => o.id);
-                try {
-                    const { data: orderItems, error: itemsError } = await this.supabase
-                        .from('order_items')
-                        .select(`
-                            *,
-                            products (
-                                name,
-                                image_url
-                            )
-                        `)
-                        .in('order_id', orderIds);
-
-                    if (itemsError) {
-                        // Log error but don't fail - table might not exist yet
-                        console.warn('⚠️ Could not fetch order_items (table may not exist):', itemsError.message);
-                        console.log('💡 To enable multi-item orders, create the order_items table in Supabase');
-                    } else if (orderItems && orderItems.length > 0) {
-                        console.log(`✅ Found ${orderItems.length} order_items for ${orderIds.length} orders`);
-                        console.log('📋 Order items data:', orderItems);
-                        // Group items by order_id
-                        orderItems.forEach(item => {
-                            if (!orderItemsMap[item.order_id]) {
-                                orderItemsMap[item.order_id] = [];
-                            }
-                            orderItemsMap[item.order_id].push(item);
-                        });
-                        // Log which orders have multiple items
-                        Object.keys(orderItemsMap).forEach(orderId => {
-                            const count = orderItemsMap[orderId].length;
-                            console.log(`📦 Order ${orderId} has ${count} item${count > 1 ? 's' : ''}:`, orderItemsMap[orderId].map(i => i.products?.name || 'Unknown'));
-                            if (count > 1) {
-                                console.log(`   → This order should display ${count} items horizontally`);
-                            }
-                        });
-                    } else {
-                        console.log('ℹ️ No order_items found - orders may be single-item only');
-                        console.log('💡 Checking if order_items exist in database...');
-                        // Diagnostic: Check one order
-                        if (orderIds.length > 0) {
-                            const { data: testItems } = await this.supabase
-                                .from('order_items')
-                                .select('*')
-                                .eq('order_id', orderIds[0])
-                                .limit(5);
-                            console.log(`🔍 Test query for order ${orderIds[0]}:`, testItems);
-                        }
-                    }
-                } catch (error) {
-                    console.warn('⚠️ Error fetching order_items:', error);
-                }
-            }
-
             // Transform Supabase data to match expected format
-            this.orders = (orders || []).map(order => this.transformOrder(order, orderItemsMap[order.id] || null));
+            // Items are now stored as JSONB in the orders table, so we read directly from order.items
+            this.orders = (orders || []).map(order => this.transformOrder(order));
             this.render();
         } catch (error) {
             console.error('Error loading orders from database:', error);
@@ -151,10 +96,9 @@ class SalesService {
     /**
      * Transform Supabase order to display format
      * @param {Object} order - Order from Supabase
-     * @param {Array} orderItems - Array of order_items (optional)
      * @returns {Object} Transformed order object
      */
-    transformOrder(order, orderItems = null) {
+    transformOrder(order) {
         // Parse measurements if stored as JSON
         let measurements = { size: '', bust: '', waist: '', hips: '', length: '' };
         if (order.measurements) {
@@ -235,33 +179,23 @@ class SalesService {
         // Format date
         const orderDate = order.created_at ? new Date(order.created_at).toISOString().split('T')[0] : '';
 
-        // Process order_items if available
+        // Process items from JSONB column (new approach) or fallback to single item
         let items = [];
-        if (orderItems && orderItems.length > 0) {
-            console.log(`📦 Processing ${orderItems.length} items for order ${order.id}`);
-            items = orderItems.map(item => {
-                let itemMeasurements = {};
-                if (item.measurements) {
-                    try {
-                        itemMeasurements = typeof item.measurements === 'string' 
-                            ? JSON.parse(item.measurements) 
-                            : item.measurements;
-                    } catch (e) {
-                        itemMeasurements = {};
-                    }
-                }
-                return {
-                    productName: item.products?.name || 'Unknown Product',
-                    productImage: item.products?.image_url || 'https://via.placeholder.com/400',
-                    color: item.color || '',
-                    price: item.price || 0,
-                    measurements: itemMeasurements
-                };
-            });
+        
+        // Check if order has items stored as JSONB array
+        if (order.items && Array.isArray(order.items) && order.items.length > 0) {
+            console.log(`📦 Processing ${order.items.length} items from JSONB for order ${order.id}`);
+            items = order.items.map(item => ({
+                productName: item.product_name || 'Unknown Product',
+                productImage: item.product_image || 'https://via.placeholder.com/400',
+                color: item.color || '',
+                price: item.price || 0,
+                measurements: item.measurements || {}
+            }));
             console.log(`✅ Created ${items.length} items for order ${order.id}:`, items.map(i => i.productName));
         } else {
-            // Fallback to single item (backward compatibility)
-            console.log(`ℹ️ No order_items found for order ${order.id}, using single item fallback`);
+            // Fallback to single item (backward compatibility for old orders)
+            console.log(`ℹ️ No items array found for order ${order.id}, using single item fallback`);
             items = [{
                 productName: order.products?.name || order.product_name || 'Unknown Product',
                 productImage: order.products?.image_url || order.product_image || order.image_url || 'https://via.placeholder.com/400',

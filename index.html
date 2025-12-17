@@ -8671,14 +8671,31 @@
                 submitBtn.disabled = true;
                 submitBtn.textContent = 'Creating Order...';
 
+                // Verify authentication before proceeding
+                const { data: { user }, error: authError } = await supabase.auth.getUser();
+                if (authError || !user) {
+                    console.error('❌ Authentication error:', authError);
+                    alert('❌ You are not authenticated. Please refresh the page and log in again.');
+                    submitBtn.disabled = false;
+                    submitBtn.textContent = originalText;
+                    return;
+                }
+                console.log('✅ User authenticated:', user.id);
+
                 try {
                     // Find or create customer
                     let customerId;
-                    const { data: existingCustomer } = await supabase
+                    // Use maybeSingle() to avoid 406 errors when customer doesn't exist
+                    const { data: existingCustomer, error: findError } = await supabase
                         .from('customers')
                         .select('id')
                         .eq('phone', customerPhone)
-                        .single();
+                        .maybeSingle();
+
+                    if (findError) {
+                        console.error('Error finding customer:', findError);
+                        // Continue to create new customer if lookup fails
+                    }
 
                     if (existingCustomer) {
                         customerId = existingCustomer.id;
@@ -8703,7 +8720,20 @@
                         finalComments = finalComments ? `${finalComments}\n${measurementsText}` : measurementsText;
                     }
 
-                    // Create order (using first item's product_id for backward compatibility)
+                    // Prepare items array for JSONB storage
+                    // Store all cart items with product details in the orders table
+                    const itemsArray = inhouseOrderCart.map(item => ({
+                        product_id: item.product.id,
+                        product_name: item.product.name,
+                        product_image: item.product.image_url || item.product.image || 'https://via.placeholder.com/400',
+                        color: item.color,
+                        price: item.product.price,
+                        measurements: measurements || {}
+                    }));
+
+                    console.log(`📦 Creating order with ${itemsArray.length} items stored as JSONB:`, itemsArray.map(i => ({ product_name: i.product_name, color: i.color, price: i.price })));
+
+                    // Create order with items stored as JSONB (avoids RLS issues with separate table)
                     const orderData = {
                         customer_id: customerId,
                         customer_phone: customerPhone,
@@ -8711,6 +8741,7 @@
                         status: 'pending',
                         color: inhouseOrderCart[0].color, // First color for backward compatibility
                         price: totalPrice, // Total price of all items
+                        items: itemsArray, // Store all items as JSONB array
                         delivery_option: deliveryOptionValue,
                         delivery_location: inhouseSelectedLocation.displayName || null,
                         delivery_latitude: inhouseSelectedLocation.lat ? parseFloat(inhouseSelectedLocation.lat) : null,
@@ -8728,35 +8759,13 @@
                         .select()
                         .single();
 
-                    if (orderError) throw new Error(`Failed to create order: ${orderError.message}`);
-
-                    // Create order_items for each cart item
-                    const orderItemsData = inhouseOrderCart.map(item => ({
-                        order_id: newOrder.id,
-                        product_id: item.product.id,
-                        color: item.color,
-                        price: item.product.price,
-                        measurements: JSON.stringify(measurements) // Store measurements as JSON
-                    }));
-
-                    console.log(`📦 Creating ${orderItemsData.length} order_items for order ${newOrder.id}:`, orderItemsData.map(i => ({ product_id: i.product_id, color: i.color, price: i.price })));
-
-                    const { data: createdItems, error: itemsError } = await supabase
-                        .from('order_items')
-                        .insert(orderItemsData)
-                        .select();
-
-                    if (itemsError) {
-                        // If order_items table doesn't exist, that's okay - we'll handle it gracefully
-                        console.error('❌ Failed to create order_items:', itemsError.message);
-                        console.warn('⚠️ Note: order_items table may not exist yet. Order created but items not stored separately.');
-                        console.log('💡 To enable multi-item orders, create the order_items table in Supabase');
-                        alert(`⚠️ Warning: Order created but items may not be stored separately.\n\nIf you see only 1 item in Sales, the order_items table needs to be created.\n\nError: ${itemsError.message}`);
-                    } else if (createdItems) {
-                        console.log(`✅ Successfully created ${createdItems.length} order_items:`, createdItems.map(i => i.id));
-                    } else {
-                        console.warn('⚠️ No data returned from order_items insert');
+                    if (orderError) {
+                        console.error('❌ Failed to create order:', orderError);
+                        throw new Error(`Failed to create order: ${orderError.message}`);
                     }
+
+                    console.log(`✅ Successfully created order ${newOrder.id} with ${itemsArray.length} items stored in JSONB column`);
+                    console.log('✅ Order items:', itemsArray);
 
                     alert(`✓ Order submitted successfully!\n\nItems: ${inhouseOrderCart.length}\nTotal: KES ${totalPrice.toLocaleString()}\nM-Pesa Code: ${mpesaCode.toUpperCase()}\n\nOrder will be processed after payment verification.`);
                     
