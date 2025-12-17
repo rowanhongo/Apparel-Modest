@@ -956,6 +956,20 @@
                 <label>Select Color <span class="required">*</span></label>
                 <div class="selected-color-display" id="selectedColorDisplay"></div>
                 <div class="color-grid" id="colorGrid"></div>
+                <button type="button" id="addToCartBtn" class="add-to-cart-btn" style="display: none; width: 100%; padding: 12px; margin-top: 12px; background: linear-gradient(135deg, #f6d365 0%, #fda085 100%); color: white; border: none; border-radius: 8px; font-size: 15px; font-weight: 600; cursor: pointer; transition: all 0.3s; box-shadow: 0 4px 15px rgba(253, 160, 133, 0.3);">
+                    Add to Cart
+                </button>
+            </div>
+
+            <!-- Order Cart -->
+            <div class="form-group" id="orderCart" style="display: none;">
+                <label>Order Items <span class="required">*</span> <span id="cartCount" style="font-size: 12px; font-weight: normal; color: #718096;">(0 items)</span></label>
+                <div id="cartItems" style="background: rgba(253, 160, 133, 0.05); border-radius: 12px; padding: 16px; margin-top: 8px; min-height: 60px; border: 1.5px solid rgba(253, 160, 133, 0.2);">
+                    <div style="text-align: center; color: #718096; padding: 20px;">No items added yet. Select a product and color, then click "Add to Cart".</div>
+                </div>
+                <div id="cartTotal" style="margin-top: 12px; padding: 12px; background: linear-gradient(135deg, rgba(246, 211, 101, 0.2) 0%, rgba(253, 160, 133, 0.2) 100%); border-radius: 8px; text-align: right; font-size: 16px; font-weight: 700; color: #2d3748; display: none;">
+                    Total: KES <span id="totalAmount">0</span>
+                </div>
             </div>
 
             <div class="form-group">
@@ -1265,12 +1279,19 @@
 
         let selectedProduct = null;
         let selectedColor = null;
+        let orderCart = []; // Cart array for multiple items
 
         const searchInput = document.getElementById('productSearch');
         const searchResults = document.getElementById('searchResults');
         const selectedProductDiv = document.getElementById('selectedProduct');
         const colorOptionsDiv = document.getElementById('colorOptions');
         const colorGrid = document.getElementById('colorGrid');
+        const addToCartBtn = document.getElementById('addToCartBtn');
+        const orderCartDiv = document.getElementById('orderCart');
+        const cartItems = document.getElementById('cartItems');
+        const cartCount = document.getElementById('cartCount');
+        const cartTotal = document.getElementById('cartTotal');
+        const totalAmount = document.getElementById('totalAmount');
 
         // Initialize Supabase and load products
         async function initializeSupabase() {
@@ -1611,8 +1632,87 @@
                     // Update selected color display
                     const selectedColorDisplay = document.getElementById('selectedColorDisplay');
                     selectedColorDisplay.textContent = `Colour: ${selectedColor}`;
+                    
+                    // Show "Add to Cart" button when color is selected
+                    if (addToCartBtn) {
+                        addToCartBtn.style.display = 'block';
+                    }
                 });
             });
+        }
+        
+        // Add to cart functionality
+        function addItemToCart() {
+            if (!selectedProduct || !selectedColor) {
+                alert('Please select a product and color');
+                return;
+            }
+
+            const cartItem = {
+                id: Date.now() + Math.random(), // Unique ID for cart item
+                product: selectedProduct,
+                color: selectedColor,
+                measurements: null // Will be set on submit
+            };
+
+            orderCart.push(cartItem);
+            updateCartDisplay();
+            
+            // Reset current selection
+            selectedProduct = null;
+            selectedColor = null;
+            searchInput.value = '';
+            selectedProductDiv.classList.remove('active');
+            colorOptionsDiv.classList.remove('active');
+            document.getElementById('selectedColorDisplay').textContent = '';
+            if (addToCartBtn) {
+                addToCartBtn.style.display = 'none';
+            }
+        }
+
+        function removeItemFromCart(itemId) {
+            orderCart = orderCart.filter(item => item.id !== itemId);
+            updateCartDisplay();
+        }
+
+        function updateCartDisplay() {
+            if (!cartItems || !cartCount || !cartTotal || !totalAmount) return;
+
+            if (orderCart.length === 0) {
+                cartItems.innerHTML = '<div style="text-align: center; color: #718096; padding: 20px;">No items added yet. Select a product and color, then click "Add to Cart".</div>';
+                orderCartDiv.style.display = 'none';
+                cartTotal.style.display = 'none';
+                return;
+            }
+
+            orderCartDiv.style.display = 'block';
+            cartCount.textContent = `(${orderCart.length} ${orderCart.length === 1 ? 'item' : 'items'})`;
+            
+            const total = orderCart.reduce((sum, item) => sum + item.product.price, 0);
+            totalAmount.textContent = total.toLocaleString();
+            cartTotal.style.display = 'block';
+
+            cartItems.innerHTML = orderCart.map(item => {
+                return `
+                    <div style="display: flex; align-items: center; gap: 12px; padding: 12px; background: white; border-radius: 8px; margin-bottom: 8px; border: 1px solid rgba(0,0,0,0.05);">
+                        <img src="${item.product.image || 'https://via.placeholder.com/400'}" alt="${item.product.name}" style="width: 60px; height: 60px; object-fit: cover; border-radius: 6px; flex-shrink: 0;">
+                        <div style="flex: 1; min-width: 0;">
+                            <div style="font-weight: 600; color: #2d3748; margin-bottom: 4px; font-size: 14px;">${item.product.name}</div>
+                            <div style="font-size: 12px; color: #718096; margin-bottom: 2px;">Color: ${item.color}</div>
+                            <div style="font-weight: 600; color: #1B4D3E; font-size: 14px;">KES ${item.product.price.toLocaleString()}</div>
+                        </div>
+                        <button type="button" onclick="removeCartItem(${item.id})" style="background: rgba(239, 68, 68, 0.1); border: none; border-radius: 50%; width: 32px; height: 32px; cursor: pointer; color: #ef4444; font-size: 18px; display: flex; align-items: center; justify-content: center; flex-shrink: 0;" title="Remove item">×</button>
+                    </div>
+                `;
+            }).join('');
+        }
+        
+        // Make removeCartItem available globally
+        window.removeCartItem = removeItemFromCart;
+        
+        // Add to cart button click handler
+        if (addToCartBtn) {
+            addToCartBtn.addEventListener('click', addItemToCart);
         }
 
         // Body measurements dropdown - show custom input if custom is selected
@@ -2574,12 +2674,8 @@
                 return;
             }
 
-            if (!selectedProduct) {
-                alert('Please select an item');
-                return;
-            }
-            if (!selectedColor) {
-                alert('Please select a color');
+            if (orderCart.length === 0) {
+                alert('Please add at least one item to your cart');
                 return;
             }
 
@@ -2684,10 +2780,13 @@
                 paymentCompleted = false;
                 paymentReference = null;
                 
+                // Calculate total amount from cart
+                const totalPrice = orderCart.reduce((sum, item) => sum + item.product.price, 0);
+                
                 // Calculate amount in kobo (Paystack uses smallest currency unit)
                 // Since we're using KES, we'll convert to kobo equivalent
                 // 1 KES = 100 kobo (similar to NGN)
-                const amountInKobo = Math.round(selectedProduct.price * 100);
+                const amountInKobo = Math.round(totalPrice * 100);
                 
                 // Get phone number for payment
                 let countryCode = document.getElementById('countryCode').value.trim();
@@ -2784,16 +2883,32 @@
                     deliveryLocation = deliveryDisplayName; // Keep for backward compatibility
                 }
 
-                // Save order with payment reference in dedicated column
+                // Prepare items array for JSONB storage (multi-item support)
+                const itemsArray = orderCart.map(item => ({
+                    product_id: item.product.id,
+                    product_name: item.product.name,
+                    product_image: item.product.image || 'https://via.placeholder.com/400',
+                    color: item.color,
+                    price: item.product.price,
+                    measurements: measurements || {}
+                }));
+
+                console.log(`📦 Creating order with ${itemsArray.length} items stored as JSONB:`, itemsArray.map(i => ({ product_name: i.product_name, color: i.color, price: i.price })));
+
+                // Calculate total price from all cart items
+                const totalPrice = orderCart.reduce((sum, item) => sum + item.product.price, 0);
+
+                // Save order with items stored as JSONB (multi-item support)
                 const { data: newOrder, error: orderError } = await supabaseClient
                     .from('orders')
                     .insert({
                         customer_id: customerId,
                         customer_phone: customerPhone, // Required field
-                        product_id: selectedProduct.id,
+                        product_id: orderCart[0].product.id, // First product for backward compatibility
                         status: 'pending',
-                        color: selectedColor,
-                        price: selectedProduct.price,
+                        color: orderCart[0].color, // First color for backward compatibility
+                        price: totalPrice, // Total price of all items
+                        items: itemsArray, // JSONB array of all items
                         delivery_option: deliveryOption,
                         delivery_location: deliveryLocation || null, // Keep for backward compatibility
                         delivery_latitude: deliveryLatitude ? parseFloat(deliveryLatitude) : null,
@@ -2811,9 +2926,11 @@
                     throw new Error(`Failed to create order: ${orderError.message}`);
                 }
 
-                alert(`✓ Payment successful!\n✓ Order submitted successfully!\n\nPayment Reference: ${paymentReference}\n\nYou can freely exit.`);
+                // Calculate total for alert
+                const totalPrice = orderCart.reduce((sum, item) => sum + item.product.price, 0);
+                alert(`✓ Payment successful!\n✓ Order submitted successfully!\n\nItems: ${orderCart.length}\nTotal: KES ${totalPrice.toLocaleString()}\nPayment Reference: ${paymentReference}\n\nYou can freely exit.`);
                 
-                // Reset form
+                // Reset form and cart
                 document.getElementById('orderForm').reset();
                 // Reset country code to just +
                 document.getElementById('countryCode').value = '+';
@@ -2844,6 +2961,11 @@
                 
                 selectedProduct = null;
                 selectedColor = null;
+                orderCart = [];
+                updateCartDisplay();
+                if (addToCartBtn) {
+                    addToCartBtn.style.display = 'none';
+                }
                 
                 // Reset payment state
                 paymentCompleted = false;
