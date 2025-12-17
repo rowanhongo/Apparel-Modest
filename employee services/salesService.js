@@ -372,12 +372,10 @@ class SalesService {
                 <div class="detail-label">Phone:</div>
                 <div class="detail-value">${order.phone}</div>
             </div>
-            ${isMultiItem ? `
-                <div class="detail-row">
-                    <div class="detail-label">Items:</div>
-                    <div class="detail-value">${items.length} item${items.length > 1 ? 's' : ''}</div>
-                </div>
-            ` : ''}
+            <div class="detail-row">
+                <div class="detail-label">Items:</div>
+                <div class="detail-value">${items.length} item${items.length > 1 ? 's' : ''}</div>
+            </div>
             <div class="detail-row">
                 <div class="detail-label">${isMultiItem ? 'Total Price:' : 'Price:'}</div>
                 <div class="detail-value">KES ${order.price.toLocaleString()}</div>
