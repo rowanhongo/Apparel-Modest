@@ -86,25 +86,55 @@ class SalesService {
             let orderItemsMap = {};
             if (orders && orders.length > 0) {
                 const orderIds = orders.map(o => o.id);
-                const { data: orderItems, error: itemsError } = await this.supabase
-                    .from('order_items')
-                    .select(`
-                        *,
-                        products (
-                            name,
-                            image_url
-                        )
-                    `)
-                    .in('order_id', orderIds);
+                try {
+                    const { data: orderItems, error: itemsError } = await this.supabase
+                        .from('order_items')
+                        .select(`
+                            *,
+                            products (
+                                name,
+                                image_url
+                            )
+                        `)
+                        .in('order_id', orderIds);
 
-                if (!itemsError && orderItems) {
-                    // Group items by order_id
-                    orderItems.forEach(item => {
-                        if (!orderItemsMap[item.order_id]) {
-                            orderItemsMap[item.order_id] = [];
+                    if (itemsError) {
+                        // Log error but don't fail - table might not exist yet
+                        console.warn('⚠️ Could not fetch order_items (table may not exist):', itemsError.message);
+                        console.log('💡 To enable multi-item orders, create the order_items table in Supabase');
+                    } else if (orderItems && orderItems.length > 0) {
+                        console.log(`✅ Found ${orderItems.length} order_items for ${orderIds.length} orders`);
+                        console.log('📋 Order items data:', orderItems);
+                        // Group items by order_id
+                        orderItems.forEach(item => {
+                            if (!orderItemsMap[item.order_id]) {
+                                orderItemsMap[item.order_id] = [];
+                            }
+                            orderItemsMap[item.order_id].push(item);
+                        });
+                        // Log which orders have multiple items
+                        Object.keys(orderItemsMap).forEach(orderId => {
+                            const count = orderItemsMap[orderId].length;
+                            console.log(`📦 Order ${orderId} has ${count} item${count > 1 ? 's' : ''}:`, orderItemsMap[orderId].map(i => i.products?.name || 'Unknown'));
+                            if (count > 1) {
+                                console.log(`   → This order should display ${count} items horizontally`);
+                            }
+                        });
+                    } else {
+                        console.log('ℹ️ No order_items found - orders may be single-item only');
+                        console.log('💡 Checking if order_items exist in database...');
+                        // Diagnostic: Check one order
+                        if (orderIds.length > 0) {
+                            const { data: testItems } = await this.supabase
+                                .from('order_items')
+                                .select('*')
+                                .eq('order_id', orderIds[0])
+                                .limit(5);
+                            console.log(`🔍 Test query for order ${orderIds[0]}:`, testItems);
                         }
-                        orderItemsMap[item.order_id].push(item);
-                    });
+                    }
+                } catch (error) {
+                    console.warn('⚠️ Error fetching order_items:', error);
                 }
             }
 
@@ -208,6 +238,7 @@ class SalesService {
         // Process order_items if available
         let items = [];
         if (orderItems && orderItems.length > 0) {
+            console.log(`📦 Processing ${orderItems.length} items for order ${order.id}`);
             items = orderItems.map(item => {
                 let itemMeasurements = {};
                 if (item.measurements) {
@@ -227,8 +258,10 @@ class SalesService {
                     measurements: itemMeasurements
                 };
             });
+            console.log(`✅ Created ${items.length} items for order ${order.id}:`, items.map(i => i.productName));
         } else {
             // Fallback to single item (backward compatibility)
+            console.log(`ℹ️ No order_items found for order ${order.id}, using single item fallback`);
             items = [{
                 productName: order.products?.name || order.product_name || 'Unknown Product',
                 productImage: order.products?.image_url || order.product_image || order.image_url || 'https://via.placeholder.com/400',
@@ -307,6 +340,14 @@ class SalesService {
         // Check if order has multiple items
         const items = order.items || [order]; // Fallback to single item if items array doesn't exist
         const isMultiItem = items.length > 1;
+        
+        // Debug logging
+        console.log(`🎨 Creating bubble for order ${order.id}:`, {
+            hasItems: !!order.items,
+            itemsCount: order.items?.length || 0,
+            isMultiItem: isMultiItem,
+            items: items.map(i => ({ name: i.productName, color: i.color }))
+        });
         
         // Generate items HTML with horizontal images
         let itemsHTML = '';

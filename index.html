@@ -8739,14 +8739,23 @@
                         measurements: JSON.stringify(measurements) // Store measurements as JSON
                     }));
 
-                    const { error: itemsError } = await supabase
+                    console.log(`📦 Creating ${orderItemsData.length} order_items for order ${newOrder.id}:`, orderItemsData.map(i => ({ product_id: i.product_id, color: i.color, price: i.price })));
+
+                    const { data: createdItems, error: itemsError } = await supabase
                         .from('order_items')
-                        .insert(orderItemsData);
+                        .insert(orderItemsData)
+                        .select();
 
                     if (itemsError) {
                         // If order_items table doesn't exist, that's okay - we'll handle it gracefully
-                        console.warn('Note: order_items table may not exist yet. Order created but items not stored separately:', itemsError.message);
-                        console.log('To enable multi-item orders, create an order_items table in Supabase with columns: id (uuid), order_id (uuid, references orders), product_id (uuid, references products), color (text), price (numeric), measurements (jsonb)');
+                        console.error('❌ Failed to create order_items:', itemsError.message);
+                        console.warn('⚠️ Note: order_items table may not exist yet. Order created but items not stored separately.');
+                        console.log('💡 To enable multi-item orders, create the order_items table in Supabase');
+                        alert(`⚠️ Warning: Order created but items may not be stored separately.\n\nIf you see only 1 item in Sales, the order_items table needs to be created.\n\nError: ${itemsError.message}`);
+                    } else if (createdItems) {
+                        console.log(`✅ Successfully created ${createdItems.length} order_items:`, createdItems.map(i => i.id));
+                    } else {
+                        console.warn('⚠️ No data returned from order_items insert');
                     }
 
                     alert(`✓ Order submitted successfully!\n\nItems: ${inhouseOrderCart.length}\nTotal: KES ${totalPrice.toLocaleString()}\nM-Pesa Code: ${mpesaCode.toUpperCase()}\n\nOrder will be processed after payment verification.`);
