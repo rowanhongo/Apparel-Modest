@@ -1,6 +1,9 @@
 // Service Worker for Apparel Modest PWA
-const CACHE_NAME = 'apparel-modest-v2';
-const RUNTIME_CACHE = 'apparel-modest-runtime-v2';
+// Update this timestamp on each deployment to trigger cache invalidation
+// Format: YYYYMMDD-HHMMSS (update when deploying)
+const CACHE_VERSION = '20251217-120000';
+const CACHE_NAME = `apparel-modest-${CACHE_VERSION}`;
+const RUNTIME_CACHE = `apparel-modest-runtime-${CACHE_VERSION}`;
 
 // Assets to cache on install
 const STATIC_ASSETS = [
@@ -68,14 +71,16 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // For HTML pages, try network first, then cache
+  // HYBRID APPROACH: Network-first for HTML/JS, Cache-first for static assets
+  
+  // Network-first strategy for HTML pages (always get fresh content)
   if (request.headers.get('accept').includes('text/html')) {
     event.respondWith(
       fetch(request)
         .then((response) => {
-          // Clone the response
+          // Clone the response for caching
           const responseToCache = response.clone();
-          // Cache the response
+          // Cache the response for offline use
           caches.open(RUNTIME_CACHE).then((cache) => {
             cache.put(request, responseToCache);
           });
@@ -87,7 +92,7 @@ self.addEventListener('fetch', (event) => {
             if (cachedResponse) {
               return cachedResponse;
             }
-            // If no cache, return offline page or error
+            // If no cache, return offline page
             return new Response('Offline - Please check your connection', {
               status: 503,
               statusText: 'Service Unavailable',
@@ -101,13 +106,48 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // For other assets (JS, CSS, images), try cache first, then network
+  // Network-first strategy for JavaScript files (always get fresh code)
+  if (request.url.endsWith('.js') || request.headers.get('accept').includes('application/javascript')) {
+    event.respondWith(
+      fetch(request)
+        .then((response) => {
+          // Clone the response for caching
+          const responseToCache = response.clone();
+          // Cache the response for offline use
+          caches.open(RUNTIME_CACHE).then((cache) => {
+            cache.put(request, responseToCache);
+          });
+          return response;
+        })
+        .catch(() => {
+          // Network failed, try cache
+          return caches.match(request);
+        })
+    );
+    return;
+  }
+
+  // Cache-first strategy for static assets (CSS, images, fonts, etc.)
   event.respondWith(
     caches.match(request)
       .then((cachedResponse) => {
         if (cachedResponse) {
+          // Return cached version immediately, but fetch in background to update cache
+          fetch(request)
+            .then((response) => {
+              if (response && response.status === 200 && response.type === 'basic') {
+                const responseToCache = response.clone();
+                caches.open(RUNTIME_CACHE).then((cache) => {
+                  cache.put(request, responseToCache);
+                });
+              }
+            })
+            .catch(() => {
+              // Ignore fetch errors in background update
+            });
           return cachedResponse;
         }
+        // Not in cache, fetch from network
         return fetch(request)
           .then((response) => {
             // Don't cache if not a valid response
@@ -132,6 +172,10 @@ self.addEventListener('fetch', (event) => {
                 }
               );
             }
+            return new Response('Resource not available offline', {
+              status: 503,
+              statusText: 'Service Unavailable',
+            });
           });
       })
   );

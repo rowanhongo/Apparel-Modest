@@ -7751,21 +7751,75 @@
 
     </script>
     
-    <!-- Service Worker Registration for PWA -->
+    <!-- Service Worker Registration for PWA with Auto-Updates -->
     <script>
         if ('serviceWorker' in navigator) {
+            let updateCheckInterval = null;
+            let isReloading = false;
+            let userActivityTimeout = null;
+            let lastUserActivity = Date.now();
+
+            // Track user activity to avoid interrupting active users
+            const activityEvents = ['mousedown', 'mousemove', 'keypress', 'scroll', 'touchstart', 'click'];
+            activityEvents.forEach(event => {
+                document.addEventListener(event, () => {
+                    lastUserActivity = Date.now();
+                }, { passive: true });
+            });
+
+            // Check if user is idle (no activity for 30 seconds)
+            const isUserIdle = () => {
+                return Date.now() - lastUserActivity > 30000; // 30 seconds
+            };
+
+            // Seamless reload function - only reload when safe
+            const seamlessReload = () => {
+                if (isReloading) return;
+                
+                // Only reload if:
+                // 1. Tab is hidden (user switched tabs/apps), OR
+                // 2. User is idle (no activity for 30 seconds)
+                if (document.hidden || isUserIdle()) {
+                    isReloading = true;
+                    console.log('🔄 Service Worker updated. Reloading seamlessly...');
+                    window.location.reload();
+                } else {
+                    // User is active, wait for next check
+                    console.log('🔄 Update available but user is active. Will reload when idle or tab hidden.');
+                }
+            };
+
             window.addEventListener('load', () => {
                 navigator.serviceWorker.register('/service-worker.js', { scope: '/' })
                     .then((registration) => {
                         console.log('✅ Service Worker registered successfully:', registration.scope);
                         
-                        // Check for updates
+                        // Check for updates immediately
+                        registration.update();
+                        
+                        // Check for updates every 1 minute
+                        updateCheckInterval = setInterval(() => {
+                            registration.update().catch(err => {
+                                console.warn('⚠️ Update check failed:', err);
+                            });
+                        }, 60 * 1000); // Every 1 minute
+
+                        // Listen for new service worker installation
                         registration.addEventListener('updatefound', () => {
                             const newWorker = registration.installing;
+                            if (!newWorker) return;
+
                             newWorker.addEventListener('statechange', () => {
-                                if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
-                                    // New service worker available
-                                    console.log('🔄 New service worker available. Refresh to update.');
+                                if (newWorker.state === 'installed') {
+                                    if (navigator.serviceWorker.controller) {
+                                        // New service worker is ready
+                                        console.log('🔄 New service worker installed. Activating...');
+                                        // The new worker will call skipWaiting() automatically
+                                        // We'll reload when controller changes
+                                    } else {
+                                        // First time installation
+                                        console.log('✅ Service Worker installed for the first time');
+                                    }
                                 }
                             });
                         });
@@ -7774,15 +7828,30 @@
                         console.error('❌ Service Worker registration failed:', error);
                     });
                 
-                // Listen for service worker updates
-                let refreshing = false;
+                // Listen for service worker controller change (new SW activated)
                 navigator.serviceWorker.addEventListener('controllerchange', () => {
-                    if (!refreshing) {
-                        refreshing = true;
-                        console.log('🔄 Service Worker updated. Reloading page...');
-                        window.location.reload();
+                    // Small delay to ensure new SW is fully active
+                    setTimeout(() => {
+                        seamlessReload();
+                    }, 100);
+                });
+
+                // Also check when tab becomes visible (user returns to app)
+                document.addEventListener('visibilitychange', () => {
+                    if (!document.hidden && navigator.serviceWorker.controller) {
+                        // Tab is visible, check for updates
+                        navigator.serviceWorker.getRegistration().then(reg => {
+                            if (reg) reg.update();
+                        });
                     }
                 });
+            });
+
+            // Clean up interval on page unload
+            window.addEventListener('beforeunload', () => {
+                if (updateCheckInterval) {
+                    clearInterval(updateCheckInterval);
+                }
             });
         }
 
