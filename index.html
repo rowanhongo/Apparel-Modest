@@ -8671,16 +8671,19 @@
                 submitBtn.disabled = true;
                 submitBtn.textContent = 'Creating Order...';
 
-                // Verify authentication before proceeding
-                const { data: { user }, error: authError } = await supabase.auth.getUser();
-                if (authError || !user) {
-                    console.error('❌ Authentication error:', authError);
+                // Verify authentication before proceeding using custom authService
+                const isLoggedIn = await authService.isLoggedIn();
+                const currentUser = authService.getCurrentUser();
+                
+                if (!isLoggedIn || !currentUser) {
+                    console.error('❌ Authentication error: User not logged in');
                     alert('❌ You are not authenticated. Please refresh the page and log in again.');
                     submitBtn.disabled = false;
                     submitBtn.textContent = originalText;
                     return;
                 }
-                console.log('✅ User authenticated:', user.id);
+                
+                console.log('✅ User authenticated:', currentUser.email || currentUser.id);
 
                 try {
                     // Find or create customer
