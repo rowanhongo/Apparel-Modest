@@ -4331,6 +4331,20 @@
                         #inhouse-order-form-container .inhouse-search-container {
                             position: relative;
                         }
+                        #inhouse-order-form-container .inhouse-search-backdrop {
+                            display: none;
+                            position: fixed;
+                            top: 0;
+                            left: 0;
+                            right: 0;
+                            bottom: 0;
+                            background: rgba(0, 0, 0, 0.5);
+                            z-index: 9999;
+                            backdrop-filter: blur(2px);
+                        }
+                        #inhouse-order-form-container .inhouse-search-backdrop.active {
+                            display: block;
+                        }
                         #inhouse-order-form-container .inhouse-search-results {
                             position: absolute;
                             top: 100%;
@@ -4512,11 +4526,14 @@
                             height: 100%;
                         }
 
-                        /* Mobile responsive styles for in-house search - results appear under search bar like desktop */
+                        /* Mobile responsive styles for in-house search - matching customer form */
                         @media (max-width: 640px) {
                             #inhouse-order-form-container .inhouse-search-container {
                                 position: relative !important;
                                 z-index: 10000 !important;
+                            }
+                            #inhouse-order-form-container .inhouse-search-results {
+                                max-width: calc(100vw - 20px) !important;
                             }
                             
                             #inhouse-order-form-container .inhouse-search-results {
@@ -4524,9 +4541,12 @@
                                 max-height: 50vh !important;
                             }
 
-                            /* Hide backdrop on mobile since results appear under search bar */
+                            /* Backdrop styling for mobile - same as customer form */
                             #inhouse-order-form-container .inhouse-search-backdrop {
-                                display: none !important;
+                                display: none;
+                            }
+                            #inhouse-order-form-container .inhouse-search-backdrop.active {
+                                display: block;
                             }
                         }
                     </style>
@@ -8293,7 +8313,10 @@
                 if (filtered.length === 0) {
                     searchResults.innerHTML = '<div class="no-results" style="padding: 16px; text-align: center; color: #718096;">No items found</div>';
                     searchResults.classList.add('active');
-                    // Backdrop not needed since results appear under search bar
+                    // Show backdrop on mobile
+                    if (searchBackdrop && window.innerWidth <= 640) {
+                        searchBackdrop.classList.add('active');
+                    }
                     return;
                 }
                 searchResults.innerHTML = filtered.map(product => {
@@ -8319,7 +8342,11 @@
                 `;
                 }).join('');
                 searchResults.classList.add('active');
-                // Backdrop not needed since results appear under search bar
+                
+                // Show backdrop on mobile (matching customer form behavior)
+                if (searchBackdrop && window.innerWidth <= 640) {
+                    searchBackdrop.classList.add('active');
+                }
             });
 
             // Product selection
