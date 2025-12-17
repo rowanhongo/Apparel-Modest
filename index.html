@@ -688,6 +688,7 @@
             overflow-y: auto;
             border-right: 1px solid rgba(224, 216, 201, 0.2) !important;
             z-index: 10003;
+            pointer-events: auto;
         }
 
         .logo {
@@ -1508,10 +1509,24 @@
                 bottom: 0;
                 background: rgba(0, 0, 0, 0.5);
                 z-index: 10002;
+                pointer-events: auto;
             }
 
             .sidebar-overlay.active {
                 display: block;
+            }
+            
+            /* Ensure sidebar is above overlay and clickable */
+            .sidebar.mobile-open {
+                z-index: 10003 !important;
+                pointer-events: auto !important;
+            }
+            
+            /* Ensure nav items are clickable */
+            .sidebar .nav-item {
+                pointer-events: auto !important;
+                z-index: 1;
+                position: relative;
             }
 
             /* Welcome section */
@@ -6461,13 +6476,17 @@
             sidebarOverlay.addEventListener('click', closeMobileSidebar);
         }
 
-        // Navigation
-        document.querySelectorAll('.nav-item').forEach(item => {
-            item.addEventListener('click', () => {
-                const tabId = item.dataset.tab;
+        // Navigation - use event delegation to ensure clicks work
+        const sidebar = document.getElementById('sidebar');
+        if (sidebar) {
+            sidebar.addEventListener('click', (e) => {
+                const navItem = e.target.closest('.nav-item');
+                if (navItem) {
+                    e.stopPropagation();
+                    const tabId = navItem.dataset.tab;
                 
                 document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active'));
-                item.classList.add('active');
+                navItem.classList.add('active');
                 
                 document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
                 document.getElementById(tabId).classList.add('active');
@@ -6566,12 +6585,13 @@
                     }
                 }
                 
-                // Close mobile sidebar after navigation
-                if (window.innerWidth <= 768) {
-                    closeMobileSidebar();
+                    // Close mobile sidebar after navigation
+                    if (window.innerWidth <= 768) {
+                        closeMobileSidebar();
+                    }
                 }
             });
-        });
+        }
 
         // Load profile data
         async function loadProfileData() {
