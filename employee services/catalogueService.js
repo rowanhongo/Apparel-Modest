@@ -382,60 +382,62 @@ class CatalogueService {
         }
 
         this.editingProductId = idString;
-        document.getElementById('product-name').value = product.name || '';
-        document.getElementById('product-category').value = product.category || '';
-        // Description field removed - no longer needed
-        document.getElementById('product-tags').value = product.tags || '';
-        document.getElementById('product-stock').value = product.stock || 0;
-        document.getElementById('product-price').value = product.price || 0;
-
-        // Load product colors
+        
+        // Get form elements with null checks
+        const nameInput = document.getElementById('product-name');
+        const categoryInput = document.getElementById('product-category');
+        const tagsInput = document.getElementById('product-tags');
+        const stockInput = document.getElementById('product-stock');
+        const priceInput = document.getElementById('product-price');
+        
+        // Set values only if elements exist
+        if (nameInput) {
+            nameInput.value = product.name || '';
+        } else {
+            console.error('Product name input not found');
+        }
+        
+        if (categoryInput) {
+            categoryInput.value = product.category || '';
+        } else {
+            console.error('Product category input not found');
+        }
+        
+        if (tagsInput) {
+            tagsInput.value = product.tags || '';
+        } else {
+            console.error('Product tags input not found');
+        }
+        
+        if (stockInput) {
+            stockInput.value = product.stock || 0;
+        } else {
+            console.error('Product stock input not found');
+        }
+        
+        if (priceInput) {
+            priceInput.value = product.price || 0;
+        } else {
+            console.error('Product price input not found');
+        }
 
         // Show existing image (use image_url from database)
         if (product.image_url || product.image) {
             this.showImagePreview(product.image_url || product.image);
         }
 
-        // Show popup notification first (before scrolling)
-        this.showEditNotification();
+        // Show popup notification with product name (before scrolling)
+        this.showEditNotification(product.name || 'this product');
 
-        // Scroll to top of form - improved timing and reliability
-        // Use requestAnimationFrame for better browser compatibility
-        requestAnimationFrame(() => {
-            const formPanel = document.getElementById('add-product-panel');
-            if (formPanel) {
-                // Get the form panel's position
-                const rect = formPanel.getBoundingClientRect();
-                const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
-                const formTop = rect.top + scrollTop;
-                
-                // Scroll to top of the page first
-                window.scrollTo({ top: 0, behavior: 'smooth' });
-                
-                // Then scroll to form after ensuring page has scrolled
-                setTimeout(() => {
-                    // Recalculate position after initial scroll
-                    const newRect = formPanel.getBoundingClientRect();
-                    const newScrollTop = window.pageYOffset || document.documentElement.scrollTop;
-                    const newFormTop = newRect.top + newScrollTop;
-                    const scrollPosition = Math.max(0, newFormTop - 20); // 20px offset from top
-                    
-                    window.scrollTo({ 
-                        top: scrollPosition,
-                        behavior: 'smooth' 
-                    });
-                }, 300);
-            } else {
-                // Fallback: just scroll to top if form panel not found
-                window.scrollTo({ top: 0, behavior: 'smooth' });
-            }
-        });
+        // Scroll to form - improved for mobile
+        this.scrollToForm();
     }
 
     /**
      * Show notification popup when editing a product
+     * @param {string} productName - Name of the product being edited
      */
-    showEditNotification() {
+    showEditNotification(productName = 'this product') {
         // Remove existing notification if any
         const existingNotification = document.getElementById('edit-product-notification');
         if (existingNotification) {
@@ -500,7 +502,7 @@ class CatalogueService {
             <svg width="24" height="24" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="flex-shrink: 0;">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
             </svg>
-            <span>You can now edit the product details above</span>
+            <span>You can now edit "${productName}"</span>
         `;
 
         // Ensure body exists and append notification
@@ -541,6 +543,45 @@ class CatalogueService {
                     }
                 }, 300);
             }
+        });
+    }
+
+    /**
+     * Scroll to form - optimized for mobile
+     */
+    scrollToForm() {
+        const formPanel = document.getElementById('add-product-panel');
+        if (!formPanel) {
+            console.warn('Form panel not found, scrolling to top');
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+            return;
+        }
+
+        // Use scrollIntoView for better mobile compatibility
+        // This is more reliable than manual scroll calculations
+        requestAnimationFrame(() => {
+            formPanel.scrollIntoView({ 
+                behavior: 'smooth', 
+                block: 'start',
+                inline: 'nearest'
+            });
+            
+            // Additional scroll adjustment for mobile to ensure form is fully visible
+            setTimeout(() => {
+                const rect = formPanel.getBoundingClientRect();
+                const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
+                const currentTop = rect.top + scrollTop;
+                
+                // On mobile, add extra offset to account for fixed headers/sticky elements
+                const isMobile = window.innerWidth <= 768;
+                const offset = isMobile ? 40 : 20; // Larger offset on mobile for better visibility
+                const targetPosition = Math.max(0, currentTop - offset);
+                
+                window.scrollTo({ 
+                    top: targetPosition,
+                    behavior: 'smooth' 
+                });
+            }, 100);
         });
     }
 
