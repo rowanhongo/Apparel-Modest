@@ -611,71 +611,74 @@ class CatalogueService {
     async deleteProduct(productId) {
         // Keep productId as string (UUID) - don't convert to number
         const idString = String(productId);
-        
-        if (!confirm('Are you sure you want to delete this product? This action cannot be undone.')) {
-            return;
-        }
 
         try {
-            // First, check if there are any orders referencing this product
-            const { data: orders, error: ordersError } = await this.supabase
+            // Check for orders in Sales (status: 'pending')
+            const { data: salesOrders, error: salesError } = await this.supabase
                 .from('orders')
-                .select('id, status')
-                .eq('product_id', idString)
-                .limit(1);
+                .select('id, status, product_id, items')
+                .eq('status', 'pending');
 
-            if (ordersError) {
-                console.error('Error checking orders:', ordersError);
-            }
+            // Check for orders in Production (status: 'in_progress')
+            const { data: productionOrders, error: productionError } = await this.supabase
+                .from('orders')
+                .select('id, status, product_id, items')
+                .eq('status', 'in_progress');
 
-            if (orders && orders.length > 0) {
-                // Count total orders for this product
-                const { count } = await this.supabase
-                    .from('orders')
-                    .select('*', { count: 'exact', head: true })
-                    .eq('product_id', idString);
+            // Check for orders in Logistics (status: 'to_deliver')
+            const { data: logisticsOrders, error: logisticsError } = await this.supabase
+                .from('orders')
+                .select('id, status, product_id, items')
+                .eq('status', 'to_deliver');
 
-                const orderCount = count || orders.length;
-                alert(
-                    `❌ Cannot delete this product!\n\n` +
-                    `This product has ${orderCount} order(s) associated with it. ` +
-                    `Deleting it would violate database integrity.\n\n` +
-                    `Options:\n` +
-                    `1. Keep the product (recommended) - preserves order history\n` +
-                    `2. Update database constraint in Supabase to allow deletion\n\n` +
-                    `To allow deletion, you need to update the foreign key constraint in Supabase:\n` +
-                    `Go to Supabase Dashboard > Table Editor > orders table > Foreign Keys > ` +
-                    `Edit "orders_product_id_fkey" and change "On delete" to "CASCADE" or "SET NULL"`
-                );
+            // Helper function to check if product exists in order
+            const hasProduct = (order) => {
+                // Check product_id field (for backward compatibility)
+                if (order.product_id && String(order.product_id) === idString) {
+                    return true;
+                }
+                // Check items array (JSONB)
+                if (order.items && Array.isArray(order.items)) {
+                    return order.items.some(item => {
+                        if (item.product_id && String(item.product_id) === idString) {
+                            return true;
+                        }
+                        // Also check if item has product object with id
+                        if (item.product && String(item.product.id) === idString) {
+                            return true;
+                        }
+                        return false;
+                    });
+                }
+                return false;
+            };
+
+            // Filter orders that actually contain this product
+            const salesWithProduct = (salesOrders || []).filter(hasProduct);
+            const productionWithProduct = (productionOrders || []).filter(hasProduct);
+            const logisticsWithProduct = (logisticsOrders || []).filter(hasProduct);
+
+            // Check if product has orders in Sales, Production, or Logistics
+            if (salesWithProduct.length > 0 || productionWithProduct.length > 0 || logisticsWithProduct.length > 0) {
+                // Show error popup
+                this.showDeleteErrorPopup();
                 return;
             }
 
-            // No orders found, safe to delete
+            // Product can be deleted (no orders in Sales, Production, or Logistics)
+            // Show confirmation dialog
+            if (!confirm('Are you sure you want to delete this product? This action cannot be undone.')) {
+                return;
+            }
+
+            // Delete the product
             const { error } = await this.supabase
                 .from('products')
                 .delete()
                 .eq('id', idString);
 
             if (error) {
-                // Check if it's a foreign key constraint error
-                if (error.message && error.message.includes('foreign key constraint')) {
-                    alert(
-                        `❌ Cannot delete this product!\n\n` +
-                        `This product is referenced by existing orders. ` +
-                        `To allow deletion, update the foreign key constraint in Supabase:\n\n` +
-                        `1. Go to Supabase Dashboard\n` +
-                        `2. Navigate to Table Editor > orders table\n` +
-                        `3. Click on Foreign Keys tab\n` +
-                        `4. Find "orders_product_id_fkey"\n` +
-                        `5. Edit and change "On delete" action to:\n` +
-                        `   - "CASCADE" (deletes orders when product is deleted)\n` +
-                        `   - "SET NULL" (sets product_id to null when product is deleted)\n\n` +
-                        `⚠️ Warning: CASCADE will delete all orders for this product!`
-                    );
-                } else {
-                    throw error;
-                }
-                return;
+                throw error;
             }
 
             // Remove from local products array
@@ -692,6 +695,94 @@ class CatalogueService {
             console.error('Error deleting product:', error);
             alert(`Failed to delete product: ${error.message || 'Unknown error'}`);
         }
+    }
+
+    /**
+     * Show error popup when product cannot be deleted
+     */
+    showDeleteErrorPopup() {
+        // Remove existing popup if any
+        const existingPopup = document.getElementById('delete-product-error-popup');
+        if (existingPopup) {
+            existingPopup.remove();
+        }
+
+        // Create popup overlay
+        const overlay = document.createElement('div');
+        overlay.id = 'delete-product-error-popup';
+        overlay.setAttribute('style', 
+            'position: fixed !important; ' +
+            'top: 0 !important; ' +
+            'left: 0 !important; ' +
+            'right: 0 !important; ' +
+            'bottom: 0 !important; ' +
+            'background: rgba(0, 0, 0, 0.5) !important; ' +
+            'z-index: 2147483647 !important; ' +
+            'display: flex !important; ' +
+            'align-items: center !important; ' +
+            'justify-content: center !important; ' +
+            'padding: 20px !important; ' +
+            'font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important;'
+        );
+
+        // Create popup content
+        const popup = document.createElement('div');
+        popup.setAttribute('style',
+            'background: white !important; ' +
+            'border-radius: 16px !important; ' +
+            'padding: 32px !important; ' +
+            'max-width: 500px !important; ' +
+            'width: 100% !important; ' +
+            'box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3) !important; ' +
+            'text-align: center !important;'
+        );
+
+        popup.innerHTML = `
+            <div style="margin-bottom: 24px;">
+                <svg width="64" height="64" fill="none" stroke="#F44336" viewBox="0 0 24 24" style="margin: 0 auto;">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+                </svg>
+            </div>
+            <h2 style="font-size: 24px; font-weight: 600; color: #2d3748; margin-bottom: 16px;">Cannot Delete Product</h2>
+            <p style="font-size: 16px; color: #4a5568; margin-bottom: 24px; line-height: 1.6;">
+                Item cannot be deleted, still has active orders.
+            </p>
+            <button id="close-error-popup-btn" style="
+                background: #1B4D3E !important;
+                color: white !important;
+                border: none !important;
+                border-radius: 8px !important;
+                padding: 12px 32px !important;
+                font-size: 16px !important;
+                font-weight: 600 !important;
+                cursor: pointer !important;
+                transition: all 0.2s !important;
+            " onmouseover="this.style.background='#155a47' !important" onmouseout="this.style.background='#1B4D3E' !important">
+                OK
+            </button>
+        `;
+
+        overlay.appendChild(popup);
+        document.body.appendChild(overlay);
+
+        // Close popup handlers
+        const closeBtn = popup.querySelector('#close-error-popup-btn');
+        const closePopup = () => {
+            overlay.style.opacity = '0';
+            overlay.style.transition = 'opacity 0.3s ease-out';
+            setTimeout(() => {
+                if (overlay && overlay.parentNode) {
+                    overlay.remove();
+                }
+            }, 300);
+        };
+
+        closeBtn.addEventListener('click', closePopup);
+        overlay.addEventListener('click', (e) => {
+            if (e.target === overlay) {
+                closePopup();
+            }
+        });
     }
 
     /**

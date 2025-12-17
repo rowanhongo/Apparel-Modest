@@ -8440,6 +8440,13 @@
                 const query = e.target.value.toLowerCase().trim();
                 if (!query) {
                     searchResults.classList.remove('active');
+                    // Reset positioning styles
+                    searchResults.style.position = '';
+                    searchResults.style.top = '';
+                    searchResults.style.left = '';
+                    searchResults.style.right = '';
+                    searchResults.style.width = '';
+                    searchResults.classList.remove('positioned');
                     if (searchBackdrop) {
                         searchBackdrop.classList.remove('active');
                     }
@@ -8449,9 +8456,32 @@
                 if (filtered.length === 0) {
                     searchResults.innerHTML = '<div class="no-results" style="padding: 16px; text-align: center; color: #718096;">No items found</div>';
                     searchResults.classList.add('active');
+                    
+                    // On mobile, position the popup relative to the search input using fixed positioning
+                    if (window.innerWidth <= 640) {
+                        const searchInput = productSearch;
+                        const inputRect = searchInput.getBoundingClientRect();
+                        searchResults.style.position = 'fixed';
+                        searchResults.style.top = (inputRect.bottom + 6) + 'px';
+                        searchResults.style.left = '20px';
+                        searchResults.style.right = '20px';
+                        searchResults.style.width = 'calc(100vw - 40px)';
+                        searchResults.classList.add('positioned');
+                    } else {
+                        // On desktop, use absolute positioning
+                        searchResults.style.position = '';
+                        searchResults.style.top = '';
+                        searchResults.style.left = '';
+                        searchResults.style.right = '';
+                        searchResults.style.width = '';
+                        searchResults.classList.remove('positioned');
+                    }
+                    
                     // Show backdrop on mobile
                     if (searchBackdrop && window.innerWidth <= 640) {
                         searchBackdrop.classList.add('active');
+                    } else if (searchBackdrop) {
+                        searchBackdrop.classList.remove('active');
                     }
                     return;
                 }
@@ -8478,10 +8508,7 @@
                 `;
                 }).join('');
                 
-                // Force show the popup
-                searchResults.style.display = 'block';
-                searchResults.style.visibility = 'visible';
-                searchResults.style.opacity = '1';
+                // Show the popup
                 searchResults.classList.add('active');
                 
                 // On mobile, position the popup relative to the search input using fixed positioning
@@ -8494,12 +8521,22 @@
                     searchResults.style.right = '20px';
                     searchResults.style.width = 'calc(100vw - 40px)';
                     searchResults.classList.add('positioned');
+                } else {
+                    // On desktop, use absolute positioning (reset any fixed positioning)
+                    searchResults.style.position = '';
+                    searchResults.style.top = '';
+                    searchResults.style.left = '';
+                    searchResults.style.right = '';
+                    searchResults.style.width = '';
+                    searchResults.classList.remove('positioned');
                 }
                 
                 // Show backdrop on mobile (matching customer form behavior)
                 if (searchBackdrop && window.innerWidth <= 640) {
-                    searchBackdrop.style.display = 'block';
                     searchBackdrop.classList.add('active');
+                } else if (searchBackdrop) {
+                    // Ensure backdrop is hidden on desktop
+                    searchBackdrop.classList.remove('active');
                 }
                 
                 // Debug log
@@ -8525,6 +8562,13 @@
                         inhouseCurrentColor = null;
                         productSearch.value = product.name;
                         searchResults.classList.remove('active');
+                        // Reset positioning styles
+                        searchResults.style.position = '';
+                        searchResults.style.top = '';
+                        searchResults.style.left = '';
+                        searchResults.style.right = '';
+                        searchResults.style.width = '';
+                        searchResults.classList.remove('positioned');
                         if (searchBackdrop) {
                             searchBackdrop.classList.remove('active');
                         }
@@ -8540,12 +8584,77 @@
                 }
             });
 
+            // Helper function to check if click/touch is outside search area
+            const isOutsideSearchArea = function(target) {
+                const isSearchInput = productSearch && (productSearch === target || productSearch.contains(target));
+                const isSearchResults = searchResults && (searchResults === target || searchResults.contains(target));
+                const isSearchResultItem = target && target.closest && target.closest('.inhouse-search-result-item');
+                const isSearchContainer = target && target.closest && target.closest('.inhouse-search-container');
+                
+                return !isSearchInput && !isSearchResults && !isSearchResultItem && !isSearchContainer;
+            };
+
+            // Close search results when clicking outside (desktop)
+            document.addEventListener('click', (e) => {
+                const backdrop = document.getElementById('inhouse-dash-searchBackdrop');
+                if (isOutsideSearchArea(e.target) && !e.target.closest('.inhouse-search-backdrop')) {
+                    searchResults.classList.remove('active');
+                    // Reset positioning styles
+                    searchResults.style.position = '';
+                    searchResults.style.top = '';
+                    searchResults.style.left = '';
+                    searchResults.style.right = '';
+                    searchResults.style.width = '';
+                    searchResults.classList.remove('positioned');
+                    if (backdrop) {
+                        backdrop.classList.remove('active');
+                    }
+                }
+            });
+            
+            // Close search results when touching outside (mobile)
+            document.addEventListener('touchend', (e) => {
+                const backdrop = document.getElementById('inhouse-dash-searchBackdrop');
+                if (isOutsideSearchArea(e.target) && !e.target.closest('.inhouse-search-backdrop')) {
+                    searchResults.classList.remove('active');
+                    // Reset positioning styles
+                    searchResults.style.position = '';
+                    searchResults.style.top = '';
+                    searchResults.style.left = '';
+                    searchResults.style.right = '';
+                    searchResults.style.width = '';
+                    searchResults.classList.remove('positioned');
+                    if (backdrop) {
+                        backdrop.classList.remove('active');
+                    }
+                }
+            }, { passive: true });
+            
             // Close search results when clicking backdrop
             if (searchBackdrop) {
                 searchBackdrop.addEventListener('click', () => {
                     searchResults.classList.remove('active');
+                    // Reset positioning styles
+                    searchResults.style.position = '';
+                    searchResults.style.top = '';
+                    searchResults.style.left = '';
+                    searchResults.style.right = '';
+                    searchResults.style.width = '';
+                    searchResults.classList.remove('positioned');
                     searchBackdrop.classList.remove('active');
                 });
+                searchBackdrop.addEventListener('touchend', (e) => {
+                    e.preventDefault();
+                    searchResults.classList.remove('active');
+                    // Reset positioning styles
+                    searchResults.style.position = '';
+                    searchResults.style.top = '';
+                    searchResults.style.left = '';
+                    searchResults.style.right = '';
+                    searchResults.style.width = '';
+                    searchResults.classList.remove('positioned');
+                    searchBackdrop.classList.remove('active');
+                }, { passive: false });
             }
 
             // Clear product
@@ -8561,6 +8670,13 @@
                         addToCartBtn.style.display = 'none';
                     }
                     searchResults.classList.remove('active');
+                    // Reset positioning styles
+                    searchResults.style.position = '';
+                    searchResults.style.top = '';
+                    searchResults.style.left = '';
+                    searchResults.style.right = '';
+                    searchResults.style.width = '';
+                    searchResults.classList.remove('positioned');
                     if (searchBackdrop) {
                         searchBackdrop.classList.remove('active');
                     }
