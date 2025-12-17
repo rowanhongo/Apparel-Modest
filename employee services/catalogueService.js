@@ -444,133 +444,96 @@ class CatalogueService {
             existingNotification.remove();
         }
 
-        // Add animation styles if not already present
-        if (!document.getElementById('edit-notification-styles')) {
-            const style = document.createElement('style');
-            style.id = 'edit-notification-styles';
-            style.textContent = `
-                @keyframes editNotificationSlideDown {
-                    from {
-                        opacity: 0;
-                        transform: translateX(-50%) translateY(-30px);
-                    }
-                    to {
-                        opacity: 1;
-                        transform: translateX(-50%) translateY(0);
-                    }
-                }
-                @keyframes editNotificationSlideUp {
-                    from {
-                        opacity: 1;
-                        transform: translateX(-50%) translateY(0);
-                    }
-                    to {
-                        opacity: 0;
-                        transform: translateX(-50%) translateY(-30px);
-                    }
-                }
-                #edit-product-notification {
-                    animation: editNotificationSlideDown 0.4s ease-out forwards;
-                }
-                #edit-product-notification.removing {
-                    animation: editNotificationSlideUp 0.3s ease-out forwards;
-                }
+        // Create a simple, reliable notification using alert as primary method
+        // This matches the pattern used for order submissions
+        alert(`✓ You can now edit "${productName}"\n\nScroll up to see the form.`);
+
+        // Also create a visual notification bubble for better UX
+        try {
+            const notification = document.createElement('div');
+            notification.id = 'edit-product-notification';
+            
+            // Use very simple, direct styling that can't be overridden
+            notification.setAttribute('style', 
+                'position: fixed !important; ' +
+                'top: 20px !important; ' +
+                'left: 50% !important; ' +
+                'transform: translateX(-50%) !important; ' +
+                'background: #1B4D3E !important; ' +
+                'color: white !important; ' +
+                'padding: 16px 24px !important; ' +
+                'border-radius: 12px !important; ' +
+                'box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4) !important; ' +
+                'z-index: 2147483647 !important; ' + // Maximum z-index value
+                'font-size: 15px !important; ' +
+                'font-weight: 600 !important; ' +
+                'display: flex !important; ' +
+                'align-items: center !important; ' +
+                'gap: 12px !important; ' +
+                'max-width: 90% !important; ' +
+                'min-width: 280px !important; ' +
+                'text-align: center !important; ' +
+                'pointer-events: auto !important; ' +
+                'cursor: pointer !important; ' +
+                'font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important;'
+            );
+
+            notification.innerHTML = `
+                <svg width="24" height="24" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="flex-shrink: 0;">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
+                </svg>
+                <span>You can now edit "${productName}"</span>
             `;
-            document.head.appendChild(style);
-        }
 
-        // Create notification element with very high z-index and proper positioning
-        const notification = document.createElement('div');
-        notification.id = 'edit-product-notification';
-        
-        // Use inline styles to ensure they're not overridden
-        Object.assign(notification.style, {
-            position: 'fixed',
-            top: '20px',
-            left: '50%',
-            transform: 'translateX(-50%)',
-            background: '#1B4D3E',
-            color: 'white',
-            padding: '16px 24px',
-            borderRadius: '12px',
-            boxShadow: '0 8px 32px rgba(0, 0, 0, 0.3)',
-            zIndex: '999999', // Very high z-index to ensure it's on top
-            fontSize: '15px',
-            fontWeight: '600',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '12px',
-            maxWidth: '90%',
-            minWidth: '280px',
-            textAlign: 'center',
-            pointerEvents: 'auto',
-            cursor: 'pointer',
-            userSelect: 'none',
-            WebkitUserSelect: 'none',
-            MozUserSelect: 'none',
-            msUserSelect: 'none'
-        });
+            // Append directly to body
+            if (document.body) {
+                document.body.appendChild(notification);
+                
+                // Force immediate visibility
+                notification.style.display = 'flex';
+                notification.style.visibility = 'visible';
+                notification.style.opacity = '1';
+                
+                // Log for debugging
+                const rect = notification.getBoundingClientRect();
+                console.log('✅ Edit notification created:', {
+                    productName,
+                    position: rect,
+                    zIndex: window.getComputedStyle(notification).zIndex,
+                    display: window.getComputedStyle(notification).display,
+                    visibility: window.getComputedStyle(notification).visibility
+                });
+                
+                // Auto remove after 5 seconds
+                setTimeout(() => {
+                    if (notification && notification.parentNode) {
+                        notification.style.opacity = '0';
+                        notification.style.transition = 'opacity 0.3s ease-out';
+                        setTimeout(() => {
+                            if (notification && notification.parentNode) {
+                                notification.remove();
+                            }
+                        }, 300);
+                    }
+                }, 5000);
 
-        notification.innerHTML = `
-            <svg width="24" height="24" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="flex-shrink: 0;">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
-            </svg>
-            <span>You can now edit "${productName}"</span>
-        `;
-
-        // Always append to body to avoid clipping by parent containers
-        // This ensures the notification is always visible regardless of overflow settings
-        if (document.body) {
-            document.body.appendChild(notification);
-            
-            // Force reflow and ensure visibility
-            void notification.offsetHeight;
-            
-            // Log for debugging
-            console.log('✅ Edit notification created:', productName, 'Position:', notification.getBoundingClientRect());
-        } else {
-            // Wait for body to be available
-            const checkBody = setInterval(() => {
-                if (document.body) {
-                    document.body.appendChild(notification);
-                    void notification.offsetHeight;
-                    console.log('✅ Edit notification created (delayed):', productName);
-                    clearInterval(checkBody);
-                }
-            }, 10);
-        }
-
-        // Auto remove after 6 seconds
-        setTimeout(() => {
-            this.removeNotification(notification);
-        }, 6000);
-
-        // Also allow manual close on click
-        notification.addEventListener('click', () => {
-            this.removeNotification(notification);
-        });
-    }
-
-    /**
-     * Animate notification in
-     */
-    animateNotificationIn(notification) {
-        // Force reflow
-        void notification.offsetHeight;
-    }
-
-    /**
-     * Remove notification with animation
-     */
-    removeNotification(notification) {
-        if (!notification || !notification.parentNode) return;
-        
-        notification.classList.add('removing');
-        setTimeout(() => {
-            if (notification && notification.parentNode) {
-                notification.remove();
+                // Allow manual close on click
+                notification.addEventListener('click', () => {
+                    if (notification && notification.parentNode) {
+                        notification.style.opacity = '0';
+                        notification.style.transition = 'opacity 0.3s ease-out';
+                        setTimeout(() => {
+                            if (notification && notification.parentNode) {
+                                notification.remove();
+                            }
+                        }, 300);
+                    }
+                });
             }
-        }, 300);
+        } catch (error) {
+            console.error('Error creating visual notification:', error);
+            // Alert already shown above, so we're good
+        }
     }
 
     /**
