@@ -7790,18 +7790,26 @@
             };
 
             window.addEventListener('load', () => {
+                // Register service worker (query params don't work for SW registration, but we'll force update)
                 navigator.serviceWorker.register('/service-worker.js', { scope: '/' })
                     .then((registration) => {
                         console.log('✅ Service Worker registered successfully:', registration.scope);
                         
-                        // Check for updates immediately
+                        // Force immediate update check with cache bypass
                         registration.update();
+                        
+                        // Unregister and re-register if service worker is too old (nuclear option)
+                        checkAndForceUpdate(registration);
                         
                         // Check for updates every 1 minute
                         updateCheckInterval = setInterval(() => {
+                            // Force update with cache bypass
                             registration.update().catch(err => {
                                 console.warn('⚠️ Update check failed:', err);
                             });
+                            
+                            // Also check if we need to force unregister
+                            checkAndForceUpdate(registration);
                         }, 60 * 1000); // Every 1 minute
 
                         // Listen for new service worker installation
@@ -7847,6 +7855,89 @@
                 });
             });
 
+            // Function to check service worker version and force update if needed
+            async function checkAndForceUpdate(registration) {
+                try {
+                    // Fetch service worker file with cache bypass to check version
+                    // Use timestamp to bypass cache
+                    const swResponse = await fetch('/service-worker.js?t=' + Date.now(), {
+                        cache: 'no-store',
+                        headers: {
+                            'Cache-Control': 'no-cache, no-store, must-revalidate',
+                            'Pragma': 'no-cache'
+                        }
+                    });
+                    
+                    if (swResponse.ok) {
+                        const swText = await swResponse.text();
+                        // Extract cache version from service worker file
+                        const versionMatch = swText.match(/const CACHE_VERSION = ['"]([^'"]+)['"]/);
+                        
+                        if (versionMatch) {
+                            const serverVersion = versionMatch[1];
+                            const storedVersion = localStorage.getItem('sw_version');
+                            
+                            // If version changed or not stored, force update
+                            if (storedVersion !== serverVersion) {
+                                console.log('🔄 Service Worker version changed:', storedVersion, '→', serverVersion);
+                                localStorage.setItem('sw_version', serverVersion);
+                                
+                                // Force unregister and re-register
+                                await forceServiceWorkerUpdate();
+                            }
+                        }
+                    }
+                } catch (error) {
+                    console.warn('⚠️ Version check failed:', error);
+                }
+            }
+            
+            // Nuclear option: Force unregister and re-register service worker
+            async function forceServiceWorkerUpdate() {
+                try {
+                    console.log('🔄 Forcing service worker update...');
+                    
+                    // Get all registrations
+                    const registrations = await navigator.serviceWorker.getRegistrations();
+                    
+                    // Unregister all
+                    for (let registration of registrations) {
+                        await registration.unregister();
+                        console.log('🗑️ Unregistered old service worker');
+                    }
+                    
+                    // Clear all caches
+                    const cacheNames = await caches.keys();
+                    for (let cacheName of cacheNames) {
+                        await caches.delete(cacheName);
+                        console.log('🗑️ Deleted cache:', cacheName);
+                    }
+                    
+                    // Wait a bit then re-register
+                    setTimeout(() => {
+                        navigator.serviceWorker.register('/service-worker.js', { scope: '/' })
+                            .then((registration) => {
+                                console.log('✅ Service Worker re-registered after force update');
+                                // Force immediate update
+                                registration.update();
+                                // Reload after a short delay to ensure new SW is active
+                                setTimeout(() => {
+                                    window.location.reload(true); // Force reload from server
+                                }, 1000);
+                            })
+                            .catch(err => {
+                                console.error('❌ Re-registration failed:', err);
+                            });
+                    }, 500);
+                } catch (error) {
+                    console.error('❌ Force update failed:', error);
+                }
+            }
+            
+            // Add manual update button (for testing/debugging)
+            // Users can call this from console: window.forcePWAUpdate()
+            window.forcePWAUpdate = forceServiceWorkerUpdate;
+            
             // Clean up interval on page unload
             window.addEventListener('beforeunload', () => {
                 if (updateCheckInterval) {

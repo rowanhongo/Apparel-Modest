@@ -5,6 +5,9 @@ const CACHE_VERSION = '20251217-120000';
 const CACHE_NAME = `apparel-modest-${CACHE_VERSION}`;
 const RUNTIME_CACHE = `apparel-modest-runtime-${CACHE_VERSION}`;
 
+// Log version for debugging
+console.log('[Service Worker] Version:', CACHE_VERSION);
+
 // Assets to cache on install
 const STATIC_ASSETS = [
   '/',
