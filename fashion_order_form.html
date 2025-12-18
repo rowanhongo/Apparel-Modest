@@ -1790,42 +1790,19 @@
             }
         });
 
-        // Height field - format as feet'inches (e.g., 6'5)
+        // Height field - allow manual typing of digits and apostrophe
         const customHeightField = document.getElementById('customHeight');
         if (customHeightField) {
             customHeightField.addEventListener('input', function(e) {
-                // Remove all non-digit characters
-                let value = this.value.replace(/[^0-9]/g, '');
-                
-                // Format: if 2+ digits, format as X'Y (e.g., 65 becomes 6'5)
-                if (value.length >= 2) {
-                    const feet = value.substring(0, 1); // First digit
-                    const inches = value.substring(1); // Remaining digits (limit to 2)
-                    this.value = feet + "'" + inches.substring(0, 2);
-                } else if (value.length === 1) {
-                    // Just one digit, show as is
-                    this.value = value;
-                } else {
-                    this.value = '';
-                }
+                // Only allow digits and apostrophe - remove everything else
+                this.value = this.value.replace(/[^0-9']/g, '');
             });
             
-            // Handle backspace to allow editing
-            customHeightField.addEventListener('keydown', function(e) {
-                if (e.key === 'Backspace' && this.value.length > 0) {
-                    // Remove last character, then reformat
-                    setTimeout(() => {
-                        let value = this.value.replace(/[^0-9]/g, '');
-                        if (value.length >= 2) {
-                            const feet = value.substring(0, 1);
-                            const inches = value.substring(1);
-                            this.value = feet + "'" + inches.substring(0, 2);
-                        } else if (value.length === 1) {
-                            this.value = value;
-                        } else {
-                            this.value = '';
-                        }
-                    }, 0);
+            customHeightField.addEventListener('keypress', function(e) {
+                // Allow digits, apostrophe, and navigation keys
+                const allowedKeys = ['Backspace', 'Delete', 'Tab', 'ArrowLeft', 'ArrowRight', 'Home', 'End'];
+                if (!/[0-9']/.test(e.key) && !allowedKeys.includes(e.key)) {
+                    e.preventDefault();
                 }
             });
         }
