@@ -653,166 +653,78 @@ class OverviewService {
     }
 
     /**
-     * Render delivery methods pie chart
+     * Render delivery methods as text list
      * @param {Object} data - Delivery methods data with labels and values
      */
     renderDeliveryMethodsChart(data) {
-        const chartContainer = document.querySelector('#admin-overview-content .chart-container:nth-of-type(2)');
+        const chartContainer = document.getElementById('delivery-methods-list');
         if (!chartContainer) return;
 
-        // Find or create SVG element
-        let svg = chartContainer.querySelector('svg');
-        if (!svg) {
-            svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
-            svg.setAttribute('width', '100%');
-            svg.setAttribute('height', '100%');
-            svg.setAttribute('viewBox', '0 0 200 200');
-            svg.setAttribute('preserveAspectRatio', 'xMidYMid meet');
-            svg.style.display = 'block';
-            svg.style.visibility = 'visible';
-            svg.style.opacity = '1';
-            svg.style.maxWidth = '100%';
-            svg.style.maxHeight = '300px';
-            svg.style.height = 'auto';
-            svg.style.minHeight = '200px';
-            
-            // Add defs with gradients
-            const defs = document.createElementNS('http://www.w3.org/2000/svg', 'defs');
-            const gradients = [
-                { id: 'pieGradient1', color1: '#41463F', color2: '#353C35' },
-                { id: 'pieGradient2', color1: '#4A5249', color2: '#353C35' },
-                { id: 'pieGradient3', color1: '#50584F', color2: '#353C35' },
-                { id: 'pieGradient4', color1: '#5A6259', color2: '#353C35' },
-                { id: 'pieGradient5', color1: '#656D64', color2: '#353C35' }
-            ];
-            
-            gradients.forEach(g => {
-                const gradient = document.createElementNS('http://www.w3.org/2000/svg', 'linearGradient');
-                gradient.setAttribute('id', g.id);
-                gradient.setAttribute('x1', '0%');
-                gradient.setAttribute('y1', '0%');
-                gradient.setAttribute('x2', '100%');
-                gradient.setAttribute('y2', '100%');
-                const stop1 = document.createElementNS('http://www.w3.org/2000/svg', 'stop');
-                stop1.setAttribute('offset', '0%');
-                stop1.setAttribute('style', `stop-color:${g.color1};stop-opacity:1`);
-                const stop2 = document.createElementNS('http://www.w3.org/2000/svg', 'stop');
-                stop2.setAttribute('offset', '100%');
-                stop2.setAttribute('style', `stop-color:${g.color2};stop-opacity:1`);
-                gradient.appendChild(stop1);
-                gradient.appendChild(stop2);
-                defs.appendChild(gradient);
-            });
-            
-            svg.appendChild(defs);
-            
-            // Add background circle
-            const bgCircle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
-            bgCircle.setAttribute('cx', '100');
-            bgCircle.setAttribute('cy', '100');
-            bgCircle.setAttribute('r', '80');
-            bgCircle.setAttribute('fill', 'none');
-            bgCircle.setAttribute('stroke', 'rgba(224,216,201,0.1)');
-            bgCircle.setAttribute('stroke-width', '2');
-            svg.appendChild(bgCircle);
-            
-            chartContainer.appendChild(svg);
-        }
-
-        // Clear existing chart paths and texts (but keep defs and background)
-        const existingPaths = svg.querySelectorAll('path[data-chart="delivery"]');
-        existingPaths.forEach(path => path.remove());
-        const existingTexts = svg.querySelectorAll('text[data-chart="delivery"]');
-        existingTexts.forEach(text => text.remove());
-        // Also remove old static paths and texts
-        const oldPaths = svg.querySelectorAll('path:not([data-chart])');
-        oldPaths.forEach(path => {
-            if (path.getAttribute('fill') && path.getAttribute('fill').includes('Gradient')) {
-                path.remove();
-            }
-        });
-        const oldTexts = svg.querySelectorAll('text:not([data-chart])');
-        oldTexts.forEach(text => {
-            if (text.textContent && (text.textContent.includes('Uber') || text.textContent.includes('Courier') || text.textContent.includes('Pickup'))) {
-                text.remove();
-            }
-        });
+        // Clear existing content
+        chartContainer.innerHTML = '';
 
         if (!data.labels || data.labels.length === 0 || !data.values || data.values.length === 0) {
-            // Show "No data" message
-            const noDataText = document.createElementNS('http://www.w3.org/2000/svg', 'text');
-            noDataText.setAttribute('x', '100');
-            noDataText.setAttribute('y', '100');
-            noDataText.setAttribute('text-anchor', 'middle');
-            noDataText.setAttribute('fill', '#41463F');
-            noDataText.setAttribute('font-size', '14');
-            noDataText.setAttribute('font-weight', '600');
-            noDataText.setAttribute('data-chart', 'delivery');
-            noDataText.textContent = 'No data';
-            svg.appendChild(noDataText);
+            const noDataDiv = document.createElement('div');
+            noDataDiv.style.cssText = 'text-align: center; color: #718096; font-size: 14px; padding: 20px;';
+            noDataDiv.textContent = 'No data available';
+            chartContainer.appendChild(noDataDiv);
             return;
         }
 
-        const centerX = 100;
-        const centerY = 100;
-        const radius = 80;
-        const innerRadius = radius * 0.6;
+        // Format delivery option names for display
+        const formatDeliveryName = (name) => {
+            return name
+                .replace(/-/g, ' ')
+                .replace(/\b\w/g, l => l.toUpperCase())
+                .replace(/In Store/i, 'In Store')
+                .replace(/Pick Up Mtaani/i, 'Pick Up Mtaani');
+        };
 
-        const total = data.values.reduce((sum, val) => sum + val, 0);
-        if (total === 0) return;
+        // Create list items for each delivery method
+        data.labels.forEach((label, i) => {
+            const value = data.values[i];
+            if (value === 0) return; // Skip zero values
 
-        let currentAngle = -Math.PI / 2;
-        const gradients = ['pieGradient1', 'pieGradient2', 'pieGradient3', 'pieGradient4', 'pieGradient5'];
+            const itemDiv = document.createElement('div');
+            const isMobile = window.innerWidth <= 768;
+            itemDiv.style.cssText = `
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                padding: ${isMobile ? '12px 14px' : '14px 16px'};
+                background: rgba(255, 255, 255, 0.05);
+                border-radius: 8px;
+                border: 1px solid rgba(255, 255, 255, 0.1);
+                transition: all 0.2s ease;
+                font-size: ${isMobile ? '14px' : '15px'};
+                color: #41463F;
+                font-weight: 500;
+                min-height: ${isMobile ? '44px' : '48px'};
+                width: 100%;
+                box-sizing: border-box;
+            `;
+            
+            // Add hover effect for desktop
+            itemDiv.addEventListener('mouseenter', function() {
+                this.style.background = 'rgba(255, 255, 255, 0.1)';
+                this.style.transform = 'translateX(4px)';
+            });
+            itemDiv.addEventListener('mouseleave', function() {
+                this.style.background = 'rgba(255, 255, 255, 0.05)';
+                this.style.transform = 'translateX(0)';
+            });
 
-        data.values.forEach((value, i) => {
-            if (value === 0) return;
+            const labelSpan = document.createElement('span');
+            labelSpan.textContent = formatDeliveryName(label);
+            labelSpan.style.cssText = 'color: #41463F; font-weight: 600;';
 
-            const sliceAngle = (value / total) * 2 * Math.PI;
-            const endAngle = currentAngle + sliceAngle;
+            const valueSpan = document.createElement('span');
+            valueSpan.textContent = value;
+            valueSpan.style.cssText = 'color: #1B4D3E; font-weight: 700; font-size: 16px;';
 
-            // Create path for pie slice
-            const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-            const startX = centerX + Math.cos(currentAngle) * radius;
-            const startY = centerY + Math.sin(currentAngle) * radius;
-            const endX = centerX + Math.cos(endAngle) * radius;
-            const endY = centerY + Math.sin(endAngle) * radius;
-            const largeArc = sliceAngle > Math.PI ? 1 : 0;
-
-            const pathData = [
-                `M ${centerX} ${centerY}`,
-                `L ${startX} ${startY}`,
-                `A ${radius} ${radius} 0 ${largeArc} 1 ${endX} ${endY}`,
-                'Z',
-                `M ${centerX} ${centerY}`,
-                `L ${endX} ${endY}`,
-                `A ${innerRadius} ${innerRadius} 0 ${largeArc} 0 ${startX} ${startY}`,
-                'Z'
-            ].join(' ');
-
-            path.setAttribute('d', pathData);
-            path.setAttribute('fill', `url(#${gradients[i % gradients.length]})`);
-            path.setAttribute('data-chart', 'delivery');
-            svg.appendChild(path);
-
-            // Add label
-            const labelAngle = currentAngle + sliceAngle / 2;
-            const labelDistance = radius + 30;
-            const labelX = centerX + Math.cos(labelAngle) * labelDistance;
-            const labelY = centerY + Math.sin(labelAngle) * labelDistance;
-            const percentage = ((value / total) * 100).toFixed(0);
-
-            const labelText = document.createElementNS('http://www.w3.org/2000/svg', 'text');
-            labelText.setAttribute('x', labelX);
-            labelText.setAttribute('y', labelY);
-            labelText.setAttribute('text-anchor', 'middle');
-            labelText.setAttribute('fill', '#41463F');
-            labelText.setAttribute('font-size', '11');
-            labelText.setAttribute('font-weight', '600');
-            labelText.setAttribute('data-chart', 'delivery');
-            labelText.textContent = `${data.labels[i]} ${percentage}%`;
-            svg.appendChild(labelText);
-
-            currentAngle = endAngle;
+            itemDiv.appendChild(labelSpan);
+            itemDiv.appendChild(valueSpan);
+            chartContainer.appendChild(itemDiv);
         });
     }
 

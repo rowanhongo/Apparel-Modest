@@ -5090,38 +5090,8 @@
                                 <div class="glass-card hover:bg-white/15 transition-all duration-300">
                                     <div class="p-6">
                                         <h3 class="mb-4" style="color: #41463F;">Delivery Methods</h3>
-                                        <div class="chart-container flex justify-center">
-                                            <svg width="100%" height="100%" viewBox="0 0 200 200" preserveAspectRatio="xMidYMid meet" style="display: block; visibility: visible; opacity: 1; max-width: 100%; max-height: 300px; height: auto; min-height: 200px;">
-                                                <defs>
-                                                    <linearGradient id="pieGradient1" x1="0%" y1="0%" x2="100%" y2="100%">
-                                                        <stop offset="0%" style="stop-color:#41463F;stop-opacity:1" />
-                                                        <stop offset="100%" style="stop-color:#353C35;stop-opacity:1" />
-                                                    </linearGradient>
-                                                    <linearGradient id="pieGradient2" x1="0%" y1="0%" x2="100%" y2="100%">
-                                                        <stop offset="0%" style="stop-color:#4A5249;stop-opacity:1" />
-                                                        <stop offset="100%" style="stop-color:#353C35;stop-opacity:1" />
-                                                    </linearGradient>
-                                                    <linearGradient id="pieGradient3" x1="0%" y1="0%" x2="100%" y2="100%">
-                                                        <stop offset="0%" style="stop-color:#50584F;stop-opacity:1" />
-                                                        <stop offset="100%" style="stop-color:#353C35;stop-opacity:1" />
-                                                    </linearGradient>
-                                                    <linearGradient id="pieGradient4" x1="0%" y1="0%" x2="100%" y2="100%">
-                                                        <stop offset="0%" style="stop-color:#5A6259;stop-opacity:1" />
-                                                        <stop offset="100%" style="stop-color:#353C35;stop-opacity:1" />
-                                                    </linearGradient>
-                                                    <linearGradient id="pieGradient5" x1="0%" y1="0%" x2="100%" y2="100%">
-                                                        <stop offset="0%" style="stop-color:#656D64;stop-opacity:1" />
-                                                        <stop offset="100%" style="stop-color:#353C35;stop-opacity:1" />
-                                                    </linearGradient>
-                                                </defs>
-                                                <circle cx="100" cy="100" r="80" fill="none" stroke="rgba(224,216,201,0.1)" stroke-width="2"/>
-                                                <path d="M 100 20 A 80 80 0 0 1 100 180 L 100 100 Z" fill="url(#pieGradient1)"/>
-                                                <path d="M 100 180 A 80 80 0 0 1 20 100 L 100 100 Z" fill="url(#pieGradient2)"/>
-                                                <path d="M 20 100 A 80 80 0 0 1 100 20 L 100 100 Z" fill="url(#pieGradient3)"/>
-                                                <text x="100" y="100" text-anchor="middle" fill="#41463F" font-size="12" font-weight="600">Uber 33%</text>
-                                                <text x="60" y="140" text-anchor="middle" fill="#41463F" font-size="11" font-weight="600">Courier 33%</text>
-                                                <text x="140" y="140" text-anchor="middle" fill="#41463F" font-size="11" font-weight="600">Pickup 33%</text>
-                                            </svg>
+                                        <div class="chart-container" id="delivery-methods-list" style="display: flex; flex-direction: column; gap: 12px; padding: 8px 0; width: 100%;">
+                                            <!-- Delivery methods will be rendered here -->
                                         </div>
                                     </div>
                                 </div>
@@ -9312,42 +9282,19 @@
                 }
             });
             
-            // Height field - format as feet'inches (e.g., 6'5)
+            // Height field - allow manual typing of digits and apostrophe
             const heightField = document.getElementById('inhouse-dash-customHeight');
             if (heightField) {
                 heightField.addEventListener('input', function(e) {
-                    // Remove all non-digit characters
-                    let value = this.value.replace(/[^0-9]/g, '');
-                    
-                    // Format: if 2+ digits, format as X'Y (e.g., 65 becomes 6'5)
-                    if (value.length >= 2) {
-                        const feet = value.substring(0, 1); // First digit
-                        const inches = value.substring(1); // Remaining digits (limit to 2)
-                        this.value = feet + "'" + inches.substring(0, 2);
-                    } else if (value.length === 1) {
-                        // Just one digit, show as is
-                        this.value = value;
-                    } else {
-                        this.value = '';
-                    }
+                    // Only allow digits and apostrophe - remove everything else
+                    this.value = this.value.replace(/[^0-9']/g, '');
                 });
                 
-                // Handle backspace to allow editing
-                heightField.addEventListener('keydown', function(e) {
-                    if (e.key === 'Backspace' && this.value.length > 0) {
-                        // Remove last character, then reformat
-                        setTimeout(() => {
-                            let value = this.value.replace(/[^0-9]/g, '');
-                            if (value.length >= 2) {
-                                const feet = value.substring(0, 1);
-                                const inches = value.substring(1);
-                                this.value = feet + "'" + inches.substring(0, 2);
-                            } else if (value.length === 1) {
-                                this.value = value;
-                            } else {
-                                this.value = '';
-                            }
-                        }, 0);
+                heightField.addEventListener('keypress', function(e) {
+                    // Allow digits, apostrophe, and navigation keys
+                    const allowedKeys = ['Backspace', 'Delete', 'Tab', 'ArrowLeft', 'ArrowRight', 'Home', 'End'];
+                    if (!/[0-9']/.test(e.key) && !allowedKeys.includes(e.key)) {
+                        e.preventDefault();
                     }
                 });
             }
