@@ -392,6 +392,34 @@
             font-weight: 400;
         }
 
+        .add-to-cart-btn {
+            width: 100%;
+            padding: 16px;
+            margin-top: 16px;
+            margin-bottom: 16px;
+            background: linear-gradient(135deg, #f6d365 0%, #fda085 100%);
+            color: white;
+            border: none;
+            border-radius: 12px;
+            font-size: 16px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 6px 20px rgba(253, 160, 133, 0.4);
+            letter-spacing: 0.5px;
+            display: none;
+        }
+
+        .add-to-cart-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(253, 160, 133, 0.5);
+            background: linear-gradient(135deg, #f6d365 0%, #fda085 100%);
+        }
+
+        .add-to-cart-btn:active {
+            transform: translateY(0);
+        }
+
         .color-grid {
             display: grid;
             grid-template-columns: repeat(auto-fill, minmax(40px, 1fr));
@@ -715,6 +743,14 @@
                 height: 38px;
             }
 
+            /* Make Add Colour button prominent on mobile */
+            .add-to-cart-btn {
+                padding: 18px !important;
+                font-size: 17px !important;
+                min-height: 56px !important;
+                box-shadow: 0 8px 25px rgba(253, 160, 133, 0.5) !important;
+            }
+
             /* Make select boxes smaller and more compact on mobile */
             .form-group select {
                 padding: 10px 12px;
@@ -964,6 +1000,9 @@
             <div class="form-group color-options" id="colorOptions">
                 <label>Select Color <span class="required">*</span></label>
                 <div class="selected-color-display" id="selectedColorDisplay"></div>
+                <button type="button" id="addToCartBtn" class="add-to-cart-btn" style="display: none; width: 100%; padding: 16px; margin-top: 16px; margin-bottom: 16px; background: linear-gradient(135deg, #f6d365 0%, #fda085 100%); color: white; border: none; border-radius: 12px; font-size: 16px; font-weight: 700; cursor: pointer; transition: all 0.3s; box-shadow: 0 6px 20px rgba(253, 160, 133, 0.4); letter-spacing: 0.5px;">
+                    Add Colour
+                </button>
                 <div class="color-grid" id="colorGrid"></div>
             </div>
 
@@ -1292,6 +1331,7 @@
         const selectedProductDiv = document.getElementById('selectedProduct');
         const colorOptionsDiv = document.getElementById('colorOptions');
         const colorGrid = document.getElementById('colorGrid');
+        const addToCartBtn = document.getElementById('addToCartBtn');
         const orderCartDiv = document.getElementById('orderCart');
         const cartItems = document.getElementById('cartItems');
         const cartCount = document.getElementById('cartCount');
@@ -1649,9 +1689,9 @@
                 const selectedColorDisplay = document.getElementById('selectedColorDisplay');
                 selectedColorDisplay.textContent = `Colour: ${selectedColor}`;
                 
-                // Automatically add to cart when color is selected
-                if (selectedProduct && selectedColor) {
-                    addItemToCart();
+                // Show "Add Colour" button when color is selected
+                if (addToCartBtn) {
+                    addToCartBtn.style.display = 'block';
                 }
             };
             
@@ -1696,6 +1736,9 @@
             selectedProductDiv.classList.remove('active');
             colorOptionsDiv.classList.remove('active');
             document.getElementById('selectedColorDisplay').textContent = '';
+            if (addToCartBtn) {
+                addToCartBtn.style.display = 'none';
+            }
         }
 
         function removeItemFromCart(itemId) {
@@ -1737,6 +1780,11 @@
         
         // Make removeCartItem available globally
         window.removeCartItem = removeItemFromCart;
+        
+        // Add to cart button click handler
+        if (addToCartBtn) {
+            addToCartBtn.addEventListener('click', addItemToCart);
+        }
 
         // Body measurements dropdown - show custom input if custom is selected
         document.getElementById('bodyMeasurements').addEventListener('change', function() {
@@ -2991,6 +3039,9 @@
                 selectedColor = null;
                 orderCart = [];
                 updateCartDisplay();
+                if (addToCartBtn) {
+                    addToCartBtn.style.display = 'none';
+                }
                 
                 // Reset payment state
                 paymentCompleted = false;
