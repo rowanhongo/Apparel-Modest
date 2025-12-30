@@ -965,16 +965,13 @@
                 <label>Select Color <span class="required">*</span></label>
                 <div class="selected-color-display" id="selectedColorDisplay"></div>
                 <div class="color-grid" id="colorGrid"></div>
-                <button type="button" id="addToCartBtn" class="add-to-cart-btn" style="display: none; width: 100%; padding: 12px; margin-top: 12px; background: linear-gradient(135deg, #f6d365 0%, #fda085 100%); color: white; border: none; border-radius: 8px; font-size: 15px; font-weight: 600; cursor: pointer; transition: all 0.3s; box-shadow: 0 4px 15px rgba(253, 160, 133, 0.3);">
-                    Add to Cart
-                </button>
             </div>
 
             <!-- Order Cart -->
             <div class="form-group" id="orderCart" style="display: none;">
                 <label>Order Items <span class="required">*</span> <span id="cartCount" style="font-size: 12px; font-weight: normal; color: #718096;">(0 items)</span></label>
                 <div id="cartItems" style="background: rgba(253, 160, 133, 0.05); border-radius: 12px; padding: 16px; margin-top: 8px; min-height: 60px; border: 1.5px solid rgba(253, 160, 133, 0.2);">
-                    <div style="text-align: center; color: #718096; padding: 20px;">No items added yet. Select a product and color, then click "Add to Cart".</div>
+                    <div style="text-align: center; color: #718096; padding: 20px;">No items added yet. Select a product and color to add items to your cart.</div>
                 </div>
                 <div id="cartTotal" style="margin-top: 12px; padding: 12px; background: linear-gradient(135deg, rgba(246, 211, 101, 0.2) 0%, rgba(253, 160, 133, 0.2) 100%); border-radius: 8px; text-align: right; font-size: 16px; font-weight: 700; color: #2d3748; display: none;">
                     Total: KES <span id="totalAmount">0</span>
@@ -1295,7 +1292,6 @@
         const selectedProductDiv = document.getElementById('selectedProduct');
         const colorOptionsDiv = document.getElementById('colorOptions');
         const colorGrid = document.getElementById('colorGrid');
-        const addToCartBtn = document.getElementById('addToCartBtn');
         const orderCartDiv = document.getElementById('orderCart');
         const cartItems = document.getElementById('cartItems');
         const cartCount = document.getElementById('cartCount');
@@ -1653,9 +1649,9 @@
                 const selectedColorDisplay = document.getElementById('selectedColorDisplay');
                 selectedColorDisplay.textContent = `Colour: ${selectedColor}`;
                 
-                // Show "Add to Cart" button when color is selected
-                if (addToCartBtn) {
-                    addToCartBtn.style.display = 'block';
+                // Automatically add to cart when color is selected
+                if (selectedProduct && selectedColor) {
+                    addItemToCart();
                 }
             };
             
@@ -1700,9 +1696,6 @@
             selectedProductDiv.classList.remove('active');
             colorOptionsDiv.classList.remove('active');
             document.getElementById('selectedColorDisplay').textContent = '';
-            if (addToCartBtn) {
-                addToCartBtn.style.display = 'none';
-            }
         }
 
         function removeItemFromCart(itemId) {
@@ -1714,7 +1707,7 @@
             if (!cartItems || !cartCount || !cartTotal || !totalAmount) return;
 
             if (orderCart.length === 0) {
-                cartItems.innerHTML = '<div style="text-align: center; color: #718096; padding: 20px;">No items added yet. Select a product and color, then click "Add to Cart".</div>';
+                cartItems.innerHTML = '<div style="text-align: center; color: #718096; padding: 20px;">No items added yet. Select a product and color to add items to your cart.</div>';
                 orderCartDiv.style.display = 'none';
                 cartTotal.style.display = 'none';
                 return;
@@ -1744,11 +1737,6 @@
         
         // Make removeCartItem available globally
         window.removeCartItem = removeItemFromCart;
-        
-        // Add to cart button click handler
-        if (addToCartBtn) {
-            addToCartBtn.addEventListener('click', addItemToCart);
-        }
 
         // Body measurements dropdown - show custom input if custom is selected
         document.getElementById('bodyMeasurements').addEventListener('change', function() {
@@ -3003,9 +2991,6 @@
                 selectedColor = null;
                 orderCart = [];
                 updateCartDisplay();
-                if (addToCartBtn) {
-                    addToCartBtn.style.display = 'none';
-                }
                 
                 // Reset payment state
                 paymentCompleted = false;
