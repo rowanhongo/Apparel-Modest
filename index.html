@@ -4733,15 +4733,15 @@
                                         </div>
                                         <div>
                                             <label style="font-size: 12px; font-weight: 600; color: #4a5568; margin-bottom: 6px; display: block;">Bust (cm) <span class="inhouse-required">*</span></label>
-                                            <input type="number" id="inhouse-dash-customBust" min="0" placeholder="e.g., 42" style="width: 100%; padding: 10px; border: 1.5px solid rgba(0,0,0,0.1); border-radius: 6px;">
+                                            <input type="number" id="inhouse-dash-customBust" min="0" step="0.1" placeholder="e.g., 42" style="width: 100%; padding: 10px; border: 1.5px solid rgba(0,0,0,0.1); border-radius: 6px;">
                                         </div>
                                         <div>
                                             <label style="font-size: 12px; font-weight: 600; color: #4a5568; margin-bottom: 6px; display: block;">High Waist (cm) <span class="inhouse-required">*</span></label>
-                                            <input type="number" id="inhouse-dash-customWaist" min="0" placeholder="e.g., 34" style="width: 100%; padding: 10px; border: 1.5px solid rgba(0,0,0,0.1); border-radius: 6px;">
+                                            <input type="number" id="inhouse-dash-customWaist" min="0" step="0.1" placeholder="e.g., 34" style="width: 100%; padding: 10px; border: 1.5px solid rgba(0,0,0,0.1); border-radius: 6px;">
                                         </div>
                                         <div>
                                             <label style="font-size: 12px; font-weight: 600; color: #4a5568; margin-bottom: 6px; display: block;">Hips (cm) <span class="inhouse-required">*</span></label>
-                                            <input type="number" id="inhouse-dash-customHips" min="0" placeholder="e.g., 46" style="width: 100%; padding: 10px; border: 1.5px solid rgba(0,0,0,0.1); border-radius: 6px;">
+                                            <input type="number" id="inhouse-dash-customHips" min="0" step="0.1" placeholder="e.g., 46" style="width: 100%; padding: 10px; border: 1.5px solid rgba(0,0,0,0.1); border-radius: 6px;">
                                         </div>
                                     </div>
                                 </div>
@@ -9272,12 +9272,37 @@
                 });
             }
 
-            // Custom size fields - only numbers (except height which has special formatting)
+            // Custom size fields - allow numbers and one decimal point (e.g., 34.5)
             ['inhouse-dash-customBust', 'inhouse-dash-customWaist', 'inhouse-dash-customHips'].forEach(id => {
                 const field = document.getElementById(id);
                 if (field) {
                     field.addEventListener('input', function() {
-                        this.value = this.value.replace(/[^0-9]/g, '');
+                        // Allow digits and decimal point, but only one decimal point
+                        let value = this.value.replace(/[^0-9.]/g, '');
+                        // Ensure only one decimal point
+                        const parts = value.split('.');
+                        if (parts.length > 2) {
+                            value = parts[0] + '.' + parts.slice(1).join('');
+                        }
+                        this.value = value;
+                    });
+                    
+                    field.addEventListener('keypress', function(e) {
+                        // Allow digits, decimal point, and navigation keys
+                        const allowedKeys = ['Backspace', 'Delete', 'Tab', 'ArrowLeft', 'ArrowRight', 'Home', 'End'];
+                        if (allowedKeys.includes(e.key)) {
+                            return; // Allow navigation keys
+                        }
+                        // Allow digits
+                        if (/[0-9]/.test(e.key)) {
+                            return; // Allow digits
+                        }
+                        // Allow decimal point only if one doesn't already exist
+                        if (e.key === '.' && !this.value.includes('.')) {
+                            return; // Allow decimal point if none exists
+                        }
+                        // Prevent all other keys
+                        e.preventDefault();
                     });
                 }
             });
