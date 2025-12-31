@@ -1712,6 +1712,10 @@
                 field.addEventListener('input', function(e) {
                     // Allow digits and decimal point, but only one decimal point
                     let value = this.value.replace(/[^0-9.]/g, '');
+                    // If value starts with decimal point, prepend 0
+                    if (value.startsWith('.')) {
+                        value = '0' + value;
+                    }
                     // Ensure only one decimal point
                     const parts = value.split('.');
                     if (parts.length > 2) {
@@ -1730,9 +1734,18 @@
                     if (/[0-9]/.test(e.key)) {
                         return; // Allow digits
                     }
-                    // Allow decimal point only if one doesn't already exist
-                    if (e.key === '.' && !this.value.includes('.')) {
-                        return; // Allow decimal point if none exists
+                    // Allow decimal point only if:
+                    // 1. One doesn't already exist
+                    // 2. There's at least one digit before the cursor position
+                    if (e.key === '.') {
+                        const cursorPos = this.selectionStart || 0;
+                        const textBeforeCursor = this.value.substring(0, cursorPos);
+                        // Check if decimal already exists or if there's no digit before cursor
+                        if (this.value.includes('.') || !/[0-9]/.test(textBeforeCursor)) {
+                            e.preventDefault();
+                            return;
+                        }
+                        return; // Allow decimal point
                     }
                     // Prevent all other keys
                     e.preventDefault();
