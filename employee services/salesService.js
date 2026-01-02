@@ -58,7 +58,7 @@ class SalesService {
      */
     async loadOrdersFromDatabase() {
         try {
-            // Fetch orders with status 'pending' (new requests)
+            // Fetch orders with status 'pending' (new requests) - exclude deleted orders
             const { data: orders, error } = await this.supabase
                 .from('orders')
                 .select(`
@@ -73,6 +73,7 @@ class SalesService {
                     )
                 `)
                 .eq('status', 'pending')
+                .is('deleted_at', null)
                 .order('created_at', { ascending: false });
 
             if (error) {
@@ -479,7 +480,7 @@ class SalesService {
     }
 
     /**
-     * Delete an order
+     * Delete an order (soft delete)
      * @param {string|number} orderId - Order ID
      */
     async deleteOrder(orderId) {
@@ -490,15 +491,26 @@ class SalesService {
         }
 
         // Ask for confirmation
-        if (!confirm('Are you sure you want to delete this order? This action cannot be undone.')) {
+        if (!confirm('Are you sure you want to delete this order? You can restore it from the Trash later.')) {
             return;
         }
 
         try {
-            // Delete order from Supabase
+            // Get current user for tracking who deleted
+            const currentUser = authService ? authService.getCurrentUser() : null;
+            const deletedByName = currentUser ? (currentUser.name || currentUser.email || 'Unknown') : 'Unknown';
+            const deletedById = currentUser ? currentUser.id : null;
+
+            // Soft delete order by setting deleted_at, original_status, and deleted_by
             const { error } = await this.supabase
                 .from('orders')
-                .delete()
+                .update({ 
+                    deleted_at: new Date().toISOString(),
+                    original_status: order.status || 'pending',
+                    deleted_by: deletedById,
+                    deleted_by_name: deletedByName,
+                    updated_at: new Date().toISOString()
+                })
                 .eq('id', orderId);
 
             if (error) {
@@ -515,7 +527,7 @@ class SalesService {
             }
 
             this.render();
-            alert('✓ Order deleted successfully');
+            alert('✓ Order deleted. You can restore it from the Trash if needed.');
         } catch (error) {
             console.error('Error deleting order:', error);
             alert('Failed to delete order. Please try again.');

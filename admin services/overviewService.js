@@ -79,22 +79,14 @@ class OverviewService {
      */
     async fetchMetrics() {
         try {
-            // Get current month start
+            // Get today's date (start of day) for orders today calculation
             const now = new Date();
-            const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
-            const monthStartStr = monthStart.toISOString();
-
-            // Get today's date (start of day)
             const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
             const todayStr = today.toISOString();
             const tomorrowStr = new Date(today.getTime() + 24 * 60 * 60 * 1000).toISOString();
 
-            // Get current month end
-            const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59);
-            const monthEndStr = monthEnd.toISOString();
-
-            // Fetch all orders from this month (for total orders and other metrics)
-            const { data: orders, error } = await this.supabase
+            // Fetch ALL orders (not just current month) for total orders, revenue, and other metrics
+            const { data: allOrders, error: allOrdersError } = await this.supabase
                 .from('orders')
                 .select(`
                     *,
@@ -102,31 +94,41 @@ class OverviewService {
                         name
                     )
                 `)
-                .gte('created_at', monthStartStr)
-                .lte('created_at', monthEndStr);
+                .order('created_at', { ascending: false });
 
-            if (error) {
-                console.error('Error fetching orders:', error);
-                throw error;
+            if (allOrdersError) {
+                console.error('Error fetching all orders:', allOrdersError);
+                throw allOrdersError;
             }
 
-            const ordersList = orders || [];
+            const allOrdersList = allOrders || [];
 
-            // Calculate total orders this month
-            const totalOrders = ordersList.length;
+            // Calculate total orders (all orders, not just this month)
+            const totalOrders = allOrdersList.length;
 
-            // Calculate total revenue this month (only from completed orders)
-            const completedOrders = ordersList.filter(order => order.status === 'completed');
+            // Calculate total revenue (only from completed orders, all time)
+            const completedOrders = allOrdersList.filter(order => order.status === 'completed');
             const totalRevenue = completedOrders.reduce((sum, order) => {
                 return sum + (parseFloat(order.price) || 0);
             }, 0);
 
-            // Calculate most ordered item
+            // Calculate most ordered item - handle both JSONB items array and single product
             const itemCounts = {};
-            ordersList.forEach(order => {
-                const itemName = order.products?.name || order.product_name || 'Unknown';
-                if (itemName && itemName !== 'Unknown') {
-                    itemCounts[itemName] = (itemCounts[itemName] || 0) + 1;
+            allOrdersList.forEach(order => {
+                // Check if order has items stored as JSONB array (new format)
+                if (order.items && Array.isArray(order.items) && order.items.length > 0) {
+                    order.items.forEach(item => {
+                        const itemName = item.product_name || 'Unknown';
+                        if (itemName && itemName !== 'Unknown') {
+                            itemCounts[itemName] = (itemCounts[itemName] || 0) + 1;
+                        }
+                    });
+                } else {
+                    // Fallback to single product (old format)
+                    const itemName = order.products?.name || order.product_name || 'Unknown';
+                    if (itemName && itemName !== 'Unknown') {
+                        itemCounts[itemName] = (itemCounts[itemName] || 0) + 1;
+                    }
                 }
             });
             const mostOrderedEntry = Object.entries(itemCounts).sort((a, b) => b[1] - a[1])[0];
@@ -134,12 +136,23 @@ class OverviewService {
                 ? `${mostOrderedEntry[0]} (${mostOrderedEntry[1]} units)` 
                 : 'N/A';
 
-            // Calculate popular color
+            // Calculate popular color - handle both JSONB items array and single product
             const colorCounts = {};
-            ordersList.forEach(order => {
-                const color = order.color;
-                if (color) {
-                    colorCounts[color] = (colorCounts[color] || 0) + 1;
+            allOrdersList.forEach(order => {
+                // Check if order has items stored as JSONB array (new format)
+                if (order.items && Array.isArray(order.items) && order.items.length > 0) {
+                    order.items.forEach(item => {
+                        const color = item.color || order.color;
+                        if (color) {
+                            colorCounts[color] = (colorCounts[color] || 0) + 1;
+                        }
+                    });
+                } else {
+                    // Fallback to single color (old format)
+                    const color = order.color;
+                    if (color) {
+                        colorCounts[color] = (colorCounts[color] || 0) + 1;
+                    }
                 }
             });
             const popularColorEntry = Object.entries(colorCounts).sort((a, b) => b[1] - a[1])[0];
@@ -147,9 +160,9 @@ class OverviewService {
                 ? `${popularColorEntry[0]} (${popularColorEntry[1]} orders)` 
                 : 'N/A';
 
-            // Calculate preferred delivery method
+            // Calculate preferred delivery method (all orders)
             const deliveryCounts = {};
-            ordersList.forEach(order => {
+            allOrdersList.forEach(order => {
                 const delivery = order.delivery_option || order.deliveryOption;
                 if (delivery) {
                     deliveryCounts[delivery] = (deliveryCounts[delivery] || 0) + 1;
@@ -163,8 +176,8 @@ class OverviewService {
                 ? preferredDeliveryEntry[1] 
                 : 0;
 
-            // Calculate orders today
-            const ordersToday = ordersList.filter(order => {
+            // Calculate orders today (only today's orders)
+            const ordersToday = allOrdersList.filter(order => {
                 const orderDate = new Date(order.created_at);
                 return orderDate >= today && orderDate < new Date(tomorrowStr);
             }).length;
@@ -173,10 +186,15 @@ class OverviewService {
             const yesterday = new Date(today.getTime() - 24 * 60 * 60 * 1000);
             const yesterdayStr = yesterday.toISOString();
             const yesterdayEndStr = new Date(yesterday.getTime() + 24 * 60 * 60 * 1000).toISOString();
-            const ordersYesterday = ordersList.filter(order => {
-                const orderDate = new Date(order.created_at);
-                return orderDate >= yesterday && orderDate < new Date(yesterdayEndStr);
-            }).length;
+            
+            // Fetch yesterday's orders for comparison
+            const { data: yesterdayOrders, error: yesterdayError } = await this.supabase
+                .from('orders')
+                .select('created_at')
+                .gte('created_at', yesterdayStr)
+                .lt('created_at', yesterdayEndStr);
+
+            const ordersYesterday = (yesterdayOrders || []).length;
 
             // Calculate percentage change
             let ordersTodayChange = '';
@@ -494,196 +512,50 @@ class OverviewService {
     }
 
     /**
-     * Render monthly orders bar chart
+     * Render monthly orders as vertical text list
      * @param {Object} data - Monthly orders data with labels and values
      */
     renderMonthlyOrdersChart(data) {
-        const chartContainer = document.querySelector('#admin-overview-content .chart-container');
-        if (!chartContainer) return;
-
-        // Find or create SVG element
-        let svg = chartContainer.querySelector('svg');
-        if (!svg) {
-            svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
-            svg.setAttribute('width', '100%');
-            svg.setAttribute('height', '100%');
-            svg.setAttribute('viewBox', '0 0 800 300');
-            svg.setAttribute('preserveAspectRatio', 'xMidYMid meet');
-            svg.style.display = 'block';
-            svg.style.visibility = 'visible';
-            svg.style.opacity = '1';
-            svg.style.maxWidth = '100%';
-            svg.style.maxHeight = '300px';
-            svg.style.height = 'auto';
-            svg.style.minHeight = '200px';
-            
-            // Add defs with gradients
-            const defs = document.createElementNS('http://www.w3.org/2000/svg', 'defs');
-            const pattern = document.createElementNS('http://www.w3.org/2000/svg', 'pattern');
-            pattern.setAttribute('id', 'grid');
-            pattern.setAttribute('width', '40');
-            pattern.setAttribute('height', '30');
-            pattern.setAttribute('patternUnits', 'userSpaceOnUse');
-            const patternPath = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-            patternPath.setAttribute('d', 'M 40 0 L 0 0 0 30');
-            patternPath.setAttribute('fill', 'none');
-            patternPath.setAttribute('stroke', 'rgba(224,216,201,0.1)');
-            patternPath.setAttribute('stroke-width', '1');
-            pattern.appendChild(patternPath);
-            
-            const gradient = document.createElementNS('http://www.w3.org/2000/svg', 'linearGradient');
-            gradient.setAttribute('id', 'barGradient');
-            gradient.setAttribute('x1', '0%');
-            gradient.setAttribute('y1', '0%');
-            gradient.setAttribute('x2', '0%');
-            gradient.setAttribute('y2', '100%');
-            const stop1 = document.createElementNS('http://www.w3.org/2000/svg', 'stop');
-            stop1.setAttribute('offset', '0%');
-            stop1.setAttribute('style', 'stop-color:#41463F;stop-opacity:1');
-            const stop2 = document.createElementNS('http://www.w3.org/2000/svg', 'stop');
-            stop2.setAttribute('offset', '100%');
-            stop2.setAttribute('style', 'stop-color:#353C35;stop-opacity:1');
-            gradient.appendChild(stop1);
-            gradient.appendChild(stop2);
-            
-            defs.appendChild(pattern);
-            defs.appendChild(gradient);
-            svg.appendChild(defs);
-            
-            // Add grid background
-            const gridRect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
-            gridRect.setAttribute('width', '100%');
-            gridRect.setAttribute('height', '100%');
-            gridRect.setAttribute('fill', 'url(#grid)');
-            svg.appendChild(gridRect);
-            
-            chartContainer.appendChild(svg);
-        }
-
-        // Clear existing chart bars and labels (but keep defs and grid)
-        const existingBars = svg.querySelector('.chart-bars');
-        if (existingBars) {
-            existingBars.innerHTML = '';
-        }
-        const existingLabels = svg.querySelector('.chart-labels');
-        if (existingLabels) {
-            existingLabels.innerHTML = '';
-        } else {
-            // Create labels group if it doesn't exist
-            const labelsGroup = document.createElementNS('http://www.w3.org/2000/svg', 'g');
-            labelsGroup.setAttribute('class', 'chart-labels');
-            svg.appendChild(labelsGroup);
-        }
-
-        // Calculate max value for scaling
-        const maxValue = Math.max(...data.values, 1);
-        const barWidth = 30;
-        const barSpacing = 30;
-        const chartWidth = 800;
-        const chartHeight = 300;
-        const padding = 60;
-        const availableWidth = chartWidth - (padding * 2);
-        const totalBarWidth = (barWidth + barSpacing) * data.values.length;
-        const startX = padding + (availableWidth - totalBarWidth) / 2;
-
-        // Get or create bars group
-        let barsGroup = svg.querySelector('.chart-bars');
-        if (!barsGroup) {
-            barsGroup = document.createElementNS('http://www.w3.org/2000/svg', 'g');
-            barsGroup.setAttribute('class', 'chart-bars');
-            svg.appendChild(barsGroup);
-        }
-
-        // Get or create labels group
-        let labelsGroup = svg.querySelector('.chart-labels');
-        if (!labelsGroup) {
-            labelsGroup = document.createElementNS('http://www.w3.org/2000/svg', 'g');
-            labelsGroup.setAttribute('class', 'chart-labels');
-            labelsGroup.setAttribute('fill', '#2D332D');
-            labelsGroup.setAttribute('font-size', '14');
-            labelsGroup.setAttribute('font-weight', '700');
-            svg.appendChild(labelsGroup);
-        }
-
-        data.values.forEach((value, i) => {
-            const barHeight = maxValue > 0 ? (value / maxValue) * (chartHeight - padding - 40) : 0;
-            const x = startX + i * (barWidth + barSpacing);
-            const y = chartHeight - padding - barHeight;
-
-            // Create bar rectangle
-            const rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
-            rect.setAttribute('x', x);
-            rect.setAttribute('y', y);
-            rect.setAttribute('width', barWidth);
-            rect.setAttribute('height', barHeight);
-            rect.setAttribute('rx', '8');
-            rect.setAttribute('ry', '8');
-            rect.setAttribute('fill', 'url(#barGradient)');
-
-            // Create value text
-            const valueText = document.createElementNS('http://www.w3.org/2000/svg', 'text');
-            valueText.setAttribute('x', x + barWidth / 2);
-            valueText.setAttribute('y', y - 5);
-            valueText.setAttribute('text-anchor', 'middle');
-            valueText.setAttribute('fill', '#2D332D');
-            valueText.setAttribute('font-size', '16');
-            valueText.setAttribute('font-weight', '700');
-            valueText.textContent = value;
-
-            // Create month label
-            const monthText = document.createElementNS('http://www.w3.org/2000/svg', 'text');
-            monthText.setAttribute('x', x + barWidth / 2);
-            monthText.setAttribute('y', chartHeight - 10);
-            monthText.setAttribute('text-anchor', 'middle');
-            monthText.setAttribute('fill', '#2D332D');
-            monthText.setAttribute('font-size', '14');
-            monthText.setAttribute('font-weight', '700');
-            monthText.textContent = data.labels[i];
-
-            barsGroup.appendChild(rect);
-            barsGroup.appendChild(valueText);
-            labelsGroup.appendChild(monthText);
-        });
-
-        // Update yearly total
-        const yearlyTotalEl = document.getElementById('yearly-total-value');
-        if (yearlyTotalEl && data.total !== undefined) {
-            yearlyTotalEl.textContent = data.total;
-        }
-    }
-
-    /**
-     * Render delivery methods as text list
-     * @param {Object} data - Delivery methods data with labels and values
-     */
-    renderDeliveryMethodsChart(data) {
-        const chartContainer = document.getElementById('delivery-methods-list');
-        if (!chartContainer) return;
+        const listContainer = document.getElementById('monthly-orders-list');
+        if (!listContainer) return;
 
         // Clear existing content
-        chartContainer.innerHTML = '';
+        listContainer.innerHTML = '';
 
         if (!data.labels || data.labels.length === 0 || !data.values || data.values.length === 0) {
             const noDataDiv = document.createElement('div');
-            noDataDiv.style.cssText = 'text-align: center; color: #718096; font-size: 14px; padding: 20px;';
+            noDataDiv.style.cssText = 'text-align: center; color: rgba(65, 70, 63, 0.6); font-size: 14px; padding: 20px;';
             noDataDiv.textContent = 'No data available';
-            chartContainer.appendChild(noDataDiv);
+            listContainer.appendChild(noDataDiv);
+            
+            // Update yearly total
+            const yearlyTotalEl = document.getElementById('yearly-total-value');
+            if (yearlyTotalEl) {
+                yearlyTotalEl.textContent = '0';
+            }
             return;
         }
 
-        // Format delivery option names for display
-        const formatDeliveryName = (name) => {
-            return name
-                .replace(/-/g, ' ')
-                .replace(/\b\w/g, l => l.toUpperCase())
-                .replace(/In Store/i, 'In Store')
-                .replace(/Pick Up Mtaani/i, 'Pick Up Mtaani');
+        // Full month names mapping
+        const monthNames = {
+            'Jan': 'January',
+            'Feb': 'February',
+            'Mar': 'March',
+            'Apr': 'April',
+            'May': 'May',
+            'Jun': 'June',
+            'Jul': 'July',
+            'Aug': 'August',
+            'Sep': 'September',
+            'Oct': 'October',
+            'Nov': 'November',
+            'Dec': 'December'
         };
 
-        // Create list items for each delivery method
+        // Create list items for each month
         data.labels.forEach((label, i) => {
             const value = data.values[i];
-            if (value === 0) return; // Skip zero values
+            if (value === undefined || value === null) return;
 
             const itemDiv = document.createElement('div');
             const isMobile = window.innerWidth <= 768;
@@ -705,26 +577,119 @@ class OverviewService {
             `;
             
             // Add hover effect for desktop
-            itemDiv.addEventListener('mouseenter', function() {
-                this.style.background = 'rgba(255, 255, 255, 0.1)';
-                this.style.transform = 'translateX(4px)';
-            });
-            itemDiv.addEventListener('mouseleave', function() {
-                this.style.background = 'rgba(255, 255, 255, 0.05)';
-                this.style.transform = 'translateX(0)';
-            });
+            if (!isMobile) {
+                itemDiv.addEventListener('mouseenter', function() {
+                    this.style.background = 'rgba(255, 255, 255, 0.1)';
+                    this.style.transform = 'translateX(4px)';
+                });
+                itemDiv.addEventListener('mouseleave', function() {
+                    this.style.background = 'rgba(255, 255, 255, 0.05)';
+                    this.style.transform = 'translateX(0)';
+                });
+            }
+
+            // Get full month name
+            const fullMonthName = monthNames[label] || label;
+            const orderText = value === 1 ? 'order' : 'orders';
 
             const labelSpan = document.createElement('span');
-            labelSpan.textContent = formatDeliveryName(label);
+            labelSpan.textContent = `${fullMonthName}:`;
             labelSpan.style.cssText = 'color: #41463F; font-weight: 600;';
 
             const valueSpan = document.createElement('span');
-            valueSpan.textContent = value;
+            valueSpan.textContent = `${value} ${orderText}`;
             valueSpan.style.cssText = 'color: #1B4D3E; font-weight: 700; font-size: 16px;';
 
             itemDiv.appendChild(labelSpan);
             itemDiv.appendChild(valueSpan);
-            chartContainer.appendChild(itemDiv);
+            listContainer.appendChild(itemDiv);
+        });
+
+        // Update yearly total
+        const yearlyTotalEl = document.getElementById('yearly-total-value');
+        if (yearlyTotalEl && data.total !== undefined) {
+            yearlyTotalEl.textContent = data.total;
+        }
+    }
+
+    /**
+     * Render delivery methods as vertical text list
+     * @param {Object} data - Delivery methods data with labels and values
+     */
+    renderDeliveryMethodsChart(data) {
+        const listContainer = document.getElementById('delivery-methods-list');
+        if (!listContainer) return;
+
+        // Clear existing content
+        listContainer.innerHTML = '';
+
+        if (!data.labels || data.labels.length === 0 || !data.values || data.values.length === 0) {
+            const noDataDiv = document.createElement('div');
+            noDataDiv.style.cssText = 'text-align: center; color: rgba(65, 70, 63, 0.6); font-size: 14px; padding: 20px;';
+            noDataDiv.textContent = 'No data available';
+            listContainer.appendChild(noDataDiv);
+            return;
+        }
+
+        // Format delivery option names for display
+        const formatDeliveryName = (name) => {
+            return name
+                .replace(/-/g, ' ')
+                .replace(/\b\w/g, l => l.toUpperCase())
+                .replace(/In Store/i, 'In Store')
+                .replace(/Pick Up Mtaani/i, 'Pick Up Mtaani');
+        };
+
+        // Create list items for each delivery method
+        data.labels.forEach((label, i) => {
+            const value = data.values[i];
+            if (value === 0 || value === undefined || value === null) return; // Skip zero values
+
+            const itemDiv = document.createElement('div');
+            const isMobile = window.innerWidth <= 768;
+            itemDiv.style.cssText = `
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                padding: ${isMobile ? '12px 14px' : '14px 16px'};
+                background: rgba(255, 255, 255, 0.05);
+                border-radius: 8px;
+                border: 1px solid rgba(255, 255, 255, 0.1);
+                transition: all 0.2s ease;
+                font-size: ${isMobile ? '14px' : '15px'};
+                color: #41463F;
+                font-weight: 500;
+                min-height: ${isMobile ? '44px' : '48px'};
+                width: 100%;
+                box-sizing: border-box;
+            `;
+            
+            // Add hover effect for desktop
+            if (!isMobile) {
+                itemDiv.addEventListener('mouseenter', function() {
+                    this.style.background = 'rgba(255, 255, 255, 0.1)';
+                    this.style.transform = 'translateX(4px)';
+                });
+                itemDiv.addEventListener('mouseleave', function() {
+                    this.style.background = 'rgba(255, 255, 255, 0.05)';
+                    this.style.transform = 'translateX(0)';
+                });
+            }
+
+            const deliveryText = value === 1 ? 'delivery' : 'deliveries';
+            const formattedLabel = formatDeliveryName(label);
+
+            const labelSpan = document.createElement('span');
+            labelSpan.textContent = `${formattedLabel}:`;
+            labelSpan.style.cssText = 'color: #41463F; font-weight: 600;';
+
+            const valueSpan = document.createElement('span');
+            valueSpan.textContent = `${value} ${deliveryText}`;
+            valueSpan.style.cssText = 'color: #1B4D3E; font-weight: 700; font-size: 16px;';
+
+            itemDiv.appendChild(labelSpan);
+            itemDiv.appendChild(valueSpan);
+            listContainer.appendChild(itemDiv);
         });
     }
 
