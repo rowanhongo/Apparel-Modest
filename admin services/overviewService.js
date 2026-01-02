@@ -73,7 +73,7 @@ class OverviewService {
             });
         } catch (error) {
             console.error('❌ Error loading overview data:', error);
-            // Fallback to empty metrics
+                // Fallback to empty metrics
             this.updateMetrics({
                 totalOrders: 0,
                 totalRevenue: 0,
@@ -103,7 +103,7 @@ class OverviewService {
             const tomorrowStr = new Date(today.getTime() + 24 * 60 * 60 * 1000).toISOString();
 
             // Fetch ALL orders (not just current month) for total orders, revenue, and other metrics
-            // Exclude deleted orders
+            // Fetch all orders and filter deleted ones in JavaScript (more reliable)
             const { data: allOrders, error: allOrdersError } = await this.supabase
                 .from('orders')
                 .select(`
@@ -112,7 +112,6 @@ class OverviewService {
                         name
                     )
                 `)
-                .is('deleted_at', null)
                 .order('created_at', { ascending: false });
 
             if (allOrdersError) {
@@ -120,8 +119,9 @@ class OverviewService {
                 throw allOrdersError;
             }
 
-            const allOrdersList = allOrders || [];
-            console.log(`📦 Fetched ${allOrdersList.length} orders (excluding deleted)`);
+            // Filter out deleted orders in JavaScript (works even if deleted_at column doesn't exist)
+            const allOrdersList = (allOrders || []).filter(order => !order.deleted_at);
+            console.log(`📦 Fetched ${allOrdersList.length} orders (excluding ${(allOrders || []).length - allOrdersList.length} deleted)`);
 
             // Calculate total orders (all orders, not just this month)
             const totalOrders = allOrdersList.length;
@@ -145,9 +145,9 @@ class OverviewService {
                     });
                 } else {
                     // Fallback to single product (old format)
-                    const itemName = order.products?.name || order.product_name || 'Unknown';
-                    if (itemName && itemName !== 'Unknown') {
-                        itemCounts[itemName] = (itemCounts[itemName] || 0) + 1;
+                const itemName = order.products?.name || order.product_name || 'Unknown';
+                if (itemName && itemName !== 'Unknown') {
+                    itemCounts[itemName] = (itemCounts[itemName] || 0) + 1;
                     }
                 }
             });
@@ -169,9 +169,9 @@ class OverviewService {
                     });
                 } else {
                     // Fallback to single color (old format)
-                    const color = order.color;
-                    if (color) {
-                        colorCounts[color] = (colorCounts[color] || 0) + 1;
+                const color = order.color;
+                if (color) {
+                    colorCounts[color] = (colorCounts[color] || 0) + 1;
                     }
                 }
             });
@@ -207,15 +207,16 @@ class OverviewService {
             const yesterdayStr = yesterday.toISOString();
             const yesterdayEndStr = new Date(yesterday.getTime() + 24 * 60 * 60 * 1000).toISOString();
             
-            // Fetch yesterday's orders for comparison (exclude deleted orders)
+            // Fetch yesterday's orders for comparison (filter deleted in JavaScript)
             const { data: yesterdayOrders, error: yesterdayError } = await this.supabase
                 .from('orders')
-                .select('created_at')
-                .is('deleted_at', null)
+                .select('created_at, deleted_at')
                 .gte('created_at', yesterdayStr)
                 .lt('created_at', yesterdayEndStr);
 
-            const ordersYesterday = (yesterdayOrders || []).length;
+            // Filter out deleted orders in JavaScript
+            const validYesterdayOrders = yesterdayError ? [] : ((yesterdayOrders || []).filter(order => !order.deleted_at));
+            const ordersYesterday = validYesterdayOrders.length;
 
             // Calculate percentage change
             let ordersTodayChange = '';
@@ -265,14 +266,16 @@ class OverviewService {
      */
     async calculateAvgProcessingTime() {
         try {
-            // Fetch completed orders with timestamps (exclude deleted orders)
+            // Fetch completed orders with timestamps (filter deleted in JavaScript)
             const { data: completedOrders, error } = await this.supabase
                 .from('orders')
-                .select('created_at, updated_at, status')
-                .eq('status', 'completed')
-                .is('deleted_at', null);
+                .select('created_at, updated_at, status, deleted_at')
+                .eq('status', 'completed');
 
-            if (error || !completedOrders || completedOrders.length === 0) {
+            // Filter out deleted orders in JavaScript
+            const validCompletedOrders = error ? [] : ((completedOrders || []).filter(order => !order.deleted_at));
+
+            if (error || !validCompletedOrders || validCompletedOrders.length === 0) {
                 return 'N/A';
             }
 
@@ -280,7 +283,7 @@ class OverviewService {
             // Calculate time differences for each stage
             // For now, we'll use a simplified calculation based on updated_at - created_at
             // In a real system, you'd track stage transitions
-            const processingTimes = completedOrders.map(order => {
+            const processingTimes = validCompletedOrders.map(order => {
                 const created = new Date(order.created_at);
                 const completed = order.updated_at ? new Date(order.updated_at) : new Date();
                 const diffHours = (completed - created) / (1000 * 60 * 60);
@@ -310,23 +313,18 @@ class OverviewService {
     }
 
     /**
-     * Fetch monthly orders data for bar chart
+     * Fetch monthly orders data - ALL TIME (all orders grouped by month across all years)
      * @returns {Promise<Object>} Monthly chart data
      */
     async fetchMonthlyOrders() {
         try {
-            // Get current year start
-            const now = new Date();
-            const yearStart = new Date(now.getFullYear(), 0, 1);
-            const yearEnd = new Date(now.getFullYear() + 1, 0, 1);
+            console.log('📅 Fetching all-time monthly orders...');
 
-            // Fetch all orders from this year (exclude deleted orders)
+            // Fetch ALL orders (all-time, no year filter) - filter deleted in JavaScript
             const { data: orders, error } = await this.supabase
                 .from('orders')
-                .select('created_at')
-                .is('deleted_at', null)
-                .gte('created_at', yearStart.toISOString())
-                .lt('created_at', yearEnd.toISOString());
+                .select('created_at, deleted_at')
+                .order('created_at', { ascending: false });
 
             if (error) {
                 console.error('Error fetching monthly orders:', error);
@@ -337,10 +335,14 @@ class OverviewService {
                 };
             }
 
-            // Group orders by month (0-11 for Jan-Dec)
+            // Filter out deleted orders in JavaScript
+            const validOrders = (orders || []).filter(order => !order.deleted_at);
+            console.log(`📦 Processing ${validOrders.length} valid orders for monthly breakdown`);
+
+            // Group orders by month (0-11 for Jan-Dec) - aggregates across ALL years
             const monthCounts = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
 
-            orders?.forEach(order => {
+            validOrders.forEach(order => {
                 const orderDate = new Date(order.created_at);
                 const monthIndex = orderDate.getMonth(); // 0-11
                 if (monthIndex >= 0 && monthIndex < 12) {
@@ -350,6 +352,7 @@ class OverviewService {
 
             // Calculate total
             const total = monthCounts.reduce((sum, count) => sum + count, 0);
+            console.log(`✅ Monthly orders breakdown - Total: ${total} orders`);
 
             return {
                 labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
@@ -372,28 +375,35 @@ class OverviewService {
      */
     async fetchDeliveryMethods() {
         try {
-            // Fetch all orders with delivery options (exclude deleted orders)
+            console.log('🚚 Fetching delivery methods...');
+
+            // Fetch all orders with delivery options (filter deleted in JavaScript)
             const { data: orders, error } = await this.supabase
                 .from('orders')
-                .select('delivery_option')
-                .is('deleted_at', null);
+                .select('delivery_option, deliveryOption, deleted_at');
 
             if (error) {
-                console.error('Error fetching delivery methods:', error);
+                console.error('❌ Error fetching delivery methods:', error);
                 return {
                     labels: [],
                     values: []
                 };
             }
 
-            // Count delivery methods
+            // Filter out deleted orders in JavaScript
+            const validOrders = (orders || []).filter(order => !order.deleted_at);
+            console.log(`📦 Processing ${validOrders.length} valid orders for delivery methods`);
+
+            // Count delivery methods - check both field names
             const deliveryCounts = {};
-            orders?.forEach(order => {
+            validOrders.forEach(order => {
                 const delivery = order.delivery_option || order.deliveryOption;
-                if (delivery) {
+                if (delivery && delivery.trim() !== '') {
                     deliveryCounts[delivery] = (deliveryCounts[delivery] || 0) + 1;
                 }
             });
+
+            console.log(`✅ Found ${Object.keys(deliveryCounts).length} delivery methods:`, deliveryCounts);
 
             // Convert to arrays for chart
             const entries = Object.entries(deliveryCounts).sort((a, b) => b[1] - a[1]);
@@ -401,7 +411,9 @@ class OverviewService {
                 // Format delivery option names
                 const formatted = key
                     .replace(/-/g, ' ')
-                    .replace(/\b\w/g, l => l.toUpperCase());
+                    .replace(/\b\w/g, l => l.toUpperCase())
+                    .replace(/In Store/i, 'In Store')
+                    .replace(/Pick Up Mtaani/i, 'Pick Up Mtaani');
                 return formatted;
             });
             const values = entries.map(([, count]) => count);
@@ -411,7 +423,7 @@ class OverviewService {
                 values
             };
         } catch (error) {
-            console.error('Error in fetchDeliveryMethods:', error);
+            console.error('❌ Error in fetchDeliveryMethods:', error);
             return {
                 labels: [],
                 values: []
@@ -722,14 +734,14 @@ class OverviewService {
             
             // Add hover effect for desktop
             if (!isMobile) {
-                itemDiv.addEventListener('mouseenter', function() {
-                    this.style.background = 'rgba(255, 255, 255, 0.1)';
-                    this.style.transform = 'translateX(4px)';
-                });
-                itemDiv.addEventListener('mouseleave', function() {
-                    this.style.background = 'rgba(255, 255, 255, 0.05)';
-                    this.style.transform = 'translateX(0)';
-                });
+            itemDiv.addEventListener('mouseenter', function() {
+                this.style.background = 'rgba(255, 255, 255, 0.1)';
+                this.style.transform = 'translateX(4px)';
+            });
+            itemDiv.addEventListener('mouseleave', function() {
+                this.style.background = 'rgba(255, 255, 255, 0.05)';
+                this.style.transform = 'translateX(0)';
+            });
             }
 
             const deliveryText = value === 1 ? 'delivery' : 'deliveries';
