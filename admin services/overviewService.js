@@ -22,6 +22,8 @@ class OverviewService {
      * Initialize the overview service
      */
     async init() {
+        console.log('🚀 Initializing admin overview service...');
+        
         // Get Supabase client
         this.supabase = getSupabaseClient();
         if (!this.supabase) {
@@ -29,11 +31,16 @@ class OverviewService {
             return;
         }
 
+        // Wait a bit to ensure DOM is ready
+        await new Promise(resolve => setTimeout(resolve, 100));
+
         // Load all data
         await this.loadOverviewData();
         
         // Set up realtime subscription for orders
         this.setupOrdersRealtime();
+        
+        console.log('✅ Admin overview service initialized');
     }
 
     /**
@@ -41,12 +48,20 @@ class OverviewService {
      */
     async loadOverviewData() {
         try {
+            console.log('📊 Loading admin overview data...');
+            
             // Load metrics and charts in parallel
             const [metricsData, monthlyData, deliveryData] = await Promise.all([
                 this.fetchMetrics(),
                 this.fetchMonthlyOrders(),
                 this.fetchDeliveryMethods()
             ]);
+
+            console.log('✅ Admin overview data loaded:', {
+                metrics: metricsData,
+                monthly: monthlyData,
+                delivery: deliveryData
+            });
 
             // Update metrics
             this.updateMetrics(metricsData);
@@ -57,8 +72,8 @@ class OverviewService {
                 deliveryMethods: deliveryData
             });
         } catch (error) {
-            console.error('Error loading overview data:', error);
-                // Fallback to empty metrics
+            console.error('❌ Error loading overview data:', error);
+            // Fallback to empty metrics
             this.updateMetrics({
                 totalOrders: 0,
                 totalRevenue: 0,
@@ -79,6 +94,8 @@ class OverviewService {
      */
     async fetchMetrics() {
         try {
+            console.log('📊 Fetching admin overview metrics...');
+            
             // Get today's date (start of day) for orders today calculation
             const now = new Date();
             const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
@@ -86,6 +103,7 @@ class OverviewService {
             const tomorrowStr = new Date(today.getTime() + 24 * 60 * 60 * 1000).toISOString();
 
             // Fetch ALL orders (not just current month) for total orders, revenue, and other metrics
+            // Exclude deleted orders
             const { data: allOrders, error: allOrdersError } = await this.supabase
                 .from('orders')
                 .select(`
@@ -94,14 +112,16 @@ class OverviewService {
                         name
                     )
                 `)
+                .is('deleted_at', null)
                 .order('created_at', { ascending: false });
 
             if (allOrdersError) {
-                console.error('Error fetching all orders:', allOrdersError);
+                console.error('❌ Error fetching all orders:', allOrdersError);
                 throw allOrdersError;
             }
 
             const allOrdersList = allOrders || [];
+            console.log(`📦 Fetched ${allOrdersList.length} orders (excluding deleted)`);
 
             // Calculate total orders (all orders, not just this month)
             const totalOrders = allOrdersList.length;
@@ -187,10 +207,11 @@ class OverviewService {
             const yesterdayStr = yesterday.toISOString();
             const yesterdayEndStr = new Date(yesterday.getTime() + 24 * 60 * 60 * 1000).toISOString();
             
-            // Fetch yesterday's orders for comparison
+            // Fetch yesterday's orders for comparison (exclude deleted orders)
             const { data: yesterdayOrders, error: yesterdayError } = await this.supabase
                 .from('orders')
                 .select('created_at')
+                .is('deleted_at', null)
                 .gte('created_at', yesterdayStr)
                 .lt('created_at', yesterdayEndStr);
 
@@ -244,11 +265,12 @@ class OverviewService {
      */
     async calculateAvgProcessingTime() {
         try {
-            // Fetch completed orders with timestamps
+            // Fetch completed orders with timestamps (exclude deleted orders)
             const { data: completedOrders, error } = await this.supabase
                 .from('orders')
                 .select('created_at, updated_at, status')
-                .eq('status', 'completed');
+                .eq('status', 'completed')
+                .is('deleted_at', null);
 
             if (error || !completedOrders || completedOrders.length === 0) {
                 return 'N/A';
@@ -298,10 +320,11 @@ class OverviewService {
             const yearStart = new Date(now.getFullYear(), 0, 1);
             const yearEnd = new Date(now.getFullYear() + 1, 0, 1);
 
-            // Fetch all orders from this year
+            // Fetch all orders from this year (exclude deleted orders)
             const { data: orders, error } = await this.supabase
                 .from('orders')
                 .select('created_at')
+                .is('deleted_at', null)
                 .gte('created_at', yearStart.toISOString())
                 .lt('created_at', yearEnd.toISOString());
 
@@ -349,10 +372,11 @@ class OverviewService {
      */
     async fetchDeliveryMethods() {
         try {
-            // Fetch all orders with delivery options
+            // Fetch all orders with delivery options (exclude deleted orders)
             const { data: orders, error } = await this.supabase
                 .from('orders')
-                .select('delivery_option');
+                .select('delivery_option')
+                .is('deleted_at', null);
 
             if (error) {
                 console.error('Error fetching delivery methods:', error);
@@ -453,6 +477,8 @@ class OverviewService {
             this.metrics = { ...this.metrics, ...metricsData };
         }
 
+        console.log('📝 Updating admin overview metrics:', this.metrics);
+
         // Update DOM elements
         const totalOrdersEl = document.getElementById('total-orders');
         const totalRevenueEl = document.getElementById('total-revenue');
@@ -460,16 +486,43 @@ class OverviewService {
         const popularColorEl = document.getElementById('popular-color');
         const preferredDeliveryEl = document.getElementById('preferred-delivery');
 
-        if (totalOrdersEl) totalOrdersEl.textContent = this.metrics.totalOrders;
-        if (totalRevenueEl) totalRevenueEl.textContent = `KES ${this.metrics.totalRevenue.toLocaleString()}`;
-        if (mostOrderedEl) mostOrderedEl.textContent = this.metrics.mostOrdered;
-        if (popularColorEl) popularColorEl.textContent = this.metrics.popularColor;
+        if (totalOrdersEl) {
+            totalOrdersEl.textContent = this.metrics.totalOrders;
+            console.log('✅ Updated total-orders:', this.metrics.totalOrders);
+        } else {
+            console.warn('⚠️ Element total-orders not found');
+        }
+        
+        if (totalRevenueEl) {
+            totalRevenueEl.textContent = `KES ${this.metrics.totalRevenue.toLocaleString()}`;
+            console.log('✅ Updated total-revenue:', this.metrics.totalRevenue);
+        } else {
+            console.warn('⚠️ Element total-revenue not found');
+        }
+        
+        if (mostOrderedEl) {
+            mostOrderedEl.textContent = this.metrics.mostOrdered;
+            console.log('✅ Updated most-ordered:', this.metrics.mostOrdered);
+        } else {
+            console.warn('⚠️ Element most-ordered not found');
+        }
+        
+        if (popularColorEl) {
+            popularColorEl.textContent = this.metrics.popularColor;
+            console.log('✅ Updated popular-color:', this.metrics.popularColor);
+        } else {
+            console.warn('⚠️ Element popular-color not found');
+        }
+        
         if (preferredDeliveryEl) {
             // Format delivery option
             const formatted = this.metrics.preferredDelivery
                 .replace(/-/g, ' ')
                 .replace(/\b\w/g, l => l.toUpperCase());
             preferredDeliveryEl.textContent = formatted;
+            console.log('✅ Updated preferred-delivery:', formatted);
+        } else {
+            console.warn('⚠️ Element preferred-delivery not found');
         }
         
         // Update preferred delivery count
@@ -563,7 +616,7 @@ class OverviewService {
                 display: flex;
                 justify-content: space-between;
                 align-items: center;
-                padding: ${isMobile ? '12px 14px' : '14px 16px'};
+                padding: ${isMobile ? '14px 12px' : '14px 16px'};
                 background: rgba(255, 255, 255, 0.05);
                 border-radius: 8px;
                 border: 1px solid rgba(255, 255, 255, 0.1);
@@ -571,9 +624,10 @@ class OverviewService {
                 font-size: ${isMobile ? '14px' : '15px'};
                 color: #41463F;
                 font-weight: 500;
-                min-height: ${isMobile ? '44px' : '48px'};
+                min-height: ${isMobile ? '48px' : '48px'};
                 width: 100%;
                 box-sizing: border-box;
+                margin-bottom: ${isMobile ? '8px' : '0'};
             `;
             
             // Add hover effect for desktop
@@ -594,11 +648,12 @@ class OverviewService {
 
             const labelSpan = document.createElement('span');
             labelSpan.textContent = `${fullMonthName}:`;
-            labelSpan.style.cssText = 'color: #41463F; font-weight: 600;';
+            const isMobileCheck = window.innerWidth <= 768;
+            labelSpan.style.cssText = `color: #41463F; font-weight: 600; font-size: ${isMobileCheck ? '14px' : '15px'}; flex: 1;`;
 
             const valueSpan = document.createElement('span');
             valueSpan.textContent = `${value} ${orderText}`;
-            valueSpan.style.cssText = 'color: #1B4D3E; font-weight: 700; font-size: 16px;';
+            valueSpan.style.cssText = `color: #1B4D3E; font-weight: 700; font-size: ${isMobileCheck ? '15px' : '16px'}; white-space: nowrap; margin-left: 8px;`;
 
             itemDiv.appendChild(labelSpan);
             itemDiv.appendChild(valueSpan);
@@ -651,7 +706,7 @@ class OverviewService {
                 display: flex;
                 justify-content: space-between;
                 align-items: center;
-                padding: ${isMobile ? '12px 14px' : '14px 16px'};
+                padding: ${isMobile ? '14px 12px' : '14px 16px'};
                 background: rgba(255, 255, 255, 0.05);
                 border-radius: 8px;
                 border: 1px solid rgba(255, 255, 255, 0.1);
@@ -659,9 +714,10 @@ class OverviewService {
                 font-size: ${isMobile ? '14px' : '15px'};
                 color: #41463F;
                 font-weight: 500;
-                min-height: ${isMobile ? '44px' : '48px'};
+                min-height: ${isMobile ? '48px' : '48px'};
                 width: 100%;
                 box-sizing: border-box;
+                margin-bottom: ${isMobile ? '8px' : '0'};
             `;
             
             // Add hover effect for desktop
@@ -681,11 +737,11 @@ class OverviewService {
 
             const labelSpan = document.createElement('span');
             labelSpan.textContent = `${formattedLabel}:`;
-            labelSpan.style.cssText = 'color: #41463F; font-weight: 600;';
+            labelSpan.style.cssText = `color: #41463F; font-weight: 600; font-size: ${isMobile ? '14px' : '15px'}; flex: 1;`;
 
             const valueSpan = document.createElement('span');
             valueSpan.textContent = `${value} ${deliveryText}`;
-            valueSpan.style.cssText = 'color: #1B4D3E; font-weight: 700; font-size: 16px;';
+            valueSpan.style.cssText = `color: #1B4D3E; font-weight: 700; font-size: ${isMobile ? '15px' : '16px'}; white-space: nowrap; margin-left: 8px;`;
 
             itemDiv.appendChild(labelSpan);
             itemDiv.appendChild(valueSpan);
