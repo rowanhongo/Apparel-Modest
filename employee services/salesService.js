@@ -58,7 +58,9 @@ class SalesService {
      */
     async loadOrdersFromDatabase() {
         try {
-            // Fetch orders with status 'pending' (new requests) - exclude deleted orders
+            // Fetch orders with status 'pending' (new requests)
+            // Note: We fetch without deleted_at filter and filter in JavaScript as a fallback
+            // This ensures orders show up even if the database filter has issues
             const { data: orders, error } = await this.supabase
                 .from('orders')
                 .select(`
@@ -73,7 +75,6 @@ class SalesService {
                     )
                 `)
                 .eq('status', 'pending')
-                .is('deleted_at', null)
                 .order('created_at', { ascending: false });
 
             if (error) {
@@ -83,9 +84,16 @@ class SalesService {
                 return;
             }
 
+            // Filter out deleted orders in JavaScript (fallback if database filter doesn't work)
+            // This ensures deleted orders don't show up on the Sales page
+            const activeOrders = (orders || []).filter(order => {
+                // Exclude orders where deleted_at is not null (soft-deleted orders)
+                return !order.deleted_at || order.deleted_at === null;
+            });
+
             // Transform Supabase data to match expected format
             // Items are now stored as JSONB in the orders table, so we read directly from order.items
-            this.orders = (orders || []).map(order => this.transformOrder(order));
+            this.orders = activeOrders.map(order => this.transformOrder(order));
             this.render();
         } catch (error) {
             console.error('Error loading orders from database:', error);

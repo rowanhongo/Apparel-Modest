@@ -70,22 +70,27 @@ class HomeService {
     async fetchStats() {
         try {
             // Fetch current orders by status (not filtered by week - showing current counts)
+            // Exclude deleted orders to match Sales page behavior
             const { count: salesCount, error: salesError } = await this.supabase
                 .from('orders')
                 .select('*', { count: 'exact', head: true })
-                .eq('status', 'pending');
+                .eq('status', 'pending')
+                .is('deleted_at', null);
 
             const { count: productionCount, error: productionError } = await this.supabase
                 .from('orders')
                 .select('*', { count: 'exact', head: true })
-                .eq('status', 'in_progress');
+                .eq('status', 'in_progress')
+                .is('deleted_at', null);
 
             const { count: logisticsCount, error: logisticsError } = await this.supabase
                 .from('orders')
                 .select('*', { count: 'exact', head: true })
-                .eq('status', 'to_deliver');
+                .eq('status', 'to_deliver')
+                .is('deleted_at', null);
 
             // Total After Sales - all completed orders (not just today)
+            // Exclude deleted orders
             let afterSalesCount = 0;
             let afterSalesError = null;
             
@@ -94,7 +99,8 @@ class HomeService {
                 const { count, error: completedError } = await this.supabase
                     .from('orders')
                     .select('*', { count: 'exact', head: true })
-                    .eq('status', 'completed');
+                    .eq('status', 'completed')
+                    .is('deleted_at', null);
                 
                 if (completedError) {
                     afterSalesError = completedError;
@@ -187,11 +193,12 @@ class HomeService {
             const startOfWeek = new Date(now.setDate(diff));
             startOfWeek.setHours(0, 0, 0, 0);
 
-            // Fetch orders from this week
+            // Fetch orders from this week (exclude deleted orders)
             const { data: orders, error } = await this.supabase
                 .from('orders')
                 .select('created_at')
-                .gte('created_at', startOfWeek.toISOString());
+                .gte('created_at', startOfWeek.toISOString())
+                .is('deleted_at', null);
 
             if (error) {
                 console.error('Error fetching weekly orders:', error);
@@ -241,30 +248,34 @@ class HomeService {
             startOfWeek.setHours(0, 0, 0, 0);
             const startOfWeekStr = startOfWeek.toISOString();
 
-            // Fetch counts for each status using count option - for this week
+            // Fetch counts for each status using count option - for this week (exclude deleted orders)
             const { count: salesCount } = await this.supabase
                 .from('orders')
                 .select('*', { count: 'exact', head: true })
                 .eq('status', 'pending')
-                .gte('created_at', startOfWeekStr);
+                .gte('created_at', startOfWeekStr)
+                .is('deleted_at', null);
 
             const { count: productionCount } = await this.supabase
                 .from('orders')
                 .select('*', { count: 'exact', head: true })
                 .eq('status', 'in_progress')
-                .gte('created_at', startOfWeekStr);
+                .gte('created_at', startOfWeekStr)
+                .is('deleted_at', null);
 
             const { count: logisticsCount } = await this.supabase
                 .from('orders')
                 .select('*', { count: 'exact', head: true })
                 .eq('status', 'to_deliver')
-                .gte('created_at', startOfWeekStr);
+                .gte('created_at', startOfWeekStr)
+                .is('deleted_at', null);
 
             const { count: afterSalesCount } = await this.supabase
                 .from('orders')
                 .select('*', { count: 'exact', head: true })
                 .eq('status', 'completed')
-                .gte('created_at', startOfWeekStr);
+                .gte('created_at', startOfWeekStr)
+                .is('deleted_at', null);
 
             return {
                 labels: ['Sales', 'Production', 'Logistics', 'After Sales'],
