@@ -6,6 +6,8 @@
 class SalesService {
     constructor() {
         this.orders = [];
+        this.filteredOrders = [];
+        this.searchTerm = '';
         this.container = null;
         this.onOrderUpdateCallback = null;
         this.supabase = null;
@@ -51,6 +53,9 @@ class SalesService {
         
         // Set up realtime subscription for orders
         this.setupOrdersRealtime();
+        
+        // Set up search input listener
+        this.setupSearchInput();
     }
 
     /**
@@ -94,6 +99,7 @@ class SalesService {
             // Transform Supabase data to match expected format
             // Items are now stored as JSONB in the orders table, so we read directly from order.items
             this.orders = activeOrders.map(order => this.transformOrder(order));
+            this.filterOrders();
             this.render();
         } catch (error) {
             console.error('Error loading orders from database:', error);
@@ -239,7 +245,23 @@ class SalesService {
      */
     loadOrders(orders) {
         this.orders = orders || [];
+        this.filterOrders();
         this.render();
+    }
+
+    /**
+     * Filter orders based on search term
+     */
+    filterOrders() {
+        if (!this.searchTerm || this.searchTerm.trim() === '') {
+            this.filteredOrders = [...this.orders];
+        } else {
+            const searchLower = this.searchTerm.toLowerCase().trim();
+            this.filteredOrders = this.orders.filter(order => {
+                const customerName = (order.customerName || '').toLowerCase();
+                return customerName.includes(searchLower);
+            });
+        }
     }
 
     /**
@@ -253,15 +275,15 @@ class SalesService {
 
         this.container.innerHTML = '';
 
-        if (this.orders.length === 0) {
+        if (this.filteredOrders.length === 0) {
             // Show empty state message
             const emptyMessage = document.createElement('div');
             emptyMessage.className = 'empty-state-message';
             emptyMessage.style.cssText = 'text-align: center; padding: 60px 20px; color: rgba(65, 70, 63, 0.6); font-size: 18px; font-weight: 500;';
-            emptyMessage.textContent = 'No sales yet';
+            emptyMessage.textContent = this.searchTerm ? 'No orders found matching your search' : 'No sales yet';
             this.container.appendChild(emptyMessage);
         } else {
-        this.orders.forEach(order => {
+        this.filteredOrders.forEach(order => {
             const orderBubble = this.createOrderBubble(order);
             this.container.appendChild(orderBubble);
         });
@@ -341,6 +363,7 @@ class SalesService {
             </div>
             <div class="order-actions">
                 <button class="btn btn-accept" data-action="accept" data-id="${order.id}">Accept</button>
+                <button class="btn btn-edit" data-action="edit" data-id="${order.id}" style="background-color: #4A90E2; color: white; border: none;">Edit</button>
                 <button class="btn btn-deny" data-action="reject" data-id="${order.id}">Reject</button>
             </div>
         `;
@@ -348,12 +371,20 @@ class SalesService {
         // Note: Click handler for expanding is now handled via event delegation in init()
         // Add button click handlers (stop propagation to prevent toggle)
         const acceptBtn = bubble.querySelector('[data-action="accept"]');
+        const editBtn = bubble.querySelector('[data-action="edit"]');
         const rejectBtn = bubble.querySelector('[data-action="reject"]');
         
         if (acceptBtn) {
             acceptBtn.addEventListener('click', (e) => {
                 e.stopPropagation();
                 this.acceptOrder(order.id);
+            });
+        }
+
+        if (editBtn) {
+            editBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                this.editOrder(order);
             });
         }
 
@@ -474,6 +505,7 @@ class SalesService {
 
             // Remove from local array
             this.orders = this.orders.filter(o => o.id !== orderId);
+            this.filterOrders();
 
             if (this.onOrderUpdateCallback) {
                 this.onOrderUpdateCallback('accepted', order);
@@ -529,6 +561,7 @@ class SalesService {
 
             // Remove from local array
             this.orders = this.orders.filter(o => o.id !== orderId);
+            this.filterOrders();
 
             if (this.onOrderUpdateCallback) {
                 this.onOrderUpdateCallback('deleted', order);
@@ -539,6 +572,220 @@ class SalesService {
         } catch (error) {
             console.error('Error deleting order:', error);
             alert('Failed to delete order. Please try again.');
+        }
+    }
+
+    /**
+     * Edit an order
+     * @param {Object} order - Order object
+     */
+    editOrder(order) {
+        this.showEditModal(order);
+    }
+
+    /**
+     * Show edit modal for order
+     * @param {Object} order - Order object
+     */
+    showEditModal(order) {
+        // Create modal overlay
+        const modalOverlay = document.createElement('div');
+        modalOverlay.id = 'editOrderModal';
+        modalOverlay.style.cssText = 'position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 10000; display: flex; align-items: center; justify-content: center;';
+        
+        const items = order.items || [order];
+        const isMultiItem = items.length > 1;
+        
+        // Build items HTML for editing
+        let itemsEditHTML = '';
+        items.forEach((item, index) => {
+            itemsEditHTML += `
+                <div style="border: 1px solid rgba(27, 77, 62, 0.2); border-radius: 8px; padding: 16px; margin-bottom: 16px;">
+                    <h3 style="margin: 0 0 12px 0; color: #1B4D3E; font-size: 16px;">Item ${index + 1}: ${item.productName}</h3>
+                    <div style="margin-bottom: 12px;">
+                        <label style="display: block; margin-bottom: 6px; font-weight: 600; color: #2d3748;">Color:</label>
+                        <input type="text" id="edit-color-${index}" value="${item.color || ''}" 
+                               style="width: 100%; padding: 8px 12px; border: 2px solid rgba(27, 77, 62, 0.2); border-radius: 6px; font-size: 14px; outline: none;"
+                               onfocus="this.style.borderColor='#1B4D3E';" 
+                               onblur="this.style.borderColor='rgba(27, 77, 62, 0.2)';">
+                    </div>
+                </div>
+            `;
+        });
+        
+        modalOverlay.innerHTML = `
+            <div style="background: white; border-radius: 12px; padding: 24px; max-width: 600px; width: 90%; max-height: 90vh; overflow-y: auto; box-shadow: 0 10px 40px rgba(0,0,0,0.2);">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px;">
+                    <h2 style="margin: 0; color: #1B4D3E; font-size: 24px;">Edit Order</h2>
+                    <button id="closeEditModal" style="background: none; border: none; font-size: 24px; cursor: pointer; color: #718096; padding: 0; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center;">&times;</button>
+                </div>
+                
+                <div style="margin-bottom: 20px;">
+                    <div style="font-weight: 600; color: #2d3748; margin-bottom: 8px;">Customer:</div>
+                    <div style="color: #718096;">${order.customerName}</div>
+                </div>
+                
+                <div style="margin-bottom: 20px;">
+                    <h3 style="margin: 0 0 12px 0; color: #1B4D3E; font-size: 18px;">Items</h3>
+                    ${itemsEditHTML}
+                </div>
+                
+                <div style="margin-bottom: 20px;">
+                    <label style="display: block; margin-bottom: 6px; font-weight: 600; color: #2d3748;">Measurements:</label>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                        <div>
+                            <label style="display: block; margin-bottom: 4px; font-size: 12px; color: #718096;">Size:</label>
+                            <input type="text" id="edit-measurement-size" value="${order.measurements?.size || ''}" 
+                                   style="width: 100%; padding: 8px 12px; border: 2px solid rgba(27, 77, 62, 0.2); border-radius: 6px; font-size: 14px; outline: none;"
+                                   onfocus="this.style.borderColor='#1B4D3E';" 
+                                   onblur="this.style.borderColor='rgba(27, 77, 62, 0.2)';">
+                        </div>
+                        <div>
+                            <label style="display: block; margin-bottom: 4px; font-size: 12px; color: #718096;">Bust:</label>
+                            <input type="text" id="edit-measurement-bust" value="${order.measurements?.bust || ''}" 
+                                   style="width: 100%; padding: 8px 12px; border: 2px solid rgba(27, 77, 62, 0.2); border-radius: 6px; font-size: 14px; outline: none;"
+                                   onfocus="this.style.borderColor='#1B4D3E';" 
+                                   onblur="this.style.borderColor='rgba(27, 77, 62, 0.2)';">
+                        </div>
+                        <div>
+                            <label style="display: block; margin-bottom: 4px; font-size: 12px; color: #718096;">Waist:</label>
+                            <input type="text" id="edit-measurement-waist" value="${order.measurements?.waist || ''}" 
+                                   style="width: 100%; padding: 8px 12px; border: 2px solid rgba(27, 77, 62, 0.2); border-radius: 6px; font-size: 14px; outline: none;"
+                                   onfocus="this.style.borderColor='#1B4D3E';" 
+                                   onblur="this.style.borderColor='rgba(27, 77, 62, 0.2)';">
+                        </div>
+                        <div>
+                            <label style="display: block; margin-bottom: 4px; font-size: 12px; color: #718096;">Hips:</label>
+                            <input type="text" id="edit-measurement-hips" value="${order.measurements?.hips || ''}" 
+                                   style="width: 100%; padding: 8px 12px; border: 2px solid rgba(27, 77, 62, 0.2); border-radius: 6px; font-size: 14px; outline: none;"
+                                   onfocus="this.style.borderColor='#1B4D3E';" 
+                                   onblur="this.style.borderColor='rgba(27, 77, 62, 0.2)';">
+                        </div>
+                    </div>
+                </div>
+                
+                <div style="margin-bottom: 20px;">
+                    <label style="display: block; margin-bottom: 6px; font-weight: 600; color: #2d3748;">Comments:</label>
+                    <textarea id="edit-comments" rows="4" 
+                              style="width: 100%; padding: 8px 12px; border: 2px solid rgba(27, 77, 62, 0.2); border-radius: 6px; font-size: 14px; outline: none; resize: vertical; font-family: inherit;"
+                              onfocus="this.style.borderColor='#1B4D3E';" 
+                              onblur="this.style.borderColor='rgba(27, 77, 62, 0.2)';">${order.comments || ''}</textarea>
+                </div>
+                
+                <div style="display: flex; gap: 12px; justify-content: flex-end; margin-top: 24px;">
+                    <button id="cancelEditOrder" style="padding: 10px 20px; background: #E2E8F0; color: #2d3748; border: none; border-radius: 6px; font-size: 14px; font-weight: 600; cursor: pointer;">Cancel</button>
+                    <button id="saveEditOrder" style="padding: 10px 20px; background: #1B4D3E; color: white; border: none; border-radius: 6px; font-size: 14px; font-weight: 600; cursor: pointer;">Save Changes</button>
+                </div>
+            </div>
+        `;
+        
+        document.body.appendChild(modalOverlay);
+        
+        // Close modal handlers
+        const closeModal = () => {
+            document.body.removeChild(modalOverlay);
+        };
+        
+        modalOverlay.querySelector('#closeEditModal').addEventListener('click', closeModal);
+        modalOverlay.querySelector('#cancelEditOrder').addEventListener('click', closeModal);
+        modalOverlay.addEventListener('click', (e) => {
+            if (e.target === modalOverlay) {
+                closeModal();
+            }
+        });
+        
+        // Save handler
+        modalOverlay.querySelector('#saveEditOrder').addEventListener('click', async () => {
+            await this.saveOrderEdit(order);
+            closeModal();
+        });
+    }
+
+    /**
+     * Save order edits to database
+     * @param {Object} order - Original order object
+     */
+    async saveOrderEdit(order) {
+        try {
+            const items = order.items || [order];
+            const isMultiItem = items.length > 1;
+            
+            // Collect updated item colors
+            const updatedItems = items.map((item, index) => {
+                const colorInput = document.getElementById(`edit-color-${index}`);
+                const newColor = colorInput ? colorInput.value.trim() : item.color;
+                
+                return {
+                    ...item,
+                    color: newColor
+                };
+            });
+            
+            // Collect updated measurements
+            const sizeInput = document.getElementById('edit-measurement-size');
+            const bustInput = document.getElementById('edit-measurement-bust');
+            const waistInput = document.getElementById('edit-measurement-waist');
+            const hipsInput = document.getElementById('edit-measurement-hips');
+            
+            const updatedMeasurements = {
+                size: sizeInput ? sizeInput.value.trim() : (order.measurements?.size || ''),
+                bust: bustInput ? bustInput.value.trim() : (order.measurements?.bust || ''),
+                waist: waistInput ? waistInput.value.trim() : (order.measurements?.waist || ''),
+                hips: hipsInput ? hipsInput.value.trim() : (order.measurements?.hips || '')
+            };
+            
+            // Collect updated comments
+            const commentsInput = document.getElementById('edit-comments');
+            const updatedComments = commentsInput ? commentsInput.value.trim() : (order.comments || '');
+            
+            // Update items array in database (JSONB column)
+            const itemsForDB = updatedItems.map(item => ({
+                product_name: item.productName,
+                product_image: item.productImage,
+                color: item.color,
+                price: item.price,
+                measurements: item.measurements || {}
+            }));
+            
+            // Update color field for backward compatibility (use first item's color)
+            const updatedColor = updatedItems[0]?.color || order.color || '';
+            
+            // Update order in database
+            const { error } = await this.supabase
+                .from('orders')
+                .update({
+                    items: itemsForDB,
+                    color: updatedColor,
+                    measurements: updatedMeasurements,
+                    comments: updatedComments,
+                    updated_at: new Date().toISOString()
+                })
+                .eq('id', order.id);
+            
+            if (error) {
+                console.error('Error updating order:', error);
+                alert('Failed to update order. Please try again.');
+                return;
+            }
+            
+            // Update local order data
+            const orderIndex = this.orders.findIndex(o => o.id === order.id);
+            if (orderIndex !== -1) {
+                this.orders[orderIndex] = {
+                    ...this.orders[orderIndex],
+                    items: updatedItems,
+                    color: updatedColor,
+                    measurements: updatedMeasurements,
+                    comments: updatedComments
+                };
+                this.filterOrders();
+                this.render();
+            }
+            
+            alert('✓ Order updated successfully');
+        } catch (error) {
+            console.error('Error saving order edit:', error);
+            alert('Failed to update order. Please try again.');
         }
     }
 
@@ -575,6 +822,7 @@ class SalesService {
 
             // Remove from local array
             this.orders = this.orders.filter(o => o.id !== orderId);
+            this.filterOrders();
 
             if (this.onOrderUpdateCallback) {
                 this.onOrderUpdateCallback('denied', order);
@@ -667,6 +915,24 @@ class SalesService {
         if (this.ordersChannel && this.supabase) {
             this.supabase.removeChannel(this.ordersChannel);
             this.ordersChannel = null;
+        }
+    }
+
+    /**
+     * Set up search input listener
+     */
+    setupSearchInput() {
+        const searchInput = document.getElementById('salesSearchInput');
+        if (searchInput) {
+            // Remove existing listener if any
+            searchInput.removeEventListener('input', this.handleSearchInput);
+            // Create bound handler
+            this.handleSearchInput = (e) => {
+                this.searchTerm = e.target.value;
+                this.filterOrders();
+                this.render();
+            };
+            searchInput.addEventListener('input', this.handleSearchInput);
         }
     }
 
