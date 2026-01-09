@@ -154,15 +154,48 @@ class CatalogueService {
         const sortFilter = document.getElementById('catalogue-sort');
 
         if (searchInput) {
-            searchInput.addEventListener('input', () => this.render());
+            // Handle input for real-time filtering
+            searchInput.addEventListener('input', () => {
+                const searchTerm = searchInput.value.toLowerCase().trim();
+                this.render();
+                
+                if (searchTerm.length === 0) {
+                    // Remove highlight when search is cleared
+                    this.removeHighlight();
+                } else {
+                    // Scroll to and highlight first match after a short delay to allow rendering
+                    setTimeout(() => {
+                        this.scrollToSearchResult();
+                    }, 100);
+                }
+            });
+
+            // Handle Enter key to search and scroll
+            searchInput.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    this.render();
+                    setTimeout(() => {
+                        this.scrollToSearchResult();
+                    }, 100);
+                }
+            });
         }
 
         if (categoryFilter) {
-            categoryFilter.addEventListener('change', () => this.render());
+            categoryFilter.addEventListener('change', () => {
+                this.render();
+                // Remove highlight when filter changes
+                this.removeHighlight();
+            });
         }
 
         if (sortFilter) {
-            sortFilter.addEventListener('change', () => this.render());
+            sortFilter.addEventListener('change', () => {
+                this.render();
+                // Remove highlight when sort changes
+                this.removeHighlight();
+            });
         }
     }
 
@@ -833,7 +866,7 @@ class CatalogueService {
             filteredProducts.sort((a, b) => b.price - a.price);
         }
 
-        this.grid.innerHTML = filteredProducts.map(product => {
+        this.grid.innerHTML = filteredProducts.map((product) => {
             const imageUrl = product.image_url || product.image || '';
             const productId = String(product.id); // Keep as string for UUID compatibility
             // Calculate status based on stock (don't rely on status column)
@@ -843,8 +876,11 @@ class CatalogueService {
                 ? 'background: rgba(76, 175, 80, 0.2); color: #4CAF50;' 
                 : 'background: rgba(244, 67, 54, 0.2); color: #F44336;';
             
+            // Add ID to card for scrolling and highlighting
+            const cardId = `product-card-${productId}`;
+            
             return `
-            <div class="chart-card" style="padding: 0; overflow: hidden;">
+            <div id="${cardId}" class="chart-card product-card" style="padding: 0; overflow: hidden;">
                 <div style="position: relative; width: 100%; padding-top: 100%; background: #f7fafc; overflow: hidden;">
                     ${imageUrl ? `<img src="${imageUrl}" alt="${product.name || 'Product'}" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover;" onerror="this.src='data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' width=\'400\' height=\'400\'%3E%3Crect fill=\'%23f7fafc\' width=\'400\' height=\'400\'/%3E%3Ctext fill=\'%23999\' x=\'50%25\' y=\'50%25\' text-anchor=\'middle\' dy=\'.3em\'%3ENo Image%3C/text%3E%3C/svg%3E';">` : '<div style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; color: rgba(65, 70, 63, 0.5);">No Image</div>'}
                 </div>
@@ -880,6 +916,56 @@ class CatalogueService {
             // Add event listeners to edit and delete buttons after rendering
             this.attachProductActionHandlers();
         }
+    }
+
+    /**
+     * Scroll to and highlight the first search result
+     */
+    scrollToSearchResult() {
+        const searchInput = document.getElementById('catalogue-search');
+        if (!searchInput) return;
+
+        const searchTerm = searchInput.value.toLowerCase().trim();
+        if (!searchTerm) {
+            this.removeHighlight();
+            return;
+        }
+
+        // Find the first product card
+        const firstCard = this.grid?.querySelector('.product-card');
+        if (!firstCard) return;
+
+        // Remove any existing highlights first
+        this.removeHighlight();
+
+        // Add highlight to first card
+        firstCard.style.backgroundColor = '#FFEB3B';
+        firstCard.style.boxShadow = '0 0 20px rgba(255, 235, 59, 0.6)';
+        firstCard.style.transition = 'all 0.3s ease';
+
+        // Scroll to the card
+        firstCard.scrollIntoView({ 
+            behavior: 'smooth', 
+            block: 'center',
+            inline: 'nearest'
+        });
+
+        // Remove highlight after 5 seconds
+        setTimeout(() => {
+            this.removeHighlight();
+        }, 5000);
+    }
+
+    /**
+     * Remove highlight from all product cards
+     */
+    removeHighlight() {
+        if (!this.grid) return;
+        const cards = this.grid.querySelectorAll('.product-card');
+        cards.forEach(card => {
+            card.style.backgroundColor = '';
+            card.style.boxShadow = '';
+        });
     }
 
     /**

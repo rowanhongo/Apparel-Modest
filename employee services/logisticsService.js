@@ -62,6 +62,7 @@ class LogisticsService {
     async loadOrdersFromDatabase() {
         try {
             // Fetch orders with status 'to_deliver' (matches the tab name 'to-deliver')
+            // Order by updated_at descending so most recently completed items (from production) appear first
             const { data: orders, error } = await this.supabase
                 .from('orders')
                 .select(`
@@ -76,7 +77,7 @@ class LogisticsService {
                     )
                 `)
                 .eq('status', 'to_deliver')
-                .order('created_at', { ascending: false });
+                .order('updated_at', { ascending: false });
 
             if (error) {
                 console.error('Error fetching logistics orders:', error);

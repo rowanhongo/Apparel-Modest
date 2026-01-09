@@ -12,6 +12,7 @@ class ProductionService {
         this.onOrderUpdateCallback = null;
         this.supabase = null;
         this.ordersChannel = null; // Realtime subscription channel
+        this.checkedOrders = new Set(); // Track which orders are checked
     }
 
     /**
@@ -327,6 +328,17 @@ class ProductionService {
             `;
         }
         
+        // Check if this order is already checked
+        const isChecked = this.checkedOrders.has(order.id);
+        const checkboxStyle = isChecked 
+            ? 'border: 2px solid #4CAF50; background: rgba(76, 175, 80, 0.1);'
+            : 'border: 2px solid rgba(65, 70, 63, 0.4); background: white;';
+        const checkboxContent = isChecked 
+            ? `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#4CAF50" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" style="display: block;">
+                <polyline points="20 6 9 17 4 12"></polyline>
+            </svg>`
+            : '';
+
         bubble.innerHTML = `
             <div class="order-header">
                 <div class="order-info" style="width: 100%;">
@@ -338,9 +350,26 @@ class ProductionService {
             <div class="order-details" id="details-${order.id}">
                 ${this.renderOrderDetails(order)}
             </div>
-            <div class="order-actions">
-                <button class="btn btn-edit" data-action="edit" data-id="${order.id}" style="background-color: #4A90E2; color: white; border: none;">Edit</button>
-                <button class="btn btn-done" data-action="done" data-id="${order.id}">Mark as Done</button>
+            <div class="order-actions" style="display: flex; align-items: center; gap: 16px; justify-content: flex-end;">
+                <div class="production-checkbox-container" data-order-id="${order.id}" style="display: flex; align-items: center; cursor: pointer; user-select: none; -webkit-user-select: none;">
+                    <div class="production-checkbox" data-order-id="${order.id}" style="
+                        width: 24px;
+                        height: 24px;
+                        ${checkboxStyle}
+                        border-radius: 4px;
+                        display: flex;
+                        align-items: center;
+                        justify-content: center;
+                        transition: all 0.2s ease;
+                        position: relative;
+                    ">
+                        ${checkboxContent}
+                    </div>
+                </div>
+                <div style="display: flex; gap: 8px;">
+                    <button class="btn btn-edit" data-action="edit" data-id="${order.id}" style="background-color: #4A90E2; color: white; border: none;">Edit</button>
+                    <button class="btn btn-done" data-action="done" data-id="${order.id}">Mark as Done</button>
+                </div>
             </div>
         `;
 
@@ -361,6 +390,41 @@ class ProductionService {
                 e.stopPropagation();
                 this.markAsDone(order.id);
             });
+        }
+
+        // Add checkbox toggle handler
+        const checkboxContainer = bubble.querySelector('.production-checkbox-container');
+        const checkbox = bubble.querySelector('.production-checkbox');
+        
+        if (checkboxContainer && checkbox) {
+            const handleCheckboxClick = (e) => {
+                e.stopPropagation();
+                e.preventDefault();
+                
+                const orderId = order.id;
+                const isChecked = this.checkedOrders.has(orderId);
+                
+                if (isChecked) {
+                    // Uncheck
+                    this.checkedOrders.delete(orderId);
+                    checkbox.innerHTML = '';
+                    checkbox.style.borderColor = 'rgba(65, 70, 63, 0.4)';
+                    checkbox.style.background = 'white';
+                } else {
+                    // Check
+                    this.checkedOrders.add(orderId);
+                    checkbox.innerHTML = `
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#4CAF50" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" style="display: block;">
+                            <polyline points="20 6 9 17 4 12"></polyline>
+                        </svg>
+                    `;
+                    checkbox.style.borderColor = '#4CAF50';
+                    checkbox.style.background = 'rgba(76, 175, 80, 0.1)';
+                }
+            };
+            
+            checkboxContainer.addEventListener('click', handleCheckboxClick);
+            checkbox.addEventListener('click', handleCheckboxClick);
         }
 
         return bubble;
@@ -674,10 +738,14 @@ class ProductionService {
 
         try {
             // Update order status to 'to_deliver'
+            // Explicitly update updated_at to track when order was marked as done in production
             // If this fails with a constraint error, the database constraint needs to be updated
             const { data, error } = await this.supabase
                 .from('orders')
-                .update({ status: 'to_deliver' })
+                .update({ 
+                    status: 'to_deliver',
+                    updated_at: new Date().toISOString()
+                })
                 .eq('id', orderIdStr)
                 .select();
             
@@ -721,6 +789,9 @@ class ProductionService {
             // Remove from local array
             this.orders = this.orders.filter(o => o.id !== orderId);
             this.filterOrders();
+            
+            // Remove from checked orders set if it was checked
+            this.checkedOrders.delete(orderId);
 
             if (this.onOrderUpdateCallback) {
                 this.onOrderUpdateCallback('done', order);
