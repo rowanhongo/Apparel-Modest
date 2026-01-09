@@ -629,8 +629,23 @@ class ProductionService {
         
         // Save handler
         modalOverlay.querySelector('#saveEditOrder').addEventListener('click', async () => {
-            await this.saveOrderEdit(order);
-            closeModal();
+            const saveButton = modalOverlay.querySelector('#saveEditOrder');
+            const originalText = saveButton.textContent;
+            saveButton.disabled = true;
+            saveButton.textContent = 'Saving...';
+            
+            try {
+                const success = await this.saveOrderEdit(order);
+                if (success) {
+                    closeModal();
+                } else {
+                    saveButton.disabled = false;
+                    saveButton.textContent = originalText;
+                }
+            } catch (error) {
+                saveButton.disabled = false;
+                saveButton.textContent = originalText;
+            }
         });
     }
 
@@ -683,22 +698,44 @@ class ProductionService {
             // Update color field for backward compatibility (use first item's color)
             const updatedColor = updatedItems[0]?.color || order.color || '';
             
+            // Ensure order.id is a string (UUID)
+            const orderIdStr = String(order.id);
+            
             // Update order in database
-            const { error } = await this.supabase
+            const { data, error } = await this.supabase
                 .from('orders')
                 .update({
                     items: itemsForDB,
                     color: updatedColor,
                     measurements: updatedMeasurements,
-                    comments: updatedComments,
+                    comments: updatedComments || null,
                     updated_at: new Date().toISOString()
                 })
-                .eq('id', order.id);
+                .eq('id', orderIdStr)
+                .select();
             
             if (error) {
-                console.error('Error updating order:', error);
-                alert('Failed to update order. Please try again.');
-                return;
+                console.error('❌ Error updating order:', error);
+                console.error('📋 Full error object:', JSON.stringify(error, null, 2));
+                console.error('🔍 Error message:', error.message);
+                console.error('🔍 Error hint:', error.hint);
+                console.error('🔍 Error details:', error.details);
+                console.error('🔍 Error code:', error.code);
+                console.error('📝 Order ID:', orderIdStr);
+                console.error('📝 Order data being sent:', {
+                    items: itemsForDB,
+                    color: updatedColor,
+                    measurements: updatedMeasurements,
+                    comments: updatedComments
+                });
+                alert(`Failed to update order: ${error.message || 'Unknown error'}. Please check the console (F12) for details.`);
+                return false;
+            }
+            
+            if (!data || data.length === 0) {
+                console.error('⚠️ No data returned from update, order may not exist');
+                alert('Order not found in database. Please refresh the page.');
+                return false;
             }
             
             // Update local order data
@@ -716,9 +753,14 @@ class ProductionService {
             }
             
             alert('✓ Order updated successfully');
+            return true;
         } catch (error) {
-            console.error('Error saving order edit:', error);
-            alert('Failed to update order. Please try again.');
+            console.error('❌ Unexpected error saving order edit:', error);
+            console.error('📋 Full error object:', JSON.stringify(error, null, 2));
+            console.error('🔍 Error message:', error.message);
+            console.error('🔍 Error stack:', error.stack);
+            alert(`Failed to update order: ${error.message || 'Unknown error'}. Please check the console (F12) for details.`);
+            return false;
         }
     }
 
