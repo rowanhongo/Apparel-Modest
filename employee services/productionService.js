@@ -684,7 +684,17 @@ class ProductionService {
             
             // Collect updated comments
             const commentsInput = document.getElementById('edit-comments');
-            const updatedComments = commentsInput ? commentsInput.value.trim() : (order.comments || '');
+            let updatedComments = commentsInput ? commentsInput.value.trim() : (order.comments || '');
+            
+            // Remove existing measurements line from comments if it exists
+            updatedComments = updatedComments.replace(/\n?Measurements:.*$/m, '').trim();
+            updatedComments = updatedComments.replace(/Measurements:.*$/m, '').trim();
+            
+            // Add measurements to comments (since measurements column doesn't exist in database)
+            if (updatedMeasurements.size || updatedMeasurements.bust || updatedMeasurements.waist || updatedMeasurements.hips) {
+                const measurementsText = `Measurements: Size=${updatedMeasurements.size || 'N/A'}, Bust=${updatedMeasurements.bust || 'N/A'}, Waist=${updatedMeasurements.waist || 'N/A'}, Hips=${updatedMeasurements.hips || 'N/A'}`;
+                updatedComments = updatedComments ? `${updatedComments}\n${measurementsText}` : measurementsText;
+            }
             
             // Update items array in database (JSONB column)
             const itemsForDB = updatedItems.map(item => ({
@@ -692,7 +702,7 @@ class ProductionService {
                 product_image: item.productImage,
                 color: item.color,
                 price: item.price,
-                measurements: item.measurements || {}
+                measurements: updatedMeasurements // Store measurements in items array
             }));
             
             // Update color field for backward compatibility (use first item's color)
@@ -701,13 +711,12 @@ class ProductionService {
             // Ensure order.id is a string (UUID)
             const orderIdStr = String(order.id);
             
-            // Update order in database
+            // Update order in database (DO NOT include measurements column - it doesn't exist)
             const { data, error } = await this.supabase
                 .from('orders')
                 .update({
                     items: itemsForDB,
                     color: updatedColor,
-                    measurements: updatedMeasurements,
                     comments: updatedComments || null,
                     updated_at: new Date().toISOString()
                 })
