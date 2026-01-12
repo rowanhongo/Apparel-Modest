@@ -3947,6 +3947,14 @@
                     </button>
                 </div>
                 
+                <!-- Clear Cache Button -->
+                <button class="admin-view-btn" id="clear-cache-button" style="width: 100%; margin-top: 10px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white;">
+                    <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                    </svg>
+                    Clear Cache & Reload
+                </button>
+                
                 <!-- Logout Button -->
                 <button class="admin-view-btn" id="logout-button" style="width: 100%; margin-top: 10px; background: linear-gradient(135deg, #E0D8C9 0%, #D4C5B0 100%);">
                     <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -6429,10 +6437,55 @@
             logout(); // Use the logout function we defined above (uses authService.logout())
         }
 
+        // Clear Cache Handler
+        async function handleClearCache() {
+            try {
+                // Show loading state
+                const button = document.getElementById('clear-cache-button');
+                const originalText = button.innerHTML;
+                button.innerHTML = '<svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24" class="animate-spin"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg> Clearing...';
+                button.disabled = true;
+
+                // Unregister all service workers
+                const registrations = await navigator.serviceWorker.getRegistrations();
+                for (const reg of registrations) {
+                    await reg.unregister();
+                    console.log('✅ Unregistered service worker:', reg.scope);
+                }
+
+                // Delete all caches
+                const cacheNames = await caches.keys();
+                for (const name of cacheNames) {
+                    await caches.delete(name);
+                    console.log('✅ Deleted cache:', name);
+                }
+
+                // Clear localStorage version
+                localStorage.removeItem('sw_version');
+
+                // Show success message
+                button.innerHTML = '<svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg> Cleared! Reloading...';
+                
+                // Reload after a short delay
+                setTimeout(() => {
+                    window.location.reload(true);
+                }, 1000);
+            } catch (error) {
+                console.error('❌ Clear cache failed:', error);
+                alert('Failed to clear cache. Please try again.');
+                const button = document.getElementById('clear-cache-button');
+                button.innerHTML = '<svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg> Clear Cache & Reload';
+                button.disabled = false;
+            }
+        }
+
         // Add click handlers
         document.addEventListener('click', (e) => {
             if (e.target && e.target.id === 'admin-view-btn') {
                 showAdminView();
+            }
+            if (e.target && e.target.id === 'clear-cache-button' || e.target.closest('#clear-cache-button')) {
+                handleClearCache();
             }
             if (e.target && e.target.id === 'logout-button' || e.target && e.target.id === 'admin-logout-btn') {
                 handleLogout();
