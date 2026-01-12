@@ -1,7 +1,7 @@
 // Service Worker for Apparel Modest PWA
 // Update this timestamp on each deployment to trigger cache invalidation
 // Format: YYYYMMDD-HHMMSS (update when deploying)
-const CACHE_VERSION = '20260112-100000';
+const CACHE_VERSION = '20260112-110000';
 const CACHE_NAME = `apparel-modest-${CACHE_VERSION}`;
 const RUNTIME_CACHE = `apparel-modest-runtime-${CACHE_VERSION}`;
 
@@ -60,15 +60,20 @@ self.addEventListener('activate', (event) => {
             })
         );
       }).then(() => {
-        // Remove HTML files from runtime cache (if any exist)
+        // Remove HTML and JavaScript files from runtime cache (if any exist)
         return caches.open(RUNTIME_CACHE).then(cache => {
           return cache.keys().then(keys => {
-            const htmlKeys = keys.filter(key => {
+            const filesToRemove = keys.filter(key => {
               const url = key.url || key;
-              return url.includes('.html') || url.endsWith('/') || url === location.origin + '/' || url === location.origin + '/index.html';
+              // Remove HTML files
+              const isHTML = url.includes('.html') || url.endsWith('/') || url === location.origin + '/' || url === location.origin + '/index.html';
+              // Remove JavaScript files
+              const isJS = url.endsWith('.js') || url.includes('/employee services/') || url.includes('/admin services/') || url.includes('/form services/');
+              return isHTML || isJS;
             });
-            return Promise.all(htmlKeys.map(key => {
-              console.log('[Service Worker] Removing HTML from cache:', key.url || key);
+            return Promise.all(filesToRemove.map(key => {
+              const url = key.url || key;
+              console.log('[Service Worker] Removing from cache:', url);
               return cache.delete(key);
             }));
           });
@@ -130,22 +135,31 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // Network-first strategy for JavaScript files (always get fresh code)
+  // JavaScript files - NEVER cache, always fetch fresh from network
   if (request.url.endsWith('.js') || request.headers.get('accept').includes('application/javascript')) {
     event.respondWith(
-      fetch(request)
+      // Always fetch fresh JavaScript, bypass all caches
+      fetch(request, {
+        cache: 'no-store',
+        headers: {
+          'Cache-Control': 'no-cache, no-store, must-revalidate',
+          'Pragma': 'no-cache'
+        }
+      })
         .then((response) => {
-          // Clone the response for caching
-          const responseToCache = response.clone();
-          // Cache the response for offline use
-          caches.open(RUNTIME_CACHE).then((cache) => {
-            cache.put(request, responseToCache);
-          });
+          // DO NOT cache JavaScript - always serve fresh
+          // This ensures users always get the latest code
           return response;
         })
         .catch(() => {
-          // Network failed, try cache
-          return caches.match(request);
+          // Network failed - return error (don't use cache)
+          return new Response('JavaScript file not available offline', {
+            status: 503,
+            statusText: 'Service Unavailable',
+            headers: new Headers({
+              'Content-Type': 'application/javascript',
+            }),
+          });
         })
     );
     return;
