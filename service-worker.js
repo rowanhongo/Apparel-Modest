@@ -1,7 +1,7 @@
 // Service Worker for Apparel Modest PWA
 // Update this timestamp on each deployment to trigger cache invalidation
 // Format: YYYYMMDD-HHMMSS (update when deploying)
-const CACHE_VERSION = '20260112-080000';
+const CACHE_VERSION = '20260112-090000';
 const CACHE_NAME = `apparel-modest-${CACHE_VERSION}`;
 const RUNTIME_CACHE = `apparel-modest-runtime-${CACHE_VERSION}`;
 
@@ -47,12 +47,23 @@ self.addEventListener('activate', (event) => {
     caches.keys().then((cacheNames) => {
       return Promise.all(
         cacheNames.map((cacheName) => {
+          // Delete ALL old caches (including old runtime caches)
           if (cacheName !== CACHE_NAME && cacheName !== RUNTIME_CACHE) {
             console.log('[Service Worker] Deleting old cache:', cacheName);
             return caches.delete(cacheName);
           }
         })
-      );
+      ).then(() => {
+        // Also delete any old runtime caches that might have the old version
+        return Promise.all(
+          cacheNames
+            .filter(name => name.startsWith('apparel-modest-runtime-') && name !== RUNTIME_CACHE)
+            .map(name => {
+              console.log('[Service Worker] Deleting old runtime cache:', name);
+              return caches.delete(name);
+            })
+        );
+      });
     })
   );
   // Take control of all pages immediately
@@ -79,14 +90,24 @@ self.addEventListener('fetch', (event) => {
   // Network-first strategy for HTML pages (always get fresh content)
   if (request.headers.get('accept').includes('text/html')) {
     event.respondWith(
-      fetch(request)
+      // Bypass all caches to ensure fresh HTML
+      fetch(request, {
+        cache: 'no-store',
+        headers: {
+          'Cache-Control': 'no-cache, no-store, must-revalidate',
+          'Pragma': 'no-cache'
+        }
+      })
         .then((response) => {
-          // Clone the response for caching
-          const responseToCache = response.clone();
-          // Cache the response for offline use
-          caches.open(RUNTIME_CACHE).then((cache) => {
-            cache.put(request, responseToCache);
-          });
+          // Only cache if response is valid
+          if (response && response.status === 200) {
+            // Clone the response for caching
+            const responseToCache = response.clone();
+            // Cache the response for offline use
+            caches.open(RUNTIME_CACHE).then((cache) => {
+              cache.put(request, responseToCache);
+            });
+          }
           return response;
         })
         .catch(() => {
