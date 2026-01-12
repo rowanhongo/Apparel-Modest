@@ -1,7 +1,7 @@
 // Service Worker for Apparel Modest PWA
 // Update this timestamp on each deployment to trigger cache invalidation
 // Format: YYYYMMDD-HHMMSS (update when deploying)
-const CACHE_VERSION = '20251217-120000';
+const CACHE_VERSION = '20260112-080000';
 const CACHE_NAME = `apparel-modest-${CACHE_VERSION}`;
 const RUNTIME_CACHE = `apparel-modest-runtime-${CACHE_VERSION}`;
 
