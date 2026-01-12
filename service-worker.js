@@ -1,24 +1,20 @@
 // Service Worker for Apparel Modest PWA
 // Update this timestamp on each deployment to trigger cache invalidation
 // Format: YYYYMMDD-HHMMSS (update when deploying)
-const CACHE_VERSION = '20260112-090000';
+const CACHE_VERSION = '20260112-100000';
 const CACHE_NAME = `apparel-modest-${CACHE_VERSION}`;
 const RUNTIME_CACHE = `apparel-modest-runtime-${CACHE_VERSION}`;
 
 // Log version for debugging
 console.log('[Service Worker] Version:', CACHE_VERSION);
 
-// Assets to cache on install
+// Assets to cache on install (HTML files excluded - always fetch fresh)
 const STATIC_ASSETS = [
-  '/',
-  '/index.html',
-  '/fashion_order_form.html',
-  '/customerform',
   '/manifest.json',
   '/config/supabase.js',
   '/config/env-loader.js',
   '/config/cloudinary.js',
-  // Add other critical assets here
+  // Add other critical assets here (but NOT HTML files)
 ];
 
 // Install event - cache static assets
@@ -40,7 +36,7 @@ self.addEventListener('install', (event) => {
   self.skipWaiting();
 });
 
-// Activate event - clean up old caches
+// Activate event - clean up old caches and remove HTML from any cache
 self.addEventListener('activate', (event) => {
   console.log('[Service Worker] Activating...');
   event.waitUntil(
@@ -63,6 +59,23 @@ self.addEventListener('activate', (event) => {
               return caches.delete(name);
             })
         );
+      }).then(() => {
+        // Remove HTML files from runtime cache (if any exist)
+        return caches.open(RUNTIME_CACHE).then(cache => {
+          return cache.keys().then(keys => {
+            const htmlKeys = keys.filter(key => {
+              const url = key.url || key;
+              return url.includes('.html') || url.endsWith('/') || url === location.origin + '/' || url === location.origin + '/index.html';
+            });
+            return Promise.all(htmlKeys.map(key => {
+              console.log('[Service Worker] Removing HTML from cache:', key.url || key);
+              return cache.delete(key);
+            }));
+          });
+        }).catch(() => {
+          // Cache doesn't exist yet, that's fine
+          return Promise.resolve();
+        });
       });
     })
   );
@@ -87,10 +100,10 @@ self.addEventListener('fetch', (event) => {
 
   // HYBRID APPROACH: Network-first for HTML/JS, Cache-first for static assets
   
-  // Network-first strategy for HTML pages (always get fresh content)
+  // HTML pages - NEVER cache, always fetch fresh from network
   if (request.headers.get('accept').includes('text/html')) {
     event.respondWith(
-      // Bypass all caches to ensure fresh HTML
+      // Always fetch fresh HTML, bypass all caches
       fetch(request, {
         cache: 'no-store',
         headers: {
@@ -99,31 +112,18 @@ self.addEventListener('fetch', (event) => {
         }
       })
         .then((response) => {
-          // Only cache if response is valid
-          if (response && response.status === 200) {
-            // Clone the response for caching
-            const responseToCache = response.clone();
-            // Cache the response for offline use
-            caches.open(RUNTIME_CACHE).then((cache) => {
-              cache.put(request, responseToCache);
-            });
-          }
+          // DO NOT cache HTML - always serve fresh
+          // This ensures users always get the latest version
           return response;
         })
         .catch(() => {
-          // Network failed, try cache
-          return caches.match(request).then((cachedResponse) => {
-            if (cachedResponse) {
-              return cachedResponse;
-            }
-            // If no cache, return offline page
-            return new Response('Offline - Please check your connection', {
-              status: 503,
-              statusText: 'Service Unavailable',
-              headers: new Headers({
-                'Content-Type': 'text/html',
-              }),
-            });
+          // Network failed - return offline message (don't use cache)
+          return new Response('Offline - Please check your connection', {
+            status: 503,
+            statusText: 'Service Unavailable',
+            headers: new Headers({
+              'Content-Type': 'text/html',
+            }),
           });
         })
     );
