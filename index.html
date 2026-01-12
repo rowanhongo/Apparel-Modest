@@ -8024,6 +8024,63 @@
                 }
             };
 
+            // IMMEDIATE VERSION CHECK - Runs before anything else
+            (async function immediateVersionCheck() {
+                try {
+                    // Check service worker version on server immediately
+                    const swResponse = await fetch('/service-worker.js?t=' + Date.now(), {
+                        cache: 'no-store',
+                        headers: {
+                            'Cache-Control': 'no-cache, no-store, must-revalidate',
+                            'Pragma': 'no-cache'
+                        }
+                    });
+                    
+                    if (swResponse.ok) {
+                        const swText = await swResponse.text();
+                        const versionMatch = swText.match(/const CACHE_VERSION = ['"]([^'"]+)['"]/);
+                        
+                        if (versionMatch) {
+                            const serverVersion = versionMatch[1];
+                            const storedVersion = localStorage.getItem('sw_version');
+                            
+                            // If version changed, immediately clear everything
+                            if (storedVersion && storedVersion !== serverVersion) {
+                                console.log('🔄 Version mismatch detected! Server:', serverVersion, 'Local:', storedVersion);
+                                console.log('🗑️ Clearing all caches and service workers...');
+                                
+                                // Unregister all service workers
+                                const regs = await navigator.serviceWorker.getRegistrations();
+                                for (const reg of regs) {
+                                    await reg.unregister();
+                                }
+                                
+                                // Delete all caches
+                                const cacheNames = await caches.keys();
+                                for (const name of cacheNames) {
+                                    await caches.delete(name);
+                                }
+                                
+                                // Update stored version
+                                localStorage.setItem('sw_version', serverVersion);
+                                
+                                // Force reload
+                                console.log('🔄 Reloading to get fresh version...');
+                                window.location.reload(true);
+                                return; // Stop execution
+                            }
+                            
+                            // Store version if not stored
+                            if (!storedVersion) {
+                                localStorage.setItem('sw_version', serverVersion);
+                            }
+                        }
+                    }
+                } catch (error) {
+                    console.warn('⚠️ Immediate version check failed:', error);
+                }
+            })();
+
             window.addEventListener('load', () => {
                 // Register service worker (query params don't work for SW registration, but we'll force update)
                 navigator.serviceWorker.register('/service-worker.js', { scope: '/' })
