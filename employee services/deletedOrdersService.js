@@ -43,11 +43,14 @@ class DeletedOrdersService {
     async loadDeletedOrders() {
         try {
             // Fetch orders where deleted_at is not null
+            // CRITICAL: Explicitly select customer_id to ensure proper relationship mapping
             const { data: orders, error } = await this.supabase
                 .from('orders')
                 .select(`
                     *,
+                    customer_id,
                     customers (
+                        id,
                         name,
                         phone
                     ),
@@ -129,10 +132,38 @@ class DeletedOrdersService {
         // Get deleted by user name if available
         const deletedByName = order.deleted_by_name || order.deleted_by || 'Unknown';
 
+        // CRITICAL FIX: Properly extract customer data to prevent name replication bug
+        let customerName = 'Unknown Customer';
+        let customerPhone = '';
+        
+        if (order.customers) {
+            if (typeof order.customers === 'object' && !Array.isArray(order.customers)) {
+                customerName = order.customers.name || 'Unknown Customer';
+                customerPhone = order.customers.phone || '';
+            } else if (Array.isArray(order.customers) && order.customers.length > 0) {
+                customerName = order.customers[0].name || 'Unknown Customer';
+                customerPhone = order.customers[0].phone || '';
+            }
+        }
+        
+        if (customerName === 'Unknown Customer' && order.customer_id) {
+            console.warn(`⚠️ Order ${order.id} has customer_id ${order.customer_id} but customer data not loaded`);
+        }
+        
+        if (customerName === 'Unknown Customer' && !order.customer_id && order.customer_name) {
+            customerName = order.customer_name;
+        }
+        
+        if (!customerPhone && !order.customer_id && order.phone) {
+            customerPhone = order.phone;
+        } else if (!customerPhone && order.customer_phone) {
+            customerPhone = order.customer_phone;
+        }
+
         return {
             id: order.id,
-            customerName: order.customers?.name || order.customer_name || 'Unknown Customer',
-            phone: order.customers?.phone || order.phone || '',
+            customerName: customerName,
+            phone: customerPhone,
             productName: items[0]?.productName || 'Unknown Product',
             productImage: items[0]?.productImage || 'https://via.placeholder.com/400',
             color: items[0]?.color || '',

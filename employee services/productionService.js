@@ -68,11 +68,14 @@ class ProductionService {
     async loadOrdersFromDatabase() {
         try {
             // Fetch orders with status 'in_progress'
+            // CRITICAL: Explicitly select customer_id to ensure proper relationship mapping
             const { data: orders, error } = await this.supabase
                 .from('orders')
                 .select(`
                     *,
+                    customer_id,
                     customers (
+                        id,
                         name,
                         phone
                     ),
@@ -91,8 +94,22 @@ class ProductionService {
                 return;
             }
 
+            // Validate customer data integrity before transforming
+            const validatedOrders = (orders || []).map(order => {
+                // Verify customer relationship is correct
+                if (order.customer_id && order.customers) {
+                    if (typeof order.customers === 'object' && !Array.isArray(order.customers)) {
+                        // Validate customer ID matches (if customer object has id)
+                        if (order.customers.id && order.customers.id !== order.customer_id) {
+                            console.error(`⚠️ Customer ID mismatch for order ${order.id}: order.customer_id=${order.customer_id}, customer.id=${order.customers.id}`);
+                        }
+                    }
+                }
+                return order;
+            });
+
             // Transform Supabase data to match expected format
-            this.orders = (orders || []).map(order => this.transformOrder(order));
+            this.orders = validatedOrders.map(order => this.transformOrder(order));
             this.filterOrders();
             this.render();
         } catch (error) {
@@ -212,10 +229,38 @@ class ProductionService {
             }];
         }
 
+        // CRITICAL FIX: Properly extract customer data to prevent name replication bug
+        let customerName = 'Unknown Customer';
+        let customerPhone = '';
+        
+        if (order.customers) {
+            if (typeof order.customers === 'object' && !Array.isArray(order.customers)) {
+                customerName = order.customers.name || 'Unknown Customer';
+                customerPhone = order.customers.phone || '';
+            } else if (Array.isArray(order.customers) && order.customers.length > 0) {
+                customerName = order.customers[0].name || 'Unknown Customer';
+                customerPhone = order.customers[0].phone || '';
+            }
+        }
+        
+        if (customerName === 'Unknown Customer' && order.customer_id) {
+            console.warn(`⚠️ Order ${order.id} has customer_id ${order.customer_id} but customer data not loaded`);
+        }
+        
+        if (customerName === 'Unknown Customer' && !order.customer_id && order.customer_name) {
+            customerName = order.customer_name;
+        }
+        
+        if (!customerPhone && !order.customer_id && order.phone) {
+            customerPhone = order.phone;
+        } else if (!customerPhone && order.customer_phone) {
+            customerPhone = order.customer_phone;
+        }
+
         return {
             id: order.id,
-            customerName: order.customers?.name || order.customer_name || 'Unknown Customer',
-            phone: order.customers?.phone || order.phone || '',
+            customerName: customerName,
+            phone: customerPhone,
             productName: items[0]?.productName || 'Unknown Product', // First item for backward compatibility
             productImage: items[0]?.productImage || 'https://via.placeholder.com/400', // First item for backward compatibility
             color: items[0]?.color || '', // First item for backward compatibility

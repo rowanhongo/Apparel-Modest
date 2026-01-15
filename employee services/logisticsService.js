@@ -63,11 +63,14 @@ class LogisticsService {
         try {
             // Fetch orders with status 'to_deliver' (matches the tab name 'to-deliver')
             // Order by updated_at descending so most recently completed items (from production) appear first
+            // CRITICAL: Explicitly select customer_id to ensure proper relationship mapping
             const { data: orders, error } = await this.supabase
                 .from('orders')
                 .select(`
                     *,
+                    customer_id,
                     customers (
+                        id,
                         name,
                         phone
                     ),
@@ -86,8 +89,23 @@ class LogisticsService {
                 return;
             }
 
+            // Validate customer data integrity before transforming
+            const validatedOrders = (orders || []).map(order => {
+                // Verify customer relationship is correct
+                if (order.customer_id && order.customers) {
+                    // Ensure the customer data matches the customer_id
+                    if (typeof order.customers === 'object' && !Array.isArray(order.customers)) {
+                        // Validate customer ID matches (if customer object has id)
+                        if (order.customers.id && order.customers.id !== order.customer_id) {
+                            console.error(`⚠️ Customer ID mismatch for order ${order.id}: order.customer_id=${order.customer_id}, customer.id=${order.customers.id}`);
+                        }
+                    }
+                }
+                return order;
+            });
+
             // Transform Supabase data to match expected format
-            this.orders = (orders || []).map(order => this.transformOrder(order));
+            this.orders = validatedOrders.map(order => this.transformOrder(order));
             this.render();
         } catch (error) {
             console.error('Error loading orders from database:', error);
@@ -102,6 +120,45 @@ class LogisticsService {
      * @returns {Object} Transformed order object
      */
     transformOrder(order) {
+        // CRITICAL FIX: Properly extract customer data to prevent name replication bug
+        // Supabase join returns customers as an object (not array) when using foreign key relationship
+        // Handle both cases: object (correct) and array (edge case) for safety
+        let customerName = 'Unknown Customer';
+        let customerPhone = '';
+        
+        if (order.customers) {
+            // Handle case where customers is an object (normal case)
+            if (typeof order.customers === 'object' && !Array.isArray(order.customers)) {
+                customerName = order.customers.name || 'Unknown Customer';
+                customerPhone = order.customers.phone || '';
+            } 
+            // Handle edge case where customers might be an array (shouldn't happen but safety check)
+            else if (Array.isArray(order.customers) && order.customers.length > 0) {
+                customerName = order.customers[0].name || 'Unknown Customer';
+                customerPhone = order.customers[0].phone || '';
+            }
+        }
+        
+        // Fallback to direct fields only if customer relationship is missing
+        // IMPORTANT: Do NOT use order.customer_name as fallback if customer_id exists
+        // This prevents using stale/incorrect customer_name data
+        if (customerName === 'Unknown Customer' && order.customer_id) {
+            // If we have customer_id but no customer data, log warning
+            console.warn(`⚠️ Order ${order.id} has customer_id ${order.customer_id} but customer data not loaded`);
+        }
+        
+        // Only use order.customer_name if we truly don't have customer relationship data
+        if (customerName === 'Unknown Customer' && !order.customer_id && order.customer_name) {
+            customerName = order.customer_name;
+        }
+        
+        // Similar logic for phone
+        if (!customerPhone && !order.customer_id && order.phone) {
+            customerPhone = order.phone;
+        } else if (!customerPhone && order.customer_phone) {
+            customerPhone = order.customer_phone;
+        }
+
         // Parse measurements if stored as JSON
         let measurements = { size: '', bust: '', waist: '', hips: '', length: '' };
         if (order.measurements) {
@@ -208,8 +265,8 @@ class LogisticsService {
 
         return {
             id: order.id,
-            customerName: order.customers?.name || order.customer_name || 'Unknown Customer',
-            phone: order.customers?.phone || order.phone || '',
+            customerName: customerName,
+            phone: customerPhone,
             productName: items[0]?.productName || 'Unknown Product', // First item for backward compatibility
             productImage: items[0]?.productImage || 'https://via.placeholder.com/400', // First item for backward compatibility
             color: items[0]?.color || '', // First item for backward compatibility

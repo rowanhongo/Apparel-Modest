@@ -52,11 +52,14 @@ class AfterSalesService {
         try {
             // Fetch orders with status 'completed'
             // Try ordering by completed_at first, fallback to created_at if column doesn't exist
+            // CRITICAL: Explicitly select customer_id to ensure proper relationship mapping
             let { data: orders, error } = await this.supabase
                 .from('orders')
                 .select(`
                     *,
+                    customer_id,
                     customers (
+                        id,
                         name,
                         phone
                     ),
@@ -74,7 +77,9 @@ class AfterSalesService {
                     .from('orders')
                     .select(`
                         *,
+                        customer_id,
                         customers (
+                            id,
                             name,
                             phone
                         ),
@@ -113,10 +118,38 @@ class AfterSalesService {
         const completedDate = order.completed_at || order.created_at;
         const dateStr = completedDate ? new Date(completedDate).toISOString().split('T')[0] : '';
 
+        // CRITICAL FIX: Properly extract customer data to prevent name replication bug
+        let customerName = 'Unknown Customer';
+        let customerPhone = '';
+        
+        if (order.customers) {
+            if (typeof order.customers === 'object' && !Array.isArray(order.customers)) {
+                customerName = order.customers.name || 'Unknown Customer';
+                customerPhone = order.customers.phone || '';
+            } else if (Array.isArray(order.customers) && order.customers.length > 0) {
+                customerName = order.customers[0].name || 'Unknown Customer';
+                customerPhone = order.customers[0].phone || '';
+            }
+        }
+        
+        if (customerName === 'Unknown Customer' && order.customer_id) {
+            console.warn(`⚠️ Order ${order.id} has customer_id ${order.customer_id} but customer data not loaded`);
+        }
+        
+        if (customerName === 'Unknown Customer' && !order.customer_id && order.customer_name) {
+            customerName = order.customer_name;
+        }
+        
+        if (!customerPhone && !order.customer_id) {
+            customerPhone = order.customer_phone || order.phone || '';
+        } else if (!customerPhone && order.customer_phone) {
+            customerPhone = order.customer_phone;
+        }
+
         return {
             id: order.id,
-            customerName: order.customers?.name || order.customer_name || 'Unknown Customer',
-            phone: order.customers?.phone || order.customer_phone || order.phone || '',
+            customerName: customerName,
+            phone: customerPhone,
             itemName: order.products?.name || order.product_name || 'Unknown Product',
             color: order.color || '',
             price: order.price || 0,
