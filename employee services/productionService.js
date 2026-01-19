@@ -373,8 +373,9 @@ class ProductionService {
             `;
         }
         
-        // Check if this order is already checked
-        const isChecked = this.checkedOrders.has(order.id);
+        // Check if this order is already checked (normalize ID to string for consistency)
+        const orderIdStr = String(order.id);
+        const isChecked = this.checkedOrders.has(orderIdStr);
         const checkboxStyle = isChecked 
             ? 'border: 2px solid #4CAF50; background: rgba(76, 175, 80, 0.1);'
             : 'border: 2px solid rgba(65, 70, 63, 0.4); background: white;';
@@ -446,18 +447,19 @@ class ProductionService {
                 e.stopPropagation();
                 e.preventDefault();
                 
-                const orderId = order.id;
-                const isChecked = this.checkedOrders.has(orderId);
+                // Normalize order ID to string for consistent Set operations
+                const orderIdStr = String(order.id);
+                const isChecked = this.checkedOrders.has(orderIdStr);
                 
                 if (isChecked) {
-                    // Uncheck
-                    this.checkedOrders.delete(orderId);
+                    // Uncheck - only remove if manually unchecked
+                    this.checkedOrders.delete(orderIdStr);
                     checkbox.innerHTML = '';
                     checkbox.style.borderColor = 'rgba(65, 70, 63, 0.4)';
                     checkbox.style.background = 'white';
                 } else {
-                    // Check
-                    this.checkedOrders.add(orderId);
+                    // Check - add to Set to persist state
+                    this.checkedOrders.add(orderIdStr);
                     checkbox.innerHTML = `
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#4CAF50" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" style="display: block;">
                             <polyline points="20 6 9 17 4 12"></polyline>
@@ -886,8 +888,8 @@ class ProductionService {
             this.orders = this.orders.filter(o => o.id !== orderId);
             this.filterOrders();
             
-            // Remove from checked orders set if it was checked
-            this.checkedOrders.delete(orderId);
+            // Remove from checked orders set if it was checked (normalize ID to string)
+            this.checkedOrders.delete(String(orderId));
 
             if (this.onOrderUpdateCallback) {
                 this.onOrderUpdateCallback('done', order);
