@@ -31,6 +31,9 @@ class HomeService {
         
         // Set up realtime subscription for orders
         this.setupOrdersRealtime();
+        
+        // Load and display failed orders notifications
+        this.loadFailedOrdersNotifications();
     }
 
     /**
@@ -531,6 +534,154 @@ class HomeService {
      */
     getStats() {
         return { ...this.stats };
+    }
+
+    /**
+     * Load failed orders from localStorage and display notifications
+     */
+    loadFailedOrdersNotifications() {
+        try {
+            const failedOrders = JSON.parse(localStorage.getItem('failed_orders') || '[]');
+            
+            // Filter out old entries (older than 7 days)
+            const sevenDaysAgo = new Date();
+            sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+            const recentFailedOrders = failedOrders.filter(order => {
+                const orderDate = new Date(order.timestamp || order.failedAt);
+                return orderDate > sevenDaysAgo;
+            });
+
+            // Update localStorage with filtered list
+            if (recentFailedOrders.length !== failedOrders.length) {
+                localStorage.setItem('failed_orders', JSON.stringify(recentFailedOrders));
+            }
+
+            // Display notifications
+            this.renderFailedOrdersNotifications(recentFailedOrders);
+        } catch (error) {
+            console.error('Error loading failed orders notifications:', error);
+        }
+    }
+
+    /**
+     * Render failed orders notifications on home page
+     * @param {Array} failedOrders - Array of failed order objects
+     */
+    renderFailedOrdersNotifications(failedOrders) {
+        // Find or create notifications container
+        let notificationsContainer = document.getElementById('failed-orders-notifications');
+        
+        if (!notificationsContainer) {
+            // Create notifications container if it doesn't exist
+            const homeTab = document.getElementById('home');
+            if (!homeTab) return;
+
+            // Create container after welcome section
+            const welcomeSection = homeTab.querySelector('.welcome-section');
+            if (welcomeSection) {
+                notificationsContainer = document.createElement('div');
+                notificationsContainer.id = 'failed-orders-notifications';
+                notificationsContainer.style.cssText = 'margin: 20px 0; padding: 0 20px;';
+                welcomeSection.parentNode.insertBefore(notificationsContainer, welcomeSection.nextSibling);
+            } else {
+                return; // Can't find where to insert
+            }
+        }
+
+        // Clear existing notifications
+        notificationsContainer.innerHTML = '';
+
+        if (failedOrders.length === 0) {
+            return; // No failed orders to display
+        }
+
+        // Create notifications section
+        const notificationsHTML = `
+            <div style="background: linear-gradient(135deg, #FEE2E2 0%, #FECACA 100%); border-radius: 12px; padding: 20px; margin-bottom: 20px; border: 2px solid #F87171; box-shadow: 0 4px 12px rgba(248, 113, 113, 0.2);">
+                <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px;">
+                    <div style="display: flex; align-items: center; gap: 12px;">
+                        <svg width="24" height="24" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="color: #DC2626;">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+                        </svg>
+                        <h3 style="margin: 0; font-size: 18px; font-weight: 600; color: #DC2626;">Failed Orders Requiring Attention</h3>
+                        <span style="background: #DC2626; color: white; padding: 4px 12px; border-radius: 12px; font-size: 14px; font-weight: 600;">${failedOrders.length}</span>
+                    </div>
+                    <button id="dismiss-all-failed-orders" style="background: rgba(220, 38, 38, 0.1); border: 1px solid #DC2626; color: #DC2626; padding: 8px 16px; border-radius: 6px; font-size: 14px; font-weight: 600; cursor: pointer; transition: all 0.2s;" 
+                            onmouseover="this.style.background='rgba(220, 38, 38, 0.2)'" 
+                            onmouseout="this.style.background='rgba(220, 38, 38, 0.1)'">
+                        Dismiss All
+                    </button>
+                </div>
+                <div style="display: flex; flex-direction: column; gap: 12px;">
+                    ${failedOrders.map((order, index) => `
+                        <div style="background: white; border-radius: 8px; padding: 16px; border: 1px solid #FCA5A5;">
+                            <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 12px;">
+                                <div style="flex: 1;">
+                                    <div style="font-weight: 600; color: #1F2937; margin-bottom: 4px;">Payment Reference: <span style="font-family: monospace; color: #DC2626;">${order.paymentReference || 'N/A'}</span></div>
+                                    <div style="font-size: 14px; color: #6B7280; margin-bottom: 4px;">Customer: ${order.customerName || 'Unknown'}</div>
+                                    <div style="font-size: 14px; color: #6B7280; margin-bottom: 4px;">Phone: ${order.customerPhone || 'N/A'}</div>
+                                    <div style="font-size: 14px; color: #6B7280; margin-bottom: 4px;">Amount: KES ${(order.totalPrice || 0).toLocaleString()}</div>
+                                    <div style="font-size: 12px; color: #9CA3AF; margin-top: 8px;">Failed: ${new Date(order.failedAt || order.timestamp).toLocaleString()}</div>
+                                    ${order.error ? `<div style="font-size: 12px; color: #DC2626; margin-top: 8px; padding: 8px; background: rgba(220, 38, 38, 0.1); border-radius: 4px;">Error: ${order.error}</div>` : ''}
+                                </div>
+                                <button class="dismiss-failed-order" data-index="${index}" style="background: rgba(220, 38, 38, 0.1); border: 1px solid #DC2626; color: #DC2626; padding: 6px 12px; border-radius: 6px; font-size: 12px; font-weight: 600; cursor: pointer; margin-left: 12px; transition: all 0.2s;"
+                                        onmouseover="this.style.background='rgba(220, 38, 38, 0.2)'" 
+                                        onmouseout="this.style.background='rgba(220, 38, 38, 0.1)'">
+                                    Dismiss
+                                </button>
+                            </div>
+                        </div>
+                    `).join('')}
+                </div>
+            </div>
+        `;
+
+        notificationsContainer.innerHTML = notificationsHTML;
+
+        // Add event listeners for dismiss buttons
+        notificationsContainer.querySelectorAll('.dismiss-failed-order').forEach(button => {
+            button.addEventListener('click', (e) => {
+                const index = parseInt(e.target.dataset.index);
+                this.dismissFailedOrder(index);
+            });
+        });
+
+        // Add event listener for dismiss all button
+        const dismissAllBtn = notificationsContainer.querySelector('#dismiss-all-failed-orders');
+        if (dismissAllBtn) {
+            dismissAllBtn.addEventListener('click', () => {
+                this.dismissAllFailedOrders();
+            });
+        }
+    }
+
+    /**
+     * Dismiss a single failed order
+     * @param {number} index - Index of failed order to dismiss
+     */
+    dismissFailedOrder(index) {
+        try {
+            const failedOrders = JSON.parse(localStorage.getItem('failed_orders') || '[]');
+            failedOrders.splice(index, 1);
+            localStorage.setItem('failed_orders', JSON.stringify(failedOrders));
+            this.loadFailedOrdersNotifications(); // Reload to update display
+        } catch (error) {
+            console.error('Error dismissing failed order:', error);
+        }
+    }
+
+    /**
+     * Dismiss all failed orders
+     */
+    dismissAllFailedOrders() {
+        if (confirm('Are you sure you want to dismiss all failed order notifications? This will not delete the orders from localStorage, but will hide them from view.')) {
+            try {
+                localStorage.setItem('failed_orders', JSON.stringify([]));
+                this.loadFailedOrdersNotifications(); // Reload to update display
+            } catch (error) {
+                console.error('Error dismissing all failed orders:', error);
+            }
+        }
     }
 }
 

@@ -52,12 +52,14 @@ class AfterSalesService {
         try {
             // Fetch orders with status 'completed'
             // Try ordering by completed_at first, fallback to created_at if column doesn't exist
-            // CRITICAL: Explicitly select customer_id to ensure proper relationship mapping
+            // CRITICAL: Explicitly select customer_id, items, and comments to ensure proper relationship mapping
             let { data: orders, error } = await this.supabase
                 .from('orders')
                 .select(`
                     *,
                     customer_id,
+                    items,
+                    comments,
                     customers (
                         id,
                         name,
@@ -78,6 +80,8 @@ class AfterSalesService {
                     .select(`
                         *,
                         customer_id,
+                        items,
+                        comments,
                         customers (
                             id,
                             name,
@@ -146,14 +150,84 @@ class AfterSalesService {
             customerPhone = order.customer_phone;
         }
 
+        // Parse measurements from comments if stored there (for backward compatibility)
+        let measurements = {};
+        let comments = order.comments || order.notes || '';
+        if (comments && comments.includes('Measurements:')) {
+            // Pattern 1: In-house format with Height and High Waist
+            let measurementsMatch = comments.match(/Measurements:\s*Height=([^,\n\r]+?),\s*Bust=([^,\n\r]+?),\s*High\s+Waist=([^,\n\r]+?),\s*Hips=([^\n\r]+?)(?:\n|$)/i);
+            
+            if (measurementsMatch && measurementsMatch.length >= 5) {
+                measurements = {
+                    height: measurementsMatch[1].trim(),
+                    bust: measurementsMatch[2].trim(),
+                    high_waist: measurementsMatch[3].trim(),
+                    hips: measurementsMatch[4].trim()
+                };
+            } else {
+                // Pattern 2: Standard format with Size and Waist
+                measurementsMatch = comments.match(/Measurements:\s*Size=([^,\n\r]+?),\s*Bust=([^,\n\r]+?),\s*Waist=([^,\n\r]+?),\s*Hips=([^\n\r]+?)(?:\n|$)/i);
+                
+                if (!measurementsMatch) {
+                    measurementsMatch = comments.match(/Size=([^,\n\r]+?)[,\s]+Bust=([^,\n\r]+?)[,\s]+Waist=([^,\n\r]+?)[,\s]+Hips=([^\n\r]+?)(?:\n|$)/i);
+                }
+                
+                if (measurementsMatch && measurementsMatch.length >= 5) {
+                    measurements = {
+                        size: measurementsMatch[1].trim(),
+                        bust: measurementsMatch[2].trim(),
+                        waist: measurementsMatch[3].trim(),
+                        hips: measurementsMatch[4].trim()
+                    };
+                }
+            }
+        }
+
+        // Process items from JSONB column (new approach) or fallback to single item
+        let items = [];
+        let totalPrice = 0;
+        
+        // Check if order has items stored as JSONB array
+        if (order.items && Array.isArray(order.items) && order.items.length > 0) {
+            console.log(`📦 Processing ${order.items.length} items from JSONB for order ${order.id}`);
+            items = order.items.map(item => ({
+                productName: item.product_name || 'Unknown Product',
+                productImage: item.product_image || 'https://via.placeholder.com/400',
+                color: item.color || '',
+                price: item.price || 0,
+                measurements: item.measurements || {}
+            }));
+            totalPrice = items.reduce((sum, item) => sum + (item.price || 0), 0);
+            console.log(`✅ Created ${items.length} items for order ${order.id}:`, items.map(i => i.productName));
+        } else {
+            // Fallback to single item (backward compatibility for old orders)
+            console.log(`ℹ️ No items array found for order ${order.id}, using single item fallback`);
+            items = [{
+                productName: order.products?.name || order.product_name || 'Unknown Product',
+                productImage: order.products?.image_url || order.product_image || order.image_url || 'https://via.placeholder.com/400',
+                color: order.color || '',
+                price: order.price || 0,
+                measurements: measurements
+            }];
+            totalPrice = order.price || 0;
+        }
+
+        // Get first item name and color for display in main row (backward compatibility)
+        const firstItem = items[0] || {};
+        const itemName = firstItem.productName || order.products?.name || order.product_name || 'Unknown Product';
+        const color = firstItem.color || order.color || '';
+
         return {
             id: order.id,
             customerName: customerName,
             phone: customerPhone,
-            itemName: order.products?.name || order.product_name || 'Unknown Product',
-            color: order.color || '',
-            price: order.price || 0,
-            date: dateStr
+            itemName: itemName,
+            color: color,
+            price: totalPrice,
+            date: dateStr,
+            items: items, // All items array
+            measurements: measurements, // Measurements from comments (if available)
+            comments: comments // Store comments for reference
         };
     }
 
@@ -161,9 +235,25 @@ class AfterSalesService {
      * Populate filter dropdowns with actual data from orders
      */
     populateFilterDropdowns() {
-        // Get unique items and colors from orders
-        const uniqueItems = [...new Set(this.orders.map(o => o.itemName).filter(Boolean))].sort();
-        const uniqueColors = [...new Set(this.orders.map(o => o.color).filter(Boolean))].sort();
+        // Get unique items and colors from all orders (including all items in each order)
+        const allItemNames = [];
+        const allColors = [];
+        
+        this.orders.forEach(order => {
+            if (order.items && order.items.length > 0) {
+                order.items.forEach(item => {
+                    if (item.productName) allItemNames.push(item.productName);
+                    if (item.color) allColors.push(item.color);
+                });
+            } else {
+                // Fallback for orders without items array
+                if (order.itemName) allItemNames.push(order.itemName);
+                if (order.color) allColors.push(order.color);
+            }
+        });
+        
+        const uniqueItems = [...new Set(allItemNames)].sort();
+        const uniqueColors = [...new Set(allColors)].sort();
 
         // Populate item filter
         const itemFilter = document.getElementById('itemFilter');
@@ -270,14 +360,24 @@ class AfterSalesService {
             });
         }
 
-        // Apply item filter
+        // Apply item filter (check all items in order)
         if (this.filters.item) {
-            filtered = filtered.filter(order => order.itemName === this.filters.item);
+            filtered = filtered.filter(order => {
+                if (order.items && order.items.length > 0) {
+                    return order.items.some(item => item.productName === this.filters.item);
+                }
+                return order.itemName === this.filters.item;
+            });
         }
 
-        // Apply color filter
+        // Apply color filter (check all items in order)
         if (this.filters.color) {
-            filtered = filtered.filter(order => order.color === this.filters.color);
+            filtered = filtered.filter(order => {
+                if (order.items && order.items.length > 0) {
+                    return order.items.some(item => item.color === this.filters.color);
+                }
+                return order.color === this.filters.color;
+            });
         }
 
         // Apply sorting
@@ -291,16 +391,42 @@ class AfterSalesService {
             case 'item-popular':
                 const itemCounts = {};
                 filtered.forEach(order => {
-                    itemCounts[order.itemName] = (itemCounts[order.itemName] || 0) + 1;
+                    if (order.items && order.items.length > 0) {
+                        order.items.forEach(item => {
+                            const itemName = item.productName || order.itemName;
+                            itemCounts[itemName] = (itemCounts[itemName] || 0) + 1;
+                        });
+                    } else {
+                        itemCounts[order.itemName] = (itemCounts[order.itemName] || 0) + 1;
+                    }
                 });
-                filtered.sort((a, b) => itemCounts[b.itemName] - itemCounts[a.itemName]);
+                filtered.sort((a, b) => {
+                    const aCount = a.items && a.items.length > 0 
+                        ? Math.max(...a.items.map(item => itemCounts[item.productName] || 0))
+                        : itemCounts[a.itemName] || 0;
+                    const bCount = b.items && b.items.length > 0 
+                        ? Math.max(...b.items.map(item => itemCounts[item.productName] || 0))
+                        : itemCounts[b.itemName] || 0;
+                    return bCount - aCount;
+                });
                 break;
             case 'color-popular':
                 const colorCounts = {};
                 filtered.forEach(order => {
-                    colorCounts[order.color] = (colorCounts[order.color] || 0) + 1;
+                    if (order.items && order.items.length > 0) {
+                        order.items.forEach(item => {
+                            const color = item.color || order.color;
+                            if (color) colorCounts[color] = (colorCounts[color] || 0) + 1;
+                        });
+                    } else {
+                        if (order.color) colorCounts[order.color] = (colorCounts[order.color] || 0) + 1;
+                    }
                 });
-                filtered.sort((a, b) => colorCounts[b.color] - colorCounts[a.color]);
+                filtered.sort((a, b) => {
+                    const aColor = a.items && a.items.length > 0 ? a.items[0].color : a.color;
+                    const bColor = b.items && b.items.length > 0 ? b.items[0].color : b.color;
+                    return (colorCounts[bColor] || 0) - (colorCounts[aColor] || 0);
+                });
                 break;
             case 'price-high':
                 filtered.sort((a, b) => b.price - a.price);
@@ -320,16 +446,109 @@ class AfterSalesService {
     render() {
         if (!this.tableBody) return;
 
-        this.tableBody.innerHTML = this.filteredOrders.map(order => `
-            <tr>
-                <td>${order.customerName}</td>
-                <td>${order.phone || 'N/A'}</td>
-                <td>${order.itemName}</td>
-                <td>${order.color}</td>
-                <td class="price-cell">KES ${order.price.toLocaleString()}</td>
-                <td>${order.date}</td>
-            </tr>
-        `).join('');
+        this.tableBody.innerHTML = this.filteredOrders.map(order => {
+            const orderId = `order-${order.id}`;
+            const hasMultipleItems = order.items && order.items.length > 1;
+            const hasMeasurements = order.items && order.items.some(item => 
+                item.measurements && Object.keys(item.measurements).length > 0
+            ) || (order.measurements && Object.keys(order.measurements).length > 0);
+            
+            // Build items display
+            let itemsHtml = '';
+            if (order.items && order.items.length > 0) {
+                itemsHtml = order.items.map((item, index) => {
+                    const itemMeasurements = item.measurements || {};
+                    const hasItemMeasurements = Object.keys(itemMeasurements).length > 0;
+                    
+                    let measurementsHtml = '';
+                    if (hasItemMeasurements) {
+                        const measurementsList = Object.entries(itemMeasurements)
+                            .filter(([key, value]) => value && value !== 'N/A' && value !== '')
+                            .map(([key, value]) => {
+                                const label = key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+                                return `<div class="measurement-item"><span class="measurement-label">${label}:</span> <span class="measurement-value">${value}</span></div>`;
+                            })
+                            .join('');
+                        
+                        if (measurementsList) {
+                            measurementsHtml = `
+                                <div class="item-measurements">
+                                    <div class="measurements-title">Measurements:</div>
+                                    ${measurementsList}
+                                </div>
+                            `;
+                        }
+                    }
+                    
+                    return `
+                        <div class="order-item-detail">
+                            <div class="item-header">
+                                <span class="item-number">${index + 1}.</span>
+                                <span class="item-name">${item.productName || 'Unknown Product'}</span>
+                                <span class="item-color">${item.color ? `(${item.color})` : ''}</span>
+                                <span class="item-price">KES ${(item.price || 0).toLocaleString()}</span>
+                            </div>
+                            ${measurementsHtml}
+                        </div>
+                    `;
+                }).join('');
+            }
+            
+            // Show first item name in main row, or indicate multiple items
+            const displayItemName = hasMultipleItems 
+                ? `${order.itemName} (${order.items.length} items)` 
+                : order.itemName;
+            
+            return `
+                <tr class="order-row" data-order-id="${order.id}" style="cursor: pointer;">
+                    <td>${order.customerName}</td>
+                    <td>${order.phone || 'N/A'}</td>
+                    <td>${displayItemName}</td>
+                    <td>${order.color}</td>
+                    <td class="price-cell">KES ${order.price.toLocaleString()}</td>
+                    <td>${order.date}</td>
+                </tr>
+                <tr class="order-details-row" id="${orderId}-details" style="display: none;">
+                    <td colspan="6" class="order-details-cell">
+                        <div class="order-details-content">
+                            <div class="order-details-header">
+                                <h4>Order Details</h4>
+                                <span class="items-count">${order.items ? order.items.length : 1} ${order.items && order.items.length === 1 ? 'Item' : 'Items'}</span>
+                            </div>
+                            <div class="order-items-list">
+                                ${itemsHtml || '<div class="no-items">No items found</div>'}
+                            </div>
+                        </div>
+                    </td>
+                </tr>
+            `;
+        }).join('');
+
+        // Add click event listeners to rows
+        this.tableBody.querySelectorAll('.order-row').forEach(row => {
+            row.addEventListener('click', (e) => {
+                const orderId = row.getAttribute('data-order-id');
+                const detailsRow = document.getElementById(`order-${orderId}-details`);
+                
+                if (detailsRow) {
+                    const isExpanded = detailsRow.style.display !== 'none';
+                    
+                    // Close all other expanded rows
+                    this.tableBody.querySelectorAll('.order-details-row').forEach(detailRow => {
+                        detailRow.style.display = 'none';
+                    });
+                    this.tableBody.querySelectorAll('.order-row').forEach(r => {
+                        r.classList.remove('expanded');
+                    });
+                    
+                    // Toggle current row
+                    if (!isExpanded) {
+                        detailsRow.style.display = 'table-row';
+                        row.classList.add('expanded');
+                    }
+                }
+            });
+        });
     }
 
     /**

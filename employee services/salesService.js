@@ -267,6 +267,7 @@ class SalesService {
 
         return {
             id: order.id,
+            customer_id: order.customer_id, // Include customer_id for editing
             customerName: customerName,
             phone: customerPhone,
             productName: items[0]?.productName || 'Unknown Product', // First item for backward compatibility
@@ -666,8 +667,15 @@ class SalesService {
                 </div>
                 
                 <div style="margin-bottom: 20px;">
-                    <div style="font-weight: 600; color: #2d3748; margin-bottom: 8px;">Customer:</div>
-                    <div style="color: #718096;">${order.customerName}</div>
+                    <div style="font-weight: 600; color: #2d3748; margin-bottom: 8px;">Customer Name:</div>
+                    <div style="display: flex; align-items: center; gap: 8px;">
+                        <input type="text" id="edit-customer-name" value="${order.customerName || ''}" 
+                               style="flex: 1; padding: 8px 12px; border: 2px solid rgba(27, 77, 62, 0.2); border-radius: 6px; font-size: 14px; outline: none;"
+                               onfocus="this.style.borderColor='#1B4D3E';" 
+                               onblur="this.style.borderColor='rgba(27, 77, 62, 0.2)';"
+                               placeholder="Customer name">
+                        <button id="edit-customer-name-btn" style="padding: 8px 16px; background: #4A90E2; color: white; border: none; border-radius: 6px; font-size: 14px; font-weight: 600; cursor: pointer; white-space: nowrap;">Edit Name</button>
+                    </div>
                 </div>
                 
                 <div style="margin-bottom: 20px;">
@@ -738,6 +746,87 @@ class SalesService {
                 closeModal();
             }
         });
+        
+        // Customer name edit handler with confirmation
+        const editCustomerNameBtn = modalOverlay.querySelector('#edit-customer-name-btn');
+        const customerNameInput = modalOverlay.querySelector('#edit-customer-name');
+        if (editCustomerNameBtn && customerNameInput) {
+            editCustomerNameBtn.addEventListener('click', async () => {
+                const newName = customerNameInput.value.trim();
+                const oldName = order.customerName || '';
+                
+                if (newName === oldName) {
+                    alert('Customer name has not changed.');
+                    return;
+                }
+                
+                if (!newName) {
+                    alert('Customer name cannot be empty.');
+                    customerNameInput.value = oldName;
+                    return;
+                }
+                
+                // Show confirmation popup
+                if (!confirm('Are you sure you want to edit the customer name?')) {
+                    customerNameInput.value = oldName;
+                    return;
+                }
+                
+                // Update customer name in database
+                try {
+                    editCustomerNameBtn.disabled = true;
+                    editCustomerNameBtn.textContent = 'Updating...';
+                    
+                    // Get customer ID from order
+                    const orderData = this.orders.find(o => o.id === order.id);
+                    if (!orderData || !orderData.customer_id) {
+                        // Try to get customer ID from database
+                        const { data: orderFromDB } = await this.supabase
+                            .from('orders')
+                            .select('customer_id')
+                            .eq('id', order.id)
+                            .single();
+                        
+                        if (orderFromDB && orderFromDB.customer_id) {
+                            const { error: updateError } = await this.supabase
+                                .from('customers')
+                                .update({ name: newName })
+                                .eq('id', orderFromDB.customer_id);
+                            
+                            if (updateError) {
+                                throw updateError;
+                            }
+                            
+                            // Update local order data
+                            order.customerName = newName;
+                            alert('✓ Customer name updated successfully');
+                        } else {
+                            throw new Error('Could not find customer ID for this order');
+                        }
+                    } else {
+                        const { error: updateError } = await this.supabase
+                            .from('customers')
+                            .update({ name: newName })
+                            .eq('id', orderData.customer_id);
+                        
+                        if (updateError) {
+                            throw updateError;
+                        }
+                        
+                        // Update local order data
+                        order.customerName = newName;
+                        alert('✓ Customer name updated successfully');
+                    }
+                } catch (error) {
+                    console.error('Error updating customer name:', error);
+                    alert(`Failed to update customer name: ${error.message}`);
+                    customerNameInput.value = oldName;
+                } finally {
+                    editCustomerNameBtn.disabled = false;
+                    editCustomerNameBtn.textContent = 'Edit Name';
+                }
+            });
+        }
         
         // Save handler
         modalOverlay.querySelector('#saveEditOrder').addEventListener('click', async () => {

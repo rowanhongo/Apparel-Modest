@@ -2960,13 +2960,134 @@
                 
                 const comments = document.getElementById('comments').value.trim();
 
-                // Step 1: Find or create customer
+                // ============================================
+                // PREVENTION STRATEGY 1: IDEMPOTENCY CHECK
+                // ============================================
+                // Check if order with this payment reference already exists
+                const { data: existingOrder } = await supabaseClient
+                    .from('orders')
+                    .select('id, status, created_at')
+                    .eq('payment_reference', paymentReference)
+                    .single();
+
+                if (existingOrder) {
+                    console.log('✅ Order already exists with payment reference:', paymentReference);
+                    // Order already exists, show success message
+                    alert(`✓ Payment successful!\n✓ Order already exists!\n\nItems: ${orderCart.length}\nTotal: KES ${totalPrice.toLocaleString()}\nPayment Reference: ${paymentReference}\nOrder ID: ${existingOrder.id}\n\nYou can freely exit.`);
+                    
+                    // Reset form and cart
+                    document.getElementById('orderForm').reset();
+                    document.getElementById('countryCode').value = '+';
+                    selectedProductDiv.classList.remove('active');
+                    colorOptionsDiv.classList.remove('active');
+                    document.getElementById('selectedColorDisplay').textContent = '';
+                    document.querySelectorAll('.color-option').forEach(o => o.classList.remove('selected'));
+                    document.getElementById('customSizeInput').style.display = 'none';
+                    document.getElementById('customHeight').value = '';
+                    document.getElementById('customBust').value = '';
+                    document.getElementById('customWaist').value = '';
+                    document.getElementById('customHips').value = '';
+                    document.getElementById('deliveryLocationInput').style.display = 'none';
+                    document.getElementById('storeLocationMessage').style.display = 'none';
+                    if (marker && map) {
+                        map.removeLayer(marker);
+                        marker = null;
+                    }
+                    selectedLocation = { lat: null, lng: null, displayName: null };
+                    document.getElementById('deliveryLatitude').value = '';
+                    document.getElementById('deliveryLongitude').value = '';
+                    document.getElementById('deliveryDisplayName').value = '';
+                    document.getElementById('selectedLocationInfo').style.display = 'none';
+                    document.getElementById('locationSearch').value = '';
+                    document.getElementById('locationSuggestions').style.display = 'none';
+                    selectedProduct = null;
+                    selectedColor = null;
+                    orderCart = [];
+                    updateCartDisplay();
+                    if (addToCartBtn) {
+                        addToCartBtn.style.display = 'none';
+                    }
+                    paymentCompleted = false;
+                    paymentReference = null;
+                    return;
+                }
+
+                // ============================================
+                // PREVENTION STRATEGY 2: DATA VALIDATION
+                // ============================================
+                // Validate all required data before attempting order creation
+                if (!orderCart || orderCart.length === 0) {
+                    throw new Error('Order cart is empty. Cannot create order.');
+                }
+
+                if (!orderCart[0] || !orderCart[0].product || !orderCart[0].product.id) {
+                    throw new Error('Invalid product data. Cannot create order.');
+                }
+
+                if (!customerName || customerName.trim() === '') {
+                    throw new Error('Customer name is required.');
+                }
+
+                if (!customerPhone || customerPhone.trim() === '') {
+                    throw new Error('Customer phone is required.');
+                }
+
+                // ============================================
+                // PREVENTION STRATEGY 3: ENHANCED ERROR LOGGING
+                // ============================================
+                // Store order data in localStorage before creation (for recovery)
+                const orderDataForRecovery = {
+                    paymentReference: paymentReference,
+                    customerName: customerName,
+                    customerPhone: customerPhone,
+                    customerEmail: customerEmail,
+                    totalPrice: totalPrice,
+                    items: orderCart.map(item => ({
+                        product_id: item.product.id,
+                        product_name: item.product.name,
+                        color: item.color,
+                        price: item.product.price
+                    })),
+                    deliveryOption: deliveryOption,
+                    measurements: measurements,
+                    comments: comments,
+                    timestamp: new Date().toISOString()
+                };
+
+                // Save to localStorage for recovery
+                try {
+                    const failedOrders = JSON.parse(localStorage.getItem('failed_orders') || '[]');
+                    // Remove any old entries (older than 7 days)
+                    const sevenDaysAgo = new Date();
+                    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+                    const recentFailedOrders = failedOrders.filter(order => {
+                        const orderDate = new Date(order.timestamp);
+                        return orderDate > sevenDaysAgo;
+                    });
+                    localStorage.setItem('failed_orders', JSON.stringify(recentFailedOrders));
+                } catch (e) {
+                    console.warn('Could not save to localStorage:', e);
+                }
+
+                // Log payment reference to console for debugging
+                console.log('💰 Payment Reference:', paymentReference);
+                console.log('📦 Order Data:', orderDataForRecovery);
+
+                // ============================================
+                // STEP 1: Find or create customer
+                // ============================================
                 let customerId;
-                const { data: existingCustomer } = await supabaseClient
+                const { data: existingCustomer, error: customerLookupError } = await supabaseClient
                     .from('customers')
                     .select('id')
                     .eq('phone', customerPhone)
                     .single();
+
+                if (customerLookupError && customerLookupError.code !== 'PGRST116') {
+                    // PGRST116 is "not found" which is expected for new customers
+                    console.error('❌ Error looking up customer:', customerLookupError);
+                    throw new Error(`Failed to lookup customer: ${customerLookupError.message}`);
+                }
 
                 if (existingCustomer) {
                     customerId = existingCustomer.id;
@@ -2987,12 +3108,16 @@
                         .single();
 
                     if (customerError) {
+                        console.error('❌ Failed to create customer:', customerError);
+                        console.error('📋 Customer data:', { name: customerName, phone: customerPhone });
                         throw new Error(`Failed to create customer: ${customerError.message}`);
                     }
                     customerId = newCustomer.id;
                 }
 
-                // Step 2: Create order
+                // ============================================
+                // STEP 2: Prepare order data
+                // ============================================
                 // Store measurements in comments since measurements column doesn't exist in schema
                 let finalComments = comments || '';
                 if (measurements && Object.keys(measurements).length > 0) {
@@ -3025,37 +3150,148 @@
 
                 console.log(`📦 Creating order with ${itemsArray.length} items stored as JSONB:`, itemsArray.map(i => ({ product_name: i.product_name, color: i.color, price: i.price })));
 
-                // Save order with items stored as JSONB (multi-item support)
-                // Note: totalPrice is already calculated above for payment
-                const { data: newOrder, error: orderError } = await supabaseClient
-                    .from('orders')
-                    .insert({
-                        customer_id: customerId,
-                        customer_phone: customerPhone, // Required field
-                        product_id: orderCart[0].product.id, // First product for backward compatibility
-                        status: 'pending',
-                        color: orderCart[0].color, // First color for backward compatibility
-                        price: totalPrice, // Total price of all items
-                        items: itemsArray, // JSONB array of all items
-                        delivery_option: deliveryOption,
-                        delivery_location: deliveryLocation || null, // Keep for backward compatibility
-                        delivery_latitude: deliveryLatitude ? parseFloat(deliveryLatitude) : null,
-                        delivery_longitude: deliveryLongitude ? parseFloat(deliveryLongitude) : null,
-                        delivery_display_name: deliveryDisplayName || null,
-                        payment_option: paymentOption, // 'paystack' - now allowed in database constraint
-                        payment_reference: paymentReference, // Store payment reference in dedicated column
-                        payment_status: 'completed', // Payment status
-                        comments: finalComments || null
-                    })
-                    .select()
-                    .single();
+                // ============================================
+                // PREVENTION STRATEGY 4: RETRY MECHANISM
+                // ============================================
+                // Retry order creation up to 3 times with exponential backoff
+                const maxRetries = 3;
+                let newOrder = null;
+                let orderError = null;
+                let lastError = null;
 
-                if (orderError) {
-                    throw new Error(`Failed to create order: ${orderError.message}`);
+                for (let attempt = 1; attempt <= maxRetries; attempt++) {
+                    try {
+                        submitBtn.textContent = `Creating Order... (Attempt ${attempt}/${maxRetries})`;
+                        
+                        // Save order with items stored as JSONB (multi-item support)
+                        const { data: orderData, error: createError } = await supabaseClient
+                            .from('orders')
+                            .insert({
+                                customer_id: customerId,
+                                customer_phone: customerPhone, // Required field
+                                product_id: orderCart[0].product.id, // First product for backward compatibility
+                                status: 'pending',
+                                color: orderCart[0].color, // First color for backward compatibility
+                                price: totalPrice, // Total price of all items
+                                items: itemsArray, // JSONB array of all items
+                                delivery_option: deliveryOption,
+                                delivery_location: deliveryLocation || null, // Keep for backward compatibility
+                                delivery_latitude: deliveryLatitude ? parseFloat(deliveryLatitude) : null,
+                                delivery_longitude: deliveryLongitude ? parseFloat(deliveryLongitude) : null,
+                                delivery_display_name: deliveryDisplayName || null,
+                                payment_option: paymentOption, // 'paystack' - now allowed in database constraint
+                                payment_reference: paymentReference, // Store payment reference in dedicated column
+                                payment_status: 'completed', // Payment status
+                                comments: finalComments || null
+                            })
+                            .select()
+                            .single();
+
+                        if (createError) {
+                            lastError = createError;
+                            orderError = createError;
+                            
+                            // Check if it's a transient error (network, timeout) that we should retry
+                            const isTransientError = createError.message.includes('timeout') || 
+                                                    createError.message.includes('network') ||
+                                                    createError.message.includes('connection') ||
+                                                    createError.code === 'PGRST301' || // Timeout
+                                                    createError.code === 'PGRST116'; // Not found (sometimes transient)
+                            
+                            if (isTransientError && attempt < maxRetries) {
+                                // Wait before retrying (exponential backoff: 1s, 2s, 4s)
+                                const waitTime = Math.pow(2, attempt - 1) * 1000;
+                                console.warn(`⚠️ Transient error on attempt ${attempt}, retrying in ${waitTime}ms...`, createError);
+                                await new Promise(resolve => setTimeout(resolve, waitTime));
+                                continue;
+                            } else {
+                                // Permanent error or max retries reached
+                                throw new Error(`Failed to create order: ${createError.message}`);
+                            }
+                        } else {
+                            newOrder = orderData;
+                            orderError = null;
+                            console.log('✅ Order created successfully on attempt', attempt);
+                            break; // Success, exit retry loop
+                        }
+                    } catch (error) {
+                        lastError = error;
+                        if (attempt === maxRetries) {
+                            // Last attempt failed
+                            throw error;
+                        }
+                        // Wait before retrying
+                        const waitTime = Math.pow(2, attempt - 1) * 1000;
+                        console.warn(`⚠️ Error on attempt ${attempt}, retrying in ${waitTime}ms...`, error);
+                        await new Promise(resolve => setTimeout(resolve, waitTime));
+                    }
                 }
 
-                // Use the totalPrice already calculated above
-                alert(`✓ Payment successful!\n✓ Order submitted successfully!\n\nItems: ${orderCart.length}\nTotal: KES ${totalPrice.toLocaleString()}\nPayment Reference: ${paymentReference}\n\nYou can freely exit.`);
+                if (orderError || !newOrder) {
+                    // ============================================
+                    // PREVENTION STRATEGY 5: FALLBACK RECOVERY
+                    // ============================================
+                    // Save failed order to localStorage for manual recovery
+                    const failedOrderData = {
+                        ...orderDataForRecovery,
+                        error: orderError ? orderError.message : 'Unknown error',
+                        errorCode: orderError ? orderError.code : null,
+                        errorDetails: orderError ? JSON.stringify(orderError) : null,
+                        failedAt: new Date().toISOString()
+                    };
+
+                    try {
+                        const failedOrders = JSON.parse(localStorage.getItem('failed_orders') || '[]');
+                        failedOrders.push(failedOrderData);
+                        localStorage.setItem('failed_orders', JSON.stringify(failedOrders));
+                    } catch (e) {
+                        console.warn('Could not save failed order to localStorage:', e);
+                    }
+
+                    // Log detailed error information
+                    console.error('❌ Failed to create order after all retries:', {
+                        paymentReference: paymentReference,
+                        error: orderError,
+                        lastError: lastError,
+                        orderData: {
+                            customerId: customerId,
+                            customerPhone: customerPhone,
+                            productId: orderCart[0].product.id,
+                            totalPrice: totalPrice,
+                            itemsCount: itemsArray.length
+                        }
+                    });
+
+                    // Show detailed error message to user
+                    const errorMessage = orderError 
+                        ? `Failed to create order: ${orderError.message}\n\nPayment Reference: ${paymentReference}\n\nPlease contact support with this payment reference.`
+                        : `Failed to create order after ${maxRetries} attempts.\n\nPayment Reference: ${paymentReference}\n\nPlease contact support with this payment reference.`;
+                    
+                    alert(`❌ ${errorMessage}`);
+                    throw new Error(errorMessage);
+                }
+
+                // ============================================
+                // PREVENTION STRATEGY 6: ORDER VERIFICATION
+                // ============================================
+                // Verify order was actually created in database
+                submitBtn.textContent = 'Verifying Order...';
+                const { data: verifiedOrder, error: verifyError } = await supabaseClient
+                    .from('orders')
+                    .select('id, status, payment_reference, created_at')
+                    .eq('payment_reference', paymentReference)
+                    .single();
+
+                if (verifyError || !verifiedOrder) {
+                    console.error('❌ Order verification failed:', verifyError);
+                    // Order creation might have failed silently
+                    throw new Error(`Order verification failed. Payment was successful but order may not have been created. Payment Reference: ${paymentReference}. Please contact support.`);
+                }
+
+                console.log('✅ Order verified in database:', verifiedOrder.id);
+
+                // Success! Order created and verified
+                alert(`✓ Payment successful!\n✓ Order submitted successfully!\n\nItems: ${orderCart.length}\nTotal: KES ${totalPrice.toLocaleString()}\nPayment Reference: ${paymentReference}\nOrder ID: ${verifiedOrder.id}\n\nYou can freely exit.`);
                 
                 // Reset form and cart
                 document.getElementById('orderForm').reset();
@@ -3098,12 +3334,70 @@
                 paymentCompleted = false;
                 paymentReference = null;
             } catch (error) {
-                console.error('Error submitting order:', error);
-                alert(`❌ Failed to submit order: ${error.message}. Please try again.`);
+                // ============================================
+                // PREVENTION STRATEGY 7: ENHANCED ERROR HANDLING
+                // ============================================
+                console.error('❌ Error submitting order:', error);
+                console.error('📋 Error details:', {
+                    message: error.message,
+                    stack: error.stack,
+                    paymentReference: paymentReference,
+                    paymentCompleted: paymentCompleted
+                });
+
+                // If payment was successful but order creation failed, save to failed orders
+                if (paymentCompleted && paymentReference) {
+                    const failedOrderData = {
+                        paymentReference: paymentReference,
+                        customerName: document.getElementById('name').value.trim(),
+                        customerPhone: fullPhoneNumber,
+                        customerEmail: customerEmail,
+                        totalPrice: totalPrice,
+                        items: orderCart.map(item => ({
+                            product_id: item.product.id,
+                            product_name: item.product.name,
+                            color: item.color,
+                            price: item.product.price
+                        })),
+                        error: error.message,
+                        errorStack: error.stack,
+                        failedAt: new Date().toISOString(),
+                        timestamp: new Date().toISOString()
+                    };
+
+                    try {
+                        const failedOrders = JSON.parse(localStorage.getItem('failed_orders') || '[]');
+                        failedOrders.push(failedOrderData);
+                        localStorage.setItem('failed_orders', JSON.stringify(failedOrders));
+                        console.log('💾 Saved failed order to localStorage for recovery');
+                    } catch (e) {
+                        console.warn('Could not save failed order to localStorage:', e);
+                    }
+
+                    // Show detailed error message with payment reference
+                    alert(`❌ Payment was successful, but order creation failed.\n\nError: ${error.message}\n\nPayment Reference: ${paymentReference}\n\nPlease DO NOT pay again. Contact support with this payment reference.\n\nYour order data has been saved for recovery.`);
+                } else {
+                    // Payment failed or was cancelled
+                    alert(`❌ Failed to submit order: ${error.message}\n\nPlease try again.`);
+                }
+
+                // Don't reset form/cart if payment succeeded but order failed
+                // This allows user to retry order creation without paying again
+                if (!paymentCompleted || !paymentReference) {
+                    // Only reset if payment didn't complete
+                    submitBtn.disabled = false;
+                    submitBtn.textContent = originalBtnText;
+                } else {
+                    // Payment succeeded but order failed - keep form data for recovery
+                    submitBtn.disabled = false;
+                    submitBtn.textContent = 'Retry Order Creation';
+                }
             } finally {
-                // Re-enable submit button
-                submitBtn.disabled = false;
-                submitBtn.textContent = originalBtnText;
+                // Re-enable submit button if not already handled
+                if (submitBtn.disabled === false && submitBtn.textContent !== 'Retry Order Creation') {
+                    submitBtn.disabled = false;
+                    submitBtn.textContent = originalBtnText;
+                }
             }
         });
     </script>
