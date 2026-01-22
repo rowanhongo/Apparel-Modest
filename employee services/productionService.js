@@ -110,6 +110,15 @@ class ProductionService {
 
             // Transform Supabase data to match expected format
             this.orders = validatedOrders.map(order => this.transformOrder(order));
+            
+            // Initialize checkedOrders Set from database values
+            this.checkedOrders.clear();
+            this.orders.forEach(order => {
+                if (order.production_checked) {
+                    this.checkedOrders.add(String(order.id));
+                }
+            });
+            
             this.filterOrders();
             this.render();
         } catch (error) {
@@ -273,7 +282,8 @@ class ProductionService {
             deliveryOption: order.delivery_option || order.deliveryOption || '',
             paymentOption: order.payment_option || order.paymentOption || '',
             paymentReference: order.payment_reference || order.paymentReference || '', // Include payment reference
-            deliveryLocation: order.delivery_display_name || order.delivery_location || order.deliveryLocation || ''
+            deliveryLocation: order.delivery_display_name || order.delivery_location || order.deliveryLocation || '',
+            production_checked: order.production_checked || false // Include production_checked status
         };
     }
 
@@ -374,9 +384,9 @@ class ProductionService {
             `;
         }
         
-        // Check if this order is already checked (normalize ID to string for consistency)
+        // Check if this order is already checked (use database value, fallback to Set for UI state)
         const orderIdStr = String(order.id);
-        const isChecked = this.checkedOrders.has(orderIdStr);
+        const isChecked = order.production_checked || this.checkedOrders.has(orderIdStr);
         const checkboxStyle = isChecked 
             ? 'border: 2px solid #4CAF50; background: rgba(76, 175, 80, 0.1);'
             : 'border: 2px solid rgba(65, 70, 63, 0.4); background: white;';
@@ -444,22 +454,17 @@ class ProductionService {
         const checkbox = bubble.querySelector('.production-checkbox');
         
         if (checkboxContainer && checkbox) {
-            const handleCheckboxClick = (e) => {
+            const handleCheckboxClick = async (e) => {
                 e.stopPropagation();
                 e.preventDefault();
                 
-                // Normalize order ID to string for consistent Set operations
+                // Normalize order ID to string for consistent operations
                 const orderIdStr = String(order.id);
-                const isChecked = this.checkedOrders.has(orderIdStr);
+                const currentCheckedState = order.production_checked || this.checkedOrders.has(orderIdStr);
+                const newCheckedState = !currentCheckedState;
                 
-                if (isChecked) {
-                    // Uncheck - only remove if manually unchecked
-                    this.checkedOrders.delete(orderIdStr);
-                    checkbox.innerHTML = '';
-                    checkbox.style.borderColor = 'rgba(65, 70, 63, 0.4)';
-                    checkbox.style.background = 'white';
-                } else {
-                    // Check - add to Set to persist state
+                // Optimistically update UI
+                if (newCheckedState) {
                     this.checkedOrders.add(orderIdStr);
                     checkbox.innerHTML = `
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#4CAF50" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" style="display: block;">
@@ -468,6 +473,65 @@ class ProductionService {
                     `;
                     checkbox.style.borderColor = '#4CAF50';
                     checkbox.style.background = 'rgba(76, 175, 80, 0.1)';
+                } else {
+                    this.checkedOrders.delete(orderIdStr);
+                    checkbox.innerHTML = '';
+                    checkbox.style.borderColor = 'rgba(65, 70, 63, 0.4)';
+                    checkbox.style.background = 'white';
+                }
+                
+                // Update database
+                try {
+                    const { error } = await this.supabase
+                        .from('orders')
+                        .update({ 
+                            production_checked: newCheckedState,
+                            updated_at: new Date().toISOString()
+                        })
+                        .eq('id', orderIdStr);
+                    
+                    if (error) {
+                        console.error('Error updating production_checked:', error);
+                        // Revert UI on error
+                        if (newCheckedState) {
+                            this.checkedOrders.delete(orderIdStr);
+                            checkbox.innerHTML = '';
+                            checkbox.style.borderColor = 'rgba(65, 70, 63, 0.4)';
+                            checkbox.style.background = 'white';
+                        } else {
+                            this.checkedOrders.add(orderIdStr);
+                            checkbox.innerHTML = `
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#4CAF50" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" style="display: block;">
+                                    <polyline points="20 6 9 17 4 12"></polyline>
+                                </svg>
+                            `;
+                            checkbox.style.borderColor = '#4CAF50';
+                            checkbox.style.background = 'rgba(76, 175, 80, 0.1)';
+                        }
+                        alert('Failed to update checkbox state. Please try again.');
+                    } else {
+                        // Update local order object to reflect database state
+                        order.production_checked = newCheckedState;
+                    }
+                } catch (error) {
+                    console.error('Unexpected error updating production_checked:', error);
+                    // Revert UI on error
+                    if (newCheckedState) {
+                        this.checkedOrders.delete(orderIdStr);
+                        checkbox.innerHTML = '';
+                        checkbox.style.borderColor = 'rgba(65, 70, 63, 0.4)';
+                        checkbox.style.background = 'white';
+                    } else {
+                        this.checkedOrders.add(orderIdStr);
+                        checkbox.innerHTML = `
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#4CAF50" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" style="display: block;">
+                                <polyline points="20 6 9 17 4 12"></polyline>
+                            </svg>
+                        `;
+                        checkbox.style.borderColor = '#4CAF50';
+                        checkbox.style.background = 'rgba(76, 175, 80, 0.1)';
+                    }
+                    alert('Failed to update checkbox state. Please try again.');
                 }
             };
             

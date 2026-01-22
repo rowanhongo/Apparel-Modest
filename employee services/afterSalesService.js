@@ -14,7 +14,8 @@ class AfterSalesService {
             date: '',
             item: '',
             color: '',
-            sort: 'date'
+            sort: 'date',
+            search: ''
         };
     }
 
@@ -37,6 +38,9 @@ class AfterSalesService {
         
         // Initialize filters after loading data
         this.initFilters();
+        
+        // Initialize search
+        this.initSearch();
         
         // Populate filter dropdowns with actual data
         this.populateFilterDropdowns();
@@ -321,6 +325,56 @@ class AfterSalesService {
     }
 
     /**
+     * Initialize search functionality
+     */
+    initSearch() {
+        const searchInput = document.getElementById('afterSalesSearchInput');
+        const clearSearchBtn = document.getElementById('clearSearchBtn');
+
+        if (searchInput) {
+            // Debounce search for better performance
+            let searchTimeout;
+            searchInput.addEventListener('input', (e) => {
+                clearTimeout(searchTimeout);
+                const searchTerm = e.target.value.trim();
+                
+                // Show/hide clear button
+                if (clearSearchBtn) {
+                    clearSearchBtn.style.display = searchTerm ? 'flex' : 'none';
+                }
+                
+                // Debounce the search
+                searchTimeout = setTimeout(() => {
+                    this.filters.search = searchTerm.toLowerCase();
+                    this.applyFilters();
+                }, 300); // 300ms delay
+            });
+
+            // Handle Enter key
+            searchInput.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    clearTimeout(searchTimeout);
+                    const searchTerm = e.target.value.trim().toLowerCase();
+                    this.filters.search = searchTerm;
+                    this.applyFilters();
+                }
+            });
+
+            // Clear search button
+            if (clearSearchBtn) {
+                clearSearchBtn.addEventListener('click', () => {
+                    searchInput.value = '';
+                    this.filters.search = '';
+                    clearSearchBtn.style.display = 'none';
+                    this.applyFilters();
+                    searchInput.focus();
+                });
+            }
+        }
+    }
+
+    /**
      * Load orders into the service (for backward compatibility)
      * @param {Array} orders - Array of completed order objects
      */
@@ -351,6 +405,57 @@ class AfterSalesService {
      */
     applyFilters() {
         let filtered = [...this.orders];
+
+        // Apply search filter (searches across multiple fields)
+        if (this.filters.search) {
+            const searchTerm = this.filters.search;
+            filtered = filtered.filter(order => {
+                // Search in customer name
+                const customerMatch = order.customerName && 
+                    order.customerName.toLowerCase().includes(searchTerm);
+                
+                // Search in phone number
+                const phoneMatch = order.phone && 
+                    order.phone.toLowerCase().includes(searchTerm);
+                
+                // Search in item names (all items)
+                let itemMatch = false;
+                if (order.items && order.items.length > 0) {
+                    itemMatch = order.items.some(item => 
+                        item.productName && item.productName.toLowerCase().includes(searchTerm)
+                    );
+                } else {
+                    itemMatch = order.itemName && 
+                        order.itemName.toLowerCase().includes(searchTerm);
+                }
+                
+                // Search in colors (all items)
+                let colorMatch = false;
+                if (order.items && order.items.length > 0) {
+                    colorMatch = order.items.some(item => 
+                        item.color && item.color.toLowerCase().includes(searchTerm)
+                    );
+                } else {
+                    colorMatch = order.color && 
+                        order.color.toLowerCase().includes(searchTerm);
+                }
+                
+                // Search in order ID
+                const idMatch = order.id && 
+                    order.id.toString().toLowerCase().includes(searchTerm);
+                
+                // Search in price
+                const priceMatch = order.price && 
+                    order.price.toString().includes(searchTerm);
+                
+                // Search in date
+                const dateMatch = order.date && 
+                    order.date.toLowerCase().includes(searchTerm);
+                
+                return customerMatch || phoneMatch || itemMatch || colorMatch || 
+                       idMatch || priceMatch || dateMatch;
+            });
+        }
 
         // Apply date filter (compare date strings)
         if (this.filters.date) {
@@ -445,6 +550,29 @@ class AfterSalesService {
      */
     render() {
         if (!this.tableBody) return;
+
+        // Show "no results" message if search/filter returns no results
+        if (this.filteredOrders.length === 0) {
+            const hasActiveFilters = this.filters.search || this.filters.date || 
+                                   this.filters.item || this.filters.color;
+            
+            this.tableBody.innerHTML = `
+                <tr>
+                    <td colspan="6" style="text-align: center; padding: 40px 20px; color: rgba(65, 70, 63, 0.6);">
+                        <div style="display: flex; flex-direction: column; align-items: center; gap: 12px;">
+                            <svg width="48" height="48" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="opacity: 0.5;">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                            </svg>
+                            <div style="font-size: 16px; font-weight: 500;">
+                                ${hasActiveFilters ? 'No orders found matching your search/filters' : 'No completed orders found'}
+                            </div>
+                            ${hasActiveFilters ? '<div style="font-size: 13px; opacity: 0.7;">Try adjusting your search or filters</div>' : ''}
+                        </div>
+                    </td>
+                </tr>
+            `;
+            return;
+        }
 
         this.tableBody.innerHTML = this.filteredOrders.map(order => {
             const orderId = `order-${order.id}`;

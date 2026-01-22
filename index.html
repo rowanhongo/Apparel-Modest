@@ -1413,6 +1413,86 @@
             padding: 20px;
         }
 
+        /* Search Bar Styles */
+        .search-section {
+            width: 100%;
+        }
+
+        .search-input-wrapper {
+            position: relative;
+            width: 100%;
+        }
+
+        .search-input {
+            width: 100%;
+            padding: 12px 48px 12px 44px;
+            border: 2px solid rgba(65, 70, 63, 0.2);
+            border-radius: 12px;
+            font-size: 14px;
+            color: #41463F;
+            background: rgba(255, 255, 255, 0.7);
+            backdrop-filter: blur(10px);
+            outline: none;
+            transition: all 0.3s ease;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+        }
+
+        .search-input:focus {
+            border-color: rgba(65, 70, 63, 0.5);
+            background: rgba(255, 255, 255, 0.9);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
+
+        .search-input::placeholder {
+            color: rgba(65, 70, 63, 0.5);
+        }
+
+        .search-icon {
+            position: absolute;
+            left: 14px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: rgba(65, 70, 63, 0.5);
+            pointer-events: none;
+        }
+
+        .clear-search-btn {
+            position: absolute;
+            right: 12px;
+            top: 50%;
+            transform: translateY(-50%);
+            background: rgba(65, 70, 63, 0.1);
+            border: none;
+            border-radius: 50%;
+            width: 24px;
+            height: 24px;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            color: rgba(65, 70, 63, 0.7);
+            z-index: 10;
+        }
+
+        .clear-search-btn:hover {
+            background: rgba(65, 70, 63, 0.2);
+            color: #41463F;
+        }
+
+        .clear-search-btn:active {
+            transform: translateY(-50%) scale(0.95);
+        }
+
+        .clear-search-btn:hover {
+            background: rgba(65, 70, 63, 0.2);
+            color: #41463F;
+        }
+
+        .clear-search-btn:active {
+            transform: translateY(-50%) scale(0.95);
+        }
+
         /* Calendar and Filter Styles */
         .filters-section {
             display: flex;
@@ -1733,6 +1813,28 @@
             .order-image {
                 width: 55px;
                 height: 55px;
+            }
+
+            /* Search bar responsive */
+            .search-section {
+                padding: 0 12px !important;
+            }
+
+            .search-input {
+                padding: 10px 44px 10px 40px !important;
+                font-size: 13px !important;
+            }
+
+            .search-icon {
+                left: 12px !important;
+                width: 18px !important;
+                height: 18px !important;
+            }
+
+            .clear-search-btn {
+                right: 10px !important;
+                width: 22px !important;
+                height: 22px !important;
             }
 
             /* Table responsive */
@@ -2581,6 +2683,39 @@
         }
 
         @media (max-width: 480px) {
+            /* Search bar extra small screens */
+            .search-section {
+                padding: 0 8px !important;
+                margin-bottom: 16px !important;
+            }
+
+            .search-input {
+                padding: 10px 40px 10px 36px !important;
+                font-size: 12px !important;
+                border-radius: 10px !important;
+            }
+
+            .search-input::placeholder {
+                font-size: 12px !important;
+            }
+
+            .search-icon {
+                left: 10px !important;
+                width: 16px !important;
+                height: 16px !important;
+            }
+
+            .clear-search-btn {
+                right: 8px !important;
+                width: 20px !important;
+                height: 20px !important;
+            }
+
+            .clear-search-btn svg {
+                width: 14px !important;
+                height: 14px !important;
+            }
+
             /* Admin dashboard extra small screens */
             #admin-dashboard-page main {
                 padding: 8px !important;
@@ -4225,6 +4360,33 @@
             <div class="tab-content" id="completed">
                 <div class="section-header">
                     <h2>After Sales</h2>
+                </div>
+                
+                <!-- Search Bar -->
+                <div class="search-section" style="margin-bottom: 24px; padding: 0 20px;">
+                    <div class="search-input-wrapper" style="position: relative; width: 100%; max-width: 600px; margin: 0 auto;">
+                        <input 
+                            type="text" 
+                            id="afterSalesSearchInput" 
+                            placeholder="Search by customer name, phone, item, color..." 
+                            class="search-input"
+                            autocomplete="off"
+                        />
+                        <svg class="search-icon" width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+                        </svg>
+                        <button 
+                            type="button" 
+                            id="clearSearchBtn" 
+                            class="clear-search-btn"
+                            style="display: none;"
+                            aria-label="Clear search"
+                        >
+                            <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                            </svg>
+                        </button>
+                    </div>
                 </div>
                 
                 <!-- Calendar and Filters -->
