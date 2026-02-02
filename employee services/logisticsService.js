@@ -129,6 +129,7 @@ class LogisticsService {
 
             // Transform Supabase data to match expected format
             this.orders = validatedOrders.map(order => this.transformOrder(order));
+            console.log('[Logistics] Loaded order IDs:', this.orders.map(o => o.id));
             
             // Initialize checkedOrders Set from database values
             this.checkedOrders.clear();
@@ -154,6 +155,7 @@ class LogisticsService {
      * @returns {Object} Transformed order object
      */
     transformOrder(order) {
+        console.log('[Logistics] transformOrder id:', order.id);
         // CRITICAL FIX: Properly extract customer data to prevent name replication bug
         // Supabase join returns customers as an object (not array) when using foreign key relationship
         // Handle both cases: object (correct) and array (edge case) for safety
