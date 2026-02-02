@@ -66,7 +66,7 @@ class LogisticsService {
         // Set up realtime subscription for orders
         this.setupOrdersRealtime();
         
-        // Set up search input listener
+        // Set up search input listener (same pattern as Production)
         this.setupSearchInput();
     }
 
@@ -826,24 +826,37 @@ class LogisticsService {
     }
 
     /**
-     * Set up search input listener
+     * Set up search input listener (same as Production)
+     * Finds input inside the Logistics tab so it binds correctly when tab is shown.
      */
     setupSearchInput() {
-        const searchInput = document.getElementById('logisticsSearchInput');
-        if (searchInput) {
-            console.log('✅ Logistics search input found and setting up listener');
-            // Remove existing listener if any
-            searchInput.removeEventListener('input', this.handleSearchInput);
-            // Create bound handler
-            this.handleSearchInput = (e) => {
-                this.searchTerm = e.target.value;
-                this.filterOrders();
-                this.render();
-            };
-            searchInput.addEventListener('input', this.handleSearchInput);
-        } else {
-            console.error('❌ Logistics search input NOT FOUND! ID: logisticsSearchInput');
+        const getSearchInput = () => {
+            const tab = this.container && this.container.closest ? this.container.closest('.tab-content') : null;
+            return tab ? tab.querySelector('#logisticsSearchInput') : document.getElementById('logisticsSearchInput');
+        };
+        let searchInput = getSearchInput();
+        if (!searchInput) {
+            setTimeout(() => {
+                searchInput = getSearchInput();
+                if (searchInput) this.bindSearchInput(searchInput);
+            }, 50);
+            return;
         }
+        this.bindSearchInput(searchInput);
+    }
+
+    /**
+     * Bind search input handler (same pattern as Production)
+     */
+    bindSearchInput(searchInput) {
+        if (!searchInput) return;
+        searchInput.removeEventListener('input', this.handleSearchInput);
+        this.handleSearchInput = (e) => {
+            this.searchTerm = e.target.value;
+            this.filterOrders();
+            this.render();
+        };
+        searchInput.addEventListener('input', this.handleSearchInput);
     }
 
     /**
