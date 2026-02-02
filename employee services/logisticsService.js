@@ -21,8 +21,14 @@ class LogisticsService {
      * @param {Function} onOrderUpdate - Callback when order status changes
      */
     async init(containerId, onOrderUpdate = null) {
+        console.log('🚀 LogisticsService.init() called with containerId:', containerId);
         this.container = document.getElementById(containerId);
         this.onOrderUpdateCallback = onOrderUpdate;
+        
+        if (!this.container) {
+            console.error('❌ Logistics container not found:', containerId);
+            return;
+        }
         
         // Get Supabase client
         this.supabase = getSupabaseClient();
@@ -30,6 +36,8 @@ class LogisticsService {
             console.error('❌ Supabase client not available');
             return;
         }
+        
+        console.log('✅ LogisticsService initialized successfully');
 
         // Set up event delegation for card clicks
         if (this.container) {
@@ -823,6 +831,7 @@ class LogisticsService {
     setupSearchInput() {
         const searchInput = document.getElementById('logisticsSearchInput');
         if (searchInput) {
+            console.log('✅ Logistics search input found and setting up listener');
             // Remove existing listener if any
             searchInput.removeEventListener('input', this.handleSearchInput);
             // Create bound handler
@@ -832,6 +841,8 @@ class LogisticsService {
                 this.render();
             };
             searchInput.addEventListener('input', this.handleSearchInput);
+        } else {
+            console.error('❌ Logistics search input NOT FOUND! ID: logisticsSearchInput');
         }
     }
 
