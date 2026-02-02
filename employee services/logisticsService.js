@@ -58,7 +58,7 @@ class LogisticsService {
 
         await this.loadOrdersFromDatabase();
         this.setupOrdersRealtime();
-        // Search/checkbox: HTML only for now; call setupSearchInput() when adding functions later
+        this.setupSearchInput();
     }
 
     /**
