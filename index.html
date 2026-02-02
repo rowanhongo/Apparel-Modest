@@ -772,14 +772,6 @@
             display: block;
         }
 
-        /* Ensure Logistics search bar is visible (same structure as Sales/Production) */
-        #to-deliver input#logisticsSearchInput,
-        #to-deliver .section-header + div {
-            display: block !important;
-            visibility: visible !important;
-            opacity: 1 !important;
-        }
-
         /* Home Tab */
         .welcome-section {
             background: rgba(65, 70, 63, 0.1);
@@ -4356,16 +4348,26 @@
                 <div class="orders-container" id="inProgressContainer"></div>
             </div>
 
-            <!-- Logistics Tab (structure identical to Sales/Production so search bar shows) -->
+            <!-- Logistics Tab: HTML-first (search bar + checkbox row visible), functions added later -->
             <div class="tab-content" id="to-deliver">
                 <div class="section-header">
                     <h2>Logistics</h2>
                 </div>
-                <div style="margin-bottom: 20px; padding: 0 20px;">
+                <!-- Search bar (same as Sales) -->
+                <div class="logistics-search-row" style="margin-bottom: 20px; padding: 0 20px;">
+                    <label for="logisticsSearchInput" style="display: block; font-size: 14px; font-weight: 600; color: #41463F; margin-bottom: 8px;">Search by customer name</label>
                     <input type="text" id="logisticsSearchInput" placeholder="Search by customer name..." 
-                           style="width: 100%; padding: 12px 16px; border: 2px solid rgba(27, 77, 62, 0.2); border-radius: 8px; font-size: 14px; outline: none; transition: border-color 0.3s;"
+                           style="width: 100%; padding: 12px 16px; border: 2px solid rgba(27, 77, 62, 0.2); border-radius: 8px; font-size: 14px; outline: none; transition: border-color 0.3s; box-sizing: border-box;"
                            onfocus="this.style.borderColor='#1B4D3E';" 
                            onblur="this.style.borderColor='rgba(27, 77, 62, 0.2)';">
+                </div>
+                <!-- Checkbox row (static HTML so you see it; each order card will get one when we add functions) -->
+                <div class="logistics-checkbox-row" style="margin-bottom: 16px; padding: 0 20px;">
+                    <span style="font-size: 14px; font-weight: 600; color: #41463F; margin-right: 12px;">Mark when ready for delivery</span>
+                    <label style="display: inline-flex; align-items: center; gap: 8px; cursor: pointer; font-size: 14px; color: #41463F;">
+                        <input type="checkbox" class="logistics-tick-box" style="width: 20px; height: 20px; accent-color: #1B4D3E;" disabled>
+                        <span>Sample (each order will have one)</span>
+                    </label>
                 </div>
                 <div class="orders-container" id="toDeliverContainer"></div>
             </div>
@@ -6941,23 +6943,13 @@
                 
                 // Initialize logistics service when logistics tab is clicked
                 if (tabId === 'to-deliver') {
-                    console.log('[Logistics] Tab clicked: to-deliver');
-                    const tabEl = document.getElementById('to-deliver');
-                    const searchInputEl = document.getElementById('logisticsSearchInput');
-                    const containerEl = document.getElementById('toDeliverContainer');
-                    console.log('[Logistics] DOM check — tab#to-deliver:', !!tabEl, 'input#logisticsSearchInput:', !!searchInputEl, 'container#toDeliverContainer:', !!containerEl);
-                    if (tabEl) console.log('[Logistics] Tab visible (has active):', tabEl.classList.contains('active'), 'tab children count:', tabEl.children.length);
                     if (!window.logisticsService) {
-                        console.log('[Logistics] Creating new LogisticsService');
                         window.logisticsService = new LogisticsService();
                     }
                     if (!window.logisticsInitialized) {
                         window.logisticsInitialized = true;
-                        console.log('[Logistics] First init — calling init("toDeliverContainer")');
                         window.logisticsService.init('toDeliverContainer');
-                        console.log('[Logistics] init() finished');
                     } else {
-                        console.log('[Logistics] Already initialized — reloading orders');
                         window.logisticsService.loadOrdersFromDatabase();
                     }
                 }

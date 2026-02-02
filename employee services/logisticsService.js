@@ -21,26 +21,19 @@ class LogisticsService {
      * @param {Function} onOrderUpdate - Callback when order status changes
      */
     async init(containerId, onOrderUpdate = null) {
-        console.log('[Logistics] init() called, containerId:', containerId);
         this.container = document.getElementById(containerId);
         this.onOrderUpdateCallback = onOrderUpdate;
         
         if (!this.container) {
-            console.error('[Logistics] Container not found:', containerId);
+            console.error('Logistics container not found:', containerId);
             return;
         }
-        console.log('[Logistics] Container found:', this.container, 'parentElement:', this.container.parentElement?.id, 'tab-content id:', this.container.closest('.tab-content')?.id);
         
-        const searchInputInTab = this.container.closest('.tab-content')?.querySelector('#logisticsSearchInput');
-        console.log('[Logistics] Search input inside tab:', !!searchInputInTab, searchInputInTab);
-        
-        // Get Supabase client
         this.supabase = getSupabaseClient();
         if (!this.supabase) {
-            console.error('[Logistics] Supabase client not available');
+            console.error('Supabase client not available');
             return;
         }
-        console.log('[Logistics] Supabase client OK');
 
         // Set up event delegation for card clicks
         if (this.container) {
@@ -63,25 +56,15 @@ class LogisticsService {
             console.error('Container not found:', containerId);
         }
 
-        // Load orders from database
-        console.log('[Logistics] Loading orders from database...');
         await this.loadOrdersFromDatabase();
-        console.log('[Logistics] loadOrdersFromDatabase() done. orders:', this.orders.length, 'filteredOrders:', this.filteredOrders.length);
-        
-        // Set up realtime subscription for orders
         this.setupOrdersRealtime();
-        
-        // Set up search input listener (same pattern as Production)
-        console.log('[Logistics] Calling setupSearchInput()...');
-        this.setupSearchInput();
-        console.log('[Logistics] init() complete');
+        // Search/checkbox: HTML only for now; call setupSearchInput() when adding functions later
     }
 
     /**
      * Load orders from Supabase database
      */
     async loadOrdersFromDatabase() {
-        console.log('[Logistics] loadOrdersFromDatabase() start');
         try {
             // Fetch orders with status 'to_deliver' (matches the tab name 'to-deliver')
             // Order by updated_at descending so most recently completed items (from production) appear first
@@ -105,12 +88,11 @@ class LogisticsService {
                 .order('updated_at', { ascending: false });
 
             if (error) {
-                console.error('[Logistics] Error fetching orders:', error);
+                console.error('Error fetching logistics orders:', error);
                 this.orders = [];
                 this.render();
                 return;
             }
-            console.log('[Logistics] Fetched orders count:', (orders || []).length);
 
             // Validate customer data integrity before transforming
             const validatedOrders = (orders || []).map(order => {
@@ -129,7 +111,6 @@ class LogisticsService {
 
             // Transform Supabase data to match expected format
             this.orders = validatedOrders.map(order => this.transformOrder(order));
-            console.log('[Logistics] Loaded order IDs:', this.orders.map(o => o.id));
             
             // Initialize checkedOrders Set from database values
             this.checkedOrders.clear();
@@ -140,10 +121,9 @@ class LogisticsService {
             });
             
             this.filterOrders();
-            console.log('[Logistics] Calling render(), filteredOrders:', this.filteredOrders.length);
             this.render();
         } catch (error) {
-            console.error('[Logistics] Error in loadOrdersFromDatabase:', error);
+            console.error('Error loading logistics orders:', error);
             this.orders = [];
             this.render();
         }
@@ -155,7 +135,6 @@ class LogisticsService {
      * @returns {Object} Transformed order object
      */
     transformOrder(order) {
-        console.log('[Logistics] transformOrder id:', order.id);
         // CRITICAL FIX: Properly extract customer data to prevent name replication bug
         // Supabase join returns customers as an object (not array) when using foreign key relationship
         // Handle both cases: object (correct) and array (edge case) for safety
@@ -348,12 +327,7 @@ class LogisticsService {
      * Render orders in the container
      */
     render() {
-        console.log('[Logistics] render() called, container:', !!this.container, 'filteredOrders:', this.filteredOrders?.length ?? 0);
-        if (!this.container) {
-            console.warn('[Logistics] render() skipped — no container');
-            return;
-        }
-
+        if (!this.container) return;
         this.container.innerHTML = '';
 
         if (this.filteredOrders.length === 0) {
@@ -379,7 +353,6 @@ class LogisticsService {
     createOrderBubble(order) {
         const bubble = document.createElement('div');
         bubble.className = 'order-bubble';
-        console.log('[Logistics] createOrderBubble order id:', order.id, 'customer:', order.customerName);
         
         // Check if order has multiple items
         const items = order.items || [order]; // Fallback to single item if items array doesn't exist
@@ -421,18 +394,7 @@ class LogisticsService {
             `;
         }
         
-        // Check if this order is already checked (use database value, fallback to Set for UI state)
-        const orderIdStr = String(order.id);
-        const isChecked = order.logistics_checked || this.checkedOrders.has(orderIdStr);
-        const checkboxStyle = isChecked 
-            ? 'border: 2px solid #4CAF50; background: rgba(76, 175, 80, 0.1);'
-            : 'border: 2px solid rgba(65, 70, 63, 0.4); background: white;';
-        const checkboxContent = isChecked 
-            ? `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#4CAF50" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" style="display: block;">
-                <polyline points="20 6 9 17 4 12"></polyline>
-            </svg>`
-            : '';
-
+        // Checkbox per order: add back when wiring functions later (HTML sample is in index.html)
         bubble.innerHTML = `
             <div class="order-header">
                 <div class="order-info" style="width: 100%;">
@@ -445,21 +407,6 @@ class LogisticsService {
                 ${this.renderOrderDetails(order)}
             </div>
             <div class="order-actions" style="display: flex; align-items: center; gap: 16px; justify-content: flex-end;">
-                <div class="logistics-checkbox-container" data-order-id="${order.id}" style="display: flex; align-items: center; cursor: pointer; user-select: none; -webkit-user-select: none;">
-                    <div class="logistics-checkbox" data-order-id="${order.id}" style="
-                        width: 24px;
-                        height: 24px;
-                        ${checkboxStyle}
-                        border-radius: 4px;
-                        display: flex;
-                        align-items: center;
-                        justify-content: center;
-                        transition: all 0.2s ease;
-                        position: relative;
-                    ">
-                        ${checkboxContent}
-                    </div>
-                </div>
                 <div style="display: flex; gap: 8px;">
                     <button class="btn btn-delivered" data-action="delivered" data-id="${order.id}">Delivered</button>
                 </div>
@@ -467,103 +414,12 @@ class LogisticsService {
         `;
 
         // Note: Click handler for expanding is now handled via event delegation in init()
-        // Add button click handler (stop propagation to prevent toggle)
         const deliveredBtn = bubble.querySelector('[data-action="delivered"]');
         if (deliveredBtn) {
             deliveredBtn.addEventListener('click', (e) => {
                 e.stopPropagation();
                 this.markAsDelivered(order.id);
             });
-        }
-
-        // Add checkbox toggle handler
-        const checkboxContainer = bubble.querySelector('.logistics-checkbox-container');
-        const checkbox = bubble.querySelector('.logistics-checkbox');
-        
-        if (checkboxContainer && checkbox) {
-            const handleCheckboxClick = async (e) => {
-                e.stopPropagation();
-                e.preventDefault();
-                
-                // Normalize order ID to string for consistent operations
-                const orderIdStr = String(order.id);
-                const currentCheckedState = order.logistics_checked || this.checkedOrders.has(orderIdStr);
-                const newCheckedState = !currentCheckedState;
-                
-                // Optimistically update UI
-                if (newCheckedState) {
-                    this.checkedOrders.add(orderIdStr);
-                    checkbox.innerHTML = `
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#4CAF50" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" style="display: block;">
-                            <polyline points="20 6 9 17 4 12"></polyline>
-                        </svg>
-                    `;
-                    checkbox.style.borderColor = '#4CAF50';
-                    checkbox.style.background = 'rgba(76, 175, 80, 0.1)';
-                } else {
-                    this.checkedOrders.delete(orderIdStr);
-                    checkbox.innerHTML = '';
-                    checkbox.style.borderColor = 'rgba(65, 70, 63, 0.4)';
-                    checkbox.style.background = 'white';
-                }
-                
-                // Update database
-                try {
-                    const { error } = await this.supabase
-                        .from('orders')
-                        .update({ 
-                            logistics_checked: newCheckedState,
-                            updated_at: new Date().toISOString()
-                        })
-                        .eq('id', orderIdStr);
-                    
-                    if (error) {
-                        console.error('Error updating logistics_checked:', error);
-                        // Revert UI on error
-                        if (newCheckedState) {
-                            this.checkedOrders.delete(orderIdStr);
-                            checkbox.innerHTML = '';
-                            checkbox.style.borderColor = 'rgba(65, 70, 63, 0.4)';
-                            checkbox.style.background = 'white';
-                        } else {
-                            this.checkedOrders.add(orderIdStr);
-                            checkbox.innerHTML = `
-                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#4CAF50" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" style="display: block;">
-                                    <polyline points="20 6 9 17 4 12"></polyline>
-                                </svg>
-                            `;
-                            checkbox.style.borderColor = '#4CAF50';
-                            checkbox.style.background = 'rgba(76, 175, 80, 0.1)';
-                        }
-                        alert('Failed to update checkbox state. Please try again.');
-                    } else {
-                        // Update local order object to reflect database state
-                        order.logistics_checked = newCheckedState;
-                    }
-                } catch (error) {
-                    console.error('Unexpected error updating logistics_checked:', error);
-                    // Revert UI on error
-                    if (newCheckedState) {
-                        this.checkedOrders.delete(orderIdStr);
-                        checkbox.innerHTML = '';
-                        checkbox.style.borderColor = 'rgba(65, 70, 63, 0.4)';
-                        checkbox.style.background = 'white';
-                    } else {
-                        this.checkedOrders.add(orderIdStr);
-                        checkbox.innerHTML = `
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#4CAF50" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" style="display: block;">
-                                <polyline points="20 6 9 17 4 12"></polyline>
-                            </svg>
-                        `;
-                        checkbox.style.borderColor = '#4CAF50';
-                        checkbox.style.background = 'rgba(76, 175, 80, 0.1)';
-                    }
-                    alert('Failed to update checkbox state. Please try again.');
-                }
-            };
-            
-            checkboxContainer.addEventListener('click', handleCheckboxClick);
-            checkbox.addEventListener('click', handleCheckboxClick);
         }
 
         return bubble;
@@ -849,37 +705,21 @@ class LogisticsService {
     setupSearchInput() {
         const getSearchInput = () => {
             const tab = this.container && this.container.closest ? this.container.closest('.tab-content') : null;
-            const input = tab ? tab.querySelector('#logisticsSearchInput') : document.getElementById('logisticsSearchInput');
-            console.log('[Logistics] getSearchInput — tab:', !!tab, 'tab.id:', tab?.id, 'input:', !!input);
-            return input;
+            return tab ? tab.querySelector('#logisticsSearchInput') : document.getElementById('logisticsSearchInput');
         };
         let searchInput = getSearchInput();
         if (!searchInput) {
-            console.warn('[Logistics] Search input not found, retrying in 50ms...');
             setTimeout(() => {
                 searchInput = getSearchInput();
-                if (searchInput) {
-                    console.log('[Logistics] Search input found on retry, binding');
-                    this.bindSearchInput(searchInput);
-                } else {
-                    console.error('[Logistics] Search input still not found after retry');
-                }
+                if (searchInput) this.bindSearchInput(searchInput);
             }, 50);
             return;
         }
-        console.log('[Logistics] Search input found, binding listener');
         this.bindSearchInput(searchInput);
     }
 
-    /**
-     * Bind search input handler (same pattern as Production)
-     */
     bindSearchInput(searchInput) {
-        if (!searchInput) {
-            console.warn('[Logistics] bindSearchInput called with no input');
-            return;
-        }
-        console.log('[Logistics] bindSearchInput — input id:', searchInput.id, 'parent:', searchInput.parentElement?.tagName, searchInput.parentElement?.className);
+        if (!searchInput) return;
         searchInput.removeEventListener('input', this.handleSearchInput);
         this.handleSearchInput = (e) => {
             this.searchTerm = e.target.value;
@@ -887,7 +727,6 @@ class LogisticsService {
             this.render();
         };
         searchInput.addEventListener('input', this.handleSearchInput);
-        console.log('[Logistics] Search input listener attached');
     }
 
     /**
