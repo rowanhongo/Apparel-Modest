@@ -6,10 +6,13 @@
 class LogisticsService {
     constructor() {
         this.orders = [];
+        this.filteredOrders = [];
+        this.searchTerm = '';
         this.container = null;
         this.onOrderUpdateCallback = null;
         this.supabase = null;
         this.ordersChannel = null; // Realtime subscription channel
+        this.checkedOrders = new Set(); // Track which orders are checked
     }
 
     /**
@@ -54,6 +57,9 @@ class LogisticsService {
         
         // Set up realtime subscription for orders
         this.setupOrdersRealtime();
+        
+        // Set up search input listener
+        this.setupSearchInput();
     }
 
     /**
@@ -106,6 +112,16 @@ class LogisticsService {
 
             // Transform Supabase data to match expected format
             this.orders = validatedOrders.map(order => this.transformOrder(order));
+            
+            // Initialize checkedOrders Set from database values
+            this.checkedOrders.clear();
+            this.orders.forEach(order => {
+                if (order.logistics_checked) {
+                    this.checkedOrders.add(String(order.id));
+                }
+            });
+            
+            this.filterOrders();
             this.render();
         } catch (error) {
             console.error('Error loading orders from database:', error);
@@ -278,7 +294,8 @@ class LogisticsService {
             deliveryOption: order.delivery_option || order.deliveryOption || '',
             paymentOption: order.payment_option || order.paymentOption || '',
             paymentReference: order.payment_reference || order.paymentReference || '', // Include payment reference
-            deliveryLocation: order.delivery_display_name || order.delivery_location || order.deliveryLocation || ''
+            deliveryLocation: order.delivery_display_name || order.delivery_location || order.deliveryLocation || '',
+            logistics_checked: order.logistics_checked || false // Include logistics_checked status
         };
     }
 
@@ -288,7 +305,23 @@ class LogisticsService {
      */
     loadOrders(orders) {
         this.orders = orders || [];
+        this.filterOrders();
         this.render();
+    }
+
+    /**
+     * Filter orders based on search term
+     */
+    filterOrders() {
+        if (!this.searchTerm || this.searchTerm.trim() === '') {
+            this.filteredOrders = [...this.orders];
+        } else {
+            const searchLower = this.searchTerm.toLowerCase().trim();
+            this.filteredOrders = this.orders.filter(order => {
+                const customerName = (order.customerName || '').toLowerCase();
+                return customerName.includes(searchLower);
+            });
+        }
     }
 
     /**
@@ -299,18 +332,18 @@ class LogisticsService {
 
         this.container.innerHTML = '';
 
-        if (this.orders.length === 0) {
+        if (this.filteredOrders.length === 0) {
             // Show empty state message
             const emptyMessage = document.createElement('div');
             emptyMessage.className = 'empty-state-message';
             emptyMessage.style.cssText = 'text-align: center; padding: 60px 20px; color: rgba(65, 70, 63, 0.6); font-size: 18px; font-weight: 500;';
-            emptyMessage.textContent = 'No logistics requests yet';
+            emptyMessage.textContent = this.searchTerm ? 'No orders found matching your search' : 'No logistics requests yet';
             this.container.appendChild(emptyMessage);
         } else {
-        this.orders.forEach(order => {
-            const orderBubble = this.createOrderBubble(order);
-            this.container.appendChild(orderBubble);
-        });
+            this.filteredOrders.forEach(order => {
+                const orderBubble = this.createOrderBubble(order);
+                this.container.appendChild(orderBubble);
+            });
         }
     }
 
@@ -363,6 +396,18 @@ class LogisticsService {
             `;
         }
         
+        // Check if this order is already checked (use database value, fallback to Set for UI state)
+        const orderIdStr = String(order.id);
+        const isChecked = order.logistics_checked || this.checkedOrders.has(orderIdStr);
+        const checkboxStyle = isChecked 
+            ? 'border: 2px solid #4CAF50; background: rgba(76, 175, 80, 0.1);'
+            : 'border: 2px solid rgba(65, 70, 63, 0.4); background: white;';
+        const checkboxContent = isChecked 
+            ? `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#4CAF50" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" style="display: block;">
+                <polyline points="20 6 9 17 4 12"></polyline>
+            </svg>`
+            : '';
+
         bubble.innerHTML = `
             <div class="order-header">
                 <div class="order-info" style="width: 100%;">
@@ -374,8 +419,25 @@ class LogisticsService {
             <div class="order-details" id="details-${order.id}">
                 ${this.renderOrderDetails(order)}
             </div>
-            <div class="order-actions">
-                <button class="btn btn-delivered" data-action="delivered" data-id="${order.id}">Delivered</button>
+            <div class="order-actions" style="display: flex; align-items: center; gap: 16px; justify-content: flex-end;">
+                <div class="logistics-checkbox-container" data-order-id="${order.id}" style="display: flex; align-items: center; cursor: pointer; user-select: none; -webkit-user-select: none;">
+                    <div class="logistics-checkbox" data-order-id="${order.id}" style="
+                        width: 24px;
+                        height: 24px;
+                        ${checkboxStyle}
+                        border-radius: 4px;
+                        display: flex;
+                        align-items: center;
+                        justify-content: center;
+                        transition: all 0.2s ease;
+                        position: relative;
+                    ">
+                        ${checkboxContent}
+                    </div>
+                </div>
+                <div style="display: flex; gap: 8px;">
+                    <button class="btn btn-delivered" data-action="delivered" data-id="${order.id}">Delivered</button>
+                </div>
             </div>
         `;
 
@@ -387,6 +449,96 @@ class LogisticsService {
                 e.stopPropagation();
                 this.markAsDelivered(order.id);
             });
+        }
+
+        // Add checkbox toggle handler
+        const checkboxContainer = bubble.querySelector('.logistics-checkbox-container');
+        const checkbox = bubble.querySelector('.logistics-checkbox');
+        
+        if (checkboxContainer && checkbox) {
+            const handleCheckboxClick = async (e) => {
+                e.stopPropagation();
+                e.preventDefault();
+                
+                // Normalize order ID to string for consistent operations
+                const orderIdStr = String(order.id);
+                const currentCheckedState = order.logistics_checked || this.checkedOrders.has(orderIdStr);
+                const newCheckedState = !currentCheckedState;
+                
+                // Optimistically update UI
+                if (newCheckedState) {
+                    this.checkedOrders.add(orderIdStr);
+                    checkbox.innerHTML = `
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#4CAF50" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" style="display: block;">
+                            <polyline points="20 6 9 17 4 12"></polyline>
+                        </svg>
+                    `;
+                    checkbox.style.borderColor = '#4CAF50';
+                    checkbox.style.background = 'rgba(76, 175, 80, 0.1)';
+                } else {
+                    this.checkedOrders.delete(orderIdStr);
+                    checkbox.innerHTML = '';
+                    checkbox.style.borderColor = 'rgba(65, 70, 63, 0.4)';
+                    checkbox.style.background = 'white';
+                }
+                
+                // Update database
+                try {
+                    const { error } = await this.supabase
+                        .from('orders')
+                        .update({ 
+                            logistics_checked: newCheckedState,
+                            updated_at: new Date().toISOString()
+                        })
+                        .eq('id', orderIdStr);
+                    
+                    if (error) {
+                        console.error('Error updating logistics_checked:', error);
+                        // Revert UI on error
+                        if (newCheckedState) {
+                            this.checkedOrders.delete(orderIdStr);
+                            checkbox.innerHTML = '';
+                            checkbox.style.borderColor = 'rgba(65, 70, 63, 0.4)';
+                            checkbox.style.background = 'white';
+                        } else {
+                            this.checkedOrders.add(orderIdStr);
+                            checkbox.innerHTML = `
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#4CAF50" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" style="display: block;">
+                                    <polyline points="20 6 9 17 4 12"></polyline>
+                                </svg>
+                            `;
+                            checkbox.style.borderColor = '#4CAF50';
+                            checkbox.style.background = 'rgba(76, 175, 80, 0.1)';
+                        }
+                        alert('Failed to update checkbox state. Please try again.');
+                    } else {
+                        // Update local order object to reflect database state
+                        order.logistics_checked = newCheckedState;
+                    }
+                } catch (error) {
+                    console.error('Unexpected error updating logistics_checked:', error);
+                    // Revert UI on error
+                    if (newCheckedState) {
+                        this.checkedOrders.delete(orderIdStr);
+                        checkbox.innerHTML = '';
+                        checkbox.style.borderColor = 'rgba(65, 70, 63, 0.4)';
+                        checkbox.style.background = 'white';
+                    } else {
+                        this.checkedOrders.add(orderIdStr);
+                        checkbox.innerHTML = `
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#4CAF50" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" style="display: block;">
+                                <polyline points="20 6 9 17 4 12"></polyline>
+                            </svg>
+                        `;
+                        checkbox.style.borderColor = '#4CAF50';
+                        checkbox.style.background = 'rgba(76, 175, 80, 0.1)';
+                    }
+                    alert('Failed to update checkbox state. Please try again.');
+                }
+            };
+            
+            checkboxContainer.addEventListener('click', handleCheckboxClick);
+            checkbox.addEventListener('click', handleCheckboxClick);
         }
 
         return bubble;
@@ -552,6 +704,9 @@ class LogisticsService {
 
             // Remove from local array
             this.orders = this.orders.filter(o => o.id !== orderId);
+            
+            // Remove from checked orders set if it was checked (normalize ID to string)
+            this.checkedOrders.delete(String(orderId));
 
             // Create completed order object for callback
             const completedOrder = {
@@ -569,6 +724,7 @@ class LogisticsService {
                 this.onOrderUpdateCallback('delivered', completedOrder);
             }
 
+            this.filterOrders();
             this.render();
             alert('✓ Order marked as delivered!');
         } catch (error) {
@@ -658,6 +814,24 @@ class LogisticsService {
         if (this.ordersChannel && this.supabase) {
             this.supabase.removeChannel(this.ordersChannel);
             this.ordersChannel = null;
+        }
+    }
+
+    /**
+     * Set up search input listener
+     */
+    setupSearchInput() {
+        const searchInput = document.getElementById('logisticsSearchInput');
+        if (searchInput) {
+            // Remove existing listener if any
+            searchInput.removeEventListener('input', this.handleSearchInput);
+            // Create bound handler
+            this.handleSearchInput = (e) => {
+                this.searchTerm = e.target.value;
+                this.filterOrders();
+                this.render();
+            };
+            searchInput.addEventListener('input', this.handleSearchInput);
         }
     }
 
