@@ -21,23 +21,26 @@ class LogisticsService {
      * @param {Function} onOrderUpdate - Callback when order status changes
      */
     async init(containerId, onOrderUpdate = null) {
-        console.log('🚀 LogisticsService.init() called with containerId:', containerId);
+        console.log('[Logistics] init() called, containerId:', containerId);
         this.container = document.getElementById(containerId);
         this.onOrderUpdateCallback = onOrderUpdate;
         
         if (!this.container) {
-            console.error('❌ Logistics container not found:', containerId);
+            console.error('[Logistics] Container not found:', containerId);
             return;
         }
+        console.log('[Logistics] Container found:', this.container, 'parentElement:', this.container.parentElement?.id, 'tab-content id:', this.container.closest('.tab-content')?.id);
+        
+        const searchInputInTab = this.container.closest('.tab-content')?.querySelector('#logisticsSearchInput');
+        console.log('[Logistics] Search input inside tab:', !!searchInputInTab, searchInputInTab);
         
         // Get Supabase client
         this.supabase = getSupabaseClient();
         if (!this.supabase) {
-            console.error('❌ Supabase client not available');
+            console.error('[Logistics] Supabase client not available');
             return;
         }
-        
-        console.log('✅ LogisticsService initialized successfully');
+        console.log('[Logistics] Supabase client OK');
 
         // Set up event delegation for card clicks
         if (this.container) {
@@ -61,19 +64,24 @@ class LogisticsService {
         }
 
         // Load orders from database
+        console.log('[Logistics] Loading orders from database...');
         await this.loadOrdersFromDatabase();
+        console.log('[Logistics] loadOrdersFromDatabase() done. orders:', this.orders.length, 'filteredOrders:', this.filteredOrders.length);
         
         // Set up realtime subscription for orders
         this.setupOrdersRealtime();
         
         // Set up search input listener (same pattern as Production)
+        console.log('[Logistics] Calling setupSearchInput()...');
         this.setupSearchInput();
+        console.log('[Logistics] init() complete');
     }
 
     /**
      * Load orders from Supabase database
      */
     async loadOrdersFromDatabase() {
+        console.log('[Logistics] loadOrdersFromDatabase() start');
         try {
             // Fetch orders with status 'to_deliver' (matches the tab name 'to-deliver')
             // Order by updated_at descending so most recently completed items (from production) appear first
@@ -97,11 +105,12 @@ class LogisticsService {
                 .order('updated_at', { ascending: false });
 
             if (error) {
-                console.error('Error fetching logistics orders:', error);
+                console.error('[Logistics] Error fetching orders:', error);
                 this.orders = [];
                 this.render();
                 return;
             }
+            console.log('[Logistics] Fetched orders count:', (orders || []).length);
 
             // Validate customer data integrity before transforming
             const validatedOrders = (orders || []).map(order => {
@@ -130,9 +139,10 @@ class LogisticsService {
             });
             
             this.filterOrders();
+            console.log('[Logistics] Calling render(), filteredOrders:', this.filteredOrders.length);
             this.render();
         } catch (error) {
-            console.error('Error loading orders from database:', error);
+            console.error('[Logistics] Error in loadOrdersFromDatabase:', error);
             this.orders = [];
             this.render();
         }
@@ -336,7 +346,11 @@ class LogisticsService {
      * Render orders in the container
      */
     render() {
-        if (!this.container) return;
+        console.log('[Logistics] render() called, container:', !!this.container, 'filteredOrders:', this.filteredOrders?.length ?? 0);
+        if (!this.container) {
+            console.warn('[Logistics] render() skipped — no container');
+            return;
+        }
 
         this.container.innerHTML = '';
 
@@ -363,6 +377,7 @@ class LogisticsService {
     createOrderBubble(order) {
         const bubble = document.createElement('div');
         bubble.className = 'order-bubble';
+        console.log('[Logistics] createOrderBubble order id:', order.id, 'customer:', order.customerName);
         
         // Check if order has multiple items
         const items = order.items || [order]; // Fallback to single item if items array doesn't exist
@@ -832,16 +847,25 @@ class LogisticsService {
     setupSearchInput() {
         const getSearchInput = () => {
             const tab = this.container && this.container.closest ? this.container.closest('.tab-content') : null;
-            return tab ? tab.querySelector('#logisticsSearchInput') : document.getElementById('logisticsSearchInput');
+            const input = tab ? tab.querySelector('#logisticsSearchInput') : document.getElementById('logisticsSearchInput');
+            console.log('[Logistics] getSearchInput — tab:', !!tab, 'tab.id:', tab?.id, 'input:', !!input);
+            return input;
         };
         let searchInput = getSearchInput();
         if (!searchInput) {
+            console.warn('[Logistics] Search input not found, retrying in 50ms...');
             setTimeout(() => {
                 searchInput = getSearchInput();
-                if (searchInput) this.bindSearchInput(searchInput);
+                if (searchInput) {
+                    console.log('[Logistics] Search input found on retry, binding');
+                    this.bindSearchInput(searchInput);
+                } else {
+                    console.error('[Logistics] Search input still not found after retry');
+                }
             }, 50);
             return;
         }
+        console.log('[Logistics] Search input found, binding listener');
         this.bindSearchInput(searchInput);
     }
 
@@ -849,7 +873,11 @@ class LogisticsService {
      * Bind search input handler (same pattern as Production)
      */
     bindSearchInput(searchInput) {
-        if (!searchInput) return;
+        if (!searchInput) {
+            console.warn('[Logistics] bindSearchInput called with no input');
+            return;
+        }
+        console.log('[Logistics] bindSearchInput — input id:', searchInput.id, 'parent:', searchInput.parentElement?.tagName, searchInput.parentElement?.className);
         searchInput.removeEventListener('input', this.handleSearchInput);
         this.handleSearchInput = (e) => {
             this.searchTerm = e.target.value;
@@ -857,6 +885,7 @@ class LogisticsService {
             this.render();
         };
         searchInput.addEventListener('input', this.handleSearchInput);
+        console.log('[Logistics] Search input listener attached');
     }
 
     /**

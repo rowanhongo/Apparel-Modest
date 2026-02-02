@@ -6941,14 +6941,23 @@
                 
                 // Initialize logistics service when logistics tab is clicked
                 if (tabId === 'to-deliver') {
+                    console.log('[Logistics] Tab clicked: to-deliver');
+                    const tabEl = document.getElementById('to-deliver');
+                    const searchInputEl = document.getElementById('logisticsSearchInput');
+                    const containerEl = document.getElementById('toDeliverContainer');
+                    console.log('[Logistics] DOM check — tab#to-deliver:', !!tabEl, 'input#logisticsSearchInput:', !!searchInputEl, 'container#toDeliverContainer:', !!containerEl);
+                    if (tabEl) console.log('[Logistics] Tab visible (has active):', tabEl.classList.contains('active'), 'tab children count:', tabEl.children.length);
                     if (!window.logisticsService) {
+                        console.log('[Logistics] Creating new LogisticsService');
                         window.logisticsService = new LogisticsService();
                     }
                     if (!window.logisticsInitialized) {
                         window.logisticsInitialized = true;
+                        console.log('[Logistics] First init — calling init("toDeliverContainer")');
                         window.logisticsService.init('toDeliverContainer');
+                        console.log('[Logistics] init() finished');
                     } else {
-                        // Reload orders if already initialized
+                        console.log('[Logistics] Already initialized — reloading orders');
                         window.logisticsService.loadOrdersFromDatabase();
                     }
                 }
