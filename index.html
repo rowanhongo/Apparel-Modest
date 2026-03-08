@@ -453,6 +453,12 @@
             }
         }
 
+        /* Mobile: fixed dropdown escapes modal overflow so items stay visible */
+        #return-product-search-results.return-search-dropdown-fixed {
+            z-index: 10001;
+            -webkit-overflow-scrolling: touch;
+        }
+
         .otp-message {
             background: rgba(224, 216, 201, 0.15);
             border: 1px solid rgba(224, 216, 201, 0.4);

@@ -3,6 +3,8 @@
  * Service for managing returns - add, edit, toggle resolved status
  */
 
+const MOBILE_BREAKPOINT_PX = 768;
+
 class ReturnsService {
     constructor() {
         this.returns = [];
@@ -14,6 +16,7 @@ class ReturnsService {
         this.selectedProduct = null;
         this.productSearchInput = null;
         this.productSearchResults = null;
+        this._dropdownScrollResizeBound = null;
     }
 
     /**
@@ -53,6 +56,65 @@ class ReturnsService {
 
         this.initEventListeners();
         this.initProductSearch();
+        this.bindDropdownScrollResize();
+    }
+
+    /**
+     * Position the search results dropdown using fixed positioning on mobile
+     * so it is not clipped by the modal card's overflow.
+     */
+    positionSearchResultsDropdown() {
+        if (!this.productSearchInput || !this.productSearchResults) return;
+        if (!this.productSearchResults.classList.contains('active')) return;
+
+        const isMobile = typeof window !== 'undefined' && window.innerWidth <= MOBILE_BREAKPOINT_PX;
+        if (isMobile) {
+            const rect = this.productSearchInput.getBoundingClientRect();
+            const gap = 6;
+            const spaceBelow = window.innerHeight - rect.bottom - gap;
+            const maxHeight = Math.min(200, Math.max(120, spaceBelow - 16));
+            this.productSearchResults.classList.add('return-search-dropdown-fixed');
+            this.productSearchResults.style.position = 'fixed';
+            this.productSearchResults.style.top = `${rect.bottom + gap}px`;
+            this.productSearchResults.style.left = `${rect.left}px`;
+            this.productSearchResults.style.width = `${rect.width}px`;
+            this.productSearchResults.style.right = 'auto';
+            this.productSearchResults.style.maxHeight = `${maxHeight}px`;
+        } else {
+            this.clearSearchResultsDropdownPosition();
+        }
+    }
+
+    /**
+     * Clear fixed positioning so dropdown uses default absolute positioning.
+     */
+    clearSearchResultsDropdownPosition() {
+        if (!this.productSearchResults) return;
+        this.productSearchResults.classList.remove('return-search-dropdown-fixed');
+        this.productSearchResults.style.position = '';
+        this.productSearchResults.style.top = '';
+        this.productSearchResults.style.left = '';
+        this.productSearchResults.style.width = '';
+        this.productSearchResults.style.right = '';
+        this.productSearchResults.style.maxHeight = '';
+    }
+
+    /**
+     * Bind scroll (on modal card) and resize to reposition dropdown when open.
+     */
+    bindDropdownScrollResize() {
+        if (this._dropdownScrollResizeBound) return;
+        const self = this;
+        this._dropdownScrollResizeBound = function () {
+            if (self.productSearchResults && self.productSearchResults.classList.contains('active')) {
+                self.positionSearchResultsDropdown();
+            }
+        };
+        const modalCard = this.modal ? this.modal.querySelector('.login-card') : null;
+        if (modalCard) {
+            modalCard.addEventListener('scroll', this._dropdownScrollResizeBound, { passive: true });
+        }
+        window.addEventListener('resize', this._dropdownScrollResizeBound);
     }
 
     /**
@@ -95,7 +157,7 @@ class ReturnsService {
             const query = e.target.value.toLowerCase().trim();
             console.log('🔍 Search query:', query, 'Products available:', this.products.length);
             if (query.length === 0) {
-                this.productSearchResults.classList.remove('active');
+                this.hideProductSearchResults();
                 this.selectedProduct = null;
                 return;
             }
@@ -107,9 +169,8 @@ class ReturnsService {
             if (!this.productSearchInput || !this.productSearchResults) return;
             const isSearchInput = this.productSearchInput.contains(e.target);
             const isSearchResults = this.productSearchResults.contains(e.target);
-            
             if (!isSearchInput && !isSearchResults) {
-                this.productSearchResults.classList.remove('active');
+                this.hideProductSearchResults();
             }
         });
 
@@ -128,6 +189,16 @@ class ReturnsService {
     }
 
     /**
+     * Hide product search results and clear mobile fixed positioning.
+     */
+    hideProductSearchResults() {
+        if (this.productSearchResults) {
+            this.productSearchResults.classList.remove('active');
+            this.clearSearchResultsDropdownPosition();
+        }
+    }
+
+    /**
      * Display product search results
      * @param {string} query - Search query
      */
@@ -141,6 +212,7 @@ class ReturnsService {
             console.warn('No products loaded yet');
             this.productSearchResults.innerHTML = '<div class="return-search-no-results">Loading products...</div>';
             this.productSearchResults.classList.add('active');
+            requestAnimationFrame(() => this.positionSearchResultsDropdown());
             return;
         }
 
@@ -151,6 +223,7 @@ class ReturnsService {
         if (filtered.length === 0) {
             this.productSearchResults.innerHTML = '<div class="return-search-no-results">No items found</div>';
             this.productSearchResults.classList.add('active');
+            requestAnimationFrame(() => this.positionSearchResultsDropdown());
             return;
         }
 
@@ -161,6 +234,7 @@ class ReturnsService {
             </div>
         `).join('');
         this.productSearchResults.classList.add('active');
+        requestAnimationFrame(() => this.positionSearchResultsDropdown());
         console.log(`✅ Displaying ${filtered.length} search results for query: "${query}"`);
     }
 
@@ -179,9 +253,7 @@ class ReturnsService {
         if (this.productSearchInput) {
             this.productSearchInput.value = product.name;
         }
-        if (this.productSearchResults) {
-            this.productSearchResults.classList.remove('active');
-        }
+        this.hideProductSearchResults();
         
         // Set hidden input for product ID
         const hiddenInput = document.getElementById('return-selected-product-id');
@@ -445,9 +517,7 @@ class ReturnsService {
         if (this.productSearchInput) {
             this.productSearchInput.value = '';
         }
-        if (this.productSearchResults) {
-            this.productSearchResults.classList.remove('active');
-        }
+        this.hideProductSearchResults();
         const hiddenInput = document.getElementById('return-selected-product-id');
         if (hiddenInput) {
             hiddenInput.value = '';
@@ -536,9 +606,7 @@ class ReturnsService {
         if (this.productSearchInput) {
             this.productSearchInput.value = '';
         }
-        if (this.productSearchResults) {
-            this.productSearchResults.classList.remove('active');
-        }
+        this.hideProductSearchResults();
         const hiddenInput = document.getElementById('return-selected-product-id');
         if (hiddenInput) {
             hiddenInput.value = '';
