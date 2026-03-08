@@ -3,8 +3,6 @@
  * Service for managing returns - add, edit, toggle resolved status
  */
 
-const MOBILE_BREAKPOINT_PX = 768;
-
 class ReturnsService {
     constructor() {
         this.returns = [];
@@ -16,6 +14,7 @@ class ReturnsService {
         this.selectedProduct = null;
         this.productSearchInput = null;
         this.productSearchResults = null;
+        this.productSearchBackdrop = null;
         this._dropdownScrollResizeBound = null;
     }
 
@@ -37,9 +36,10 @@ class ReturnsService {
             return;
         }
 
-        // Get product search elements
+        // Get product search elements (dropdown lives outside card to avoid overflow clipping)
         this.productSearchInput = document.getElementById('return-cloth-item');
         this.productSearchResults = document.getElementById('return-product-search-results');
+        this.productSearchBackdrop = document.getElementById('return-search-results-backdrop');
 
         if (!this.productSearchInput) {
             console.error('❌ Product search input not found');
@@ -60,43 +60,38 @@ class ReturnsService {
     }
 
     /**
-     * Position the search results dropdown using fixed positioning on mobile
-     * so it is not clipped by the modal card's overflow.
+     * Position the search results dropdown with fixed positioning (like fashion_order_form).
+     * Dropdown lives outside the modal card so it is never clipped by overflow.
      */
     positionSearchResultsDropdown() {
         if (!this.productSearchInput || !this.productSearchResults) return;
         if (!this.productSearchResults.classList.contains('active')) return;
 
-        const isMobile = typeof window !== 'undefined' && window.innerWidth <= MOBILE_BREAKPOINT_PX;
-        if (isMobile) {
-            const rect = this.productSearchInput.getBoundingClientRect();
-            const gap = 6;
-            const spaceBelow = window.innerHeight - rect.bottom - gap;
-            const maxHeight = Math.min(200, Math.max(120, spaceBelow - 16));
-            this.productSearchResults.classList.add('return-search-dropdown-fixed');
-            this.productSearchResults.style.position = 'fixed';
-            this.productSearchResults.style.top = `${rect.bottom + gap}px`;
-            this.productSearchResults.style.left = `${rect.left}px`;
-            this.productSearchResults.style.width = `${rect.width}px`;
-            this.productSearchResults.style.right = 'auto';
-            this.productSearchResults.style.maxHeight = `${maxHeight}px`;
-        } else {
-            this.clearSearchResultsDropdownPosition();
-        }
+        const rect = this.productSearchInput.getBoundingClientRect();
+        const gap = 6;
+        const spaceBelow = window.innerHeight - rect.bottom - gap;
+        const maxHeight = Math.max(150, Math.min(400, spaceBelow - 16, window.innerHeight * 0.7));
+        this.productSearchResults.style.position = 'fixed';
+        this.productSearchResults.style.top = `${rect.bottom + gap}px`;
+        this.productSearchResults.style.left = `${rect.left}px`;
+        this.productSearchResults.style.width = `${rect.width}px`;
+        this.productSearchResults.style.maxHeight = `${maxHeight}px`;
     }
 
     /**
-     * Clear fixed positioning so dropdown uses default absolute positioning.
+     * Clear dropdown inline positioning styles and hide backdrop.
      */
     clearSearchResultsDropdownPosition() {
-        if (!this.productSearchResults) return;
-        this.productSearchResults.classList.remove('return-search-dropdown-fixed');
-        this.productSearchResults.style.position = '';
-        this.productSearchResults.style.top = '';
-        this.productSearchResults.style.left = '';
-        this.productSearchResults.style.width = '';
-        this.productSearchResults.style.right = '';
-        this.productSearchResults.style.maxHeight = '';
+        if (this.productSearchResults) {
+            this.productSearchResults.style.position = '';
+            this.productSearchResults.style.top = '';
+            this.productSearchResults.style.left = '';
+            this.productSearchResults.style.width = '';
+            this.productSearchResults.style.maxHeight = '';
+        }
+        if (this.productSearchBackdrop) {
+            this.productSearchBackdrop.classList.remove('active');
+        }
     }
 
     /**
@@ -124,7 +119,7 @@ class ReturnsService {
         try {
             const { data: productsData, error } = await this.supabase
                 .from('products')
-                .select('id, name, image_url')
+                .select('id, name, image_url, price')
                 .order('name', { ascending: true });
 
             if (error) {
@@ -136,7 +131,8 @@ class ReturnsService {
             this.products = (productsData || []).map(product => ({
                 id: product.id,
                 name: product.name || 'Unknown Product',
-                image: product.image_url || 'https://via.placeholder.com/400'
+                image: product.image_url || 'https://via.placeholder.com/400',
+                price: product.price != null ? Number(product.price) : null
             }));
 
             console.log(`✅ Loaded ${this.products.length} products for returns`);
@@ -169,10 +165,20 @@ class ReturnsService {
             if (!this.productSearchInput || !this.productSearchResults) return;
             const isSearchInput = this.productSearchInput.contains(e.target);
             const isSearchResults = this.productSearchResults.contains(e.target);
-            if (!isSearchInput && !isSearchResults) {
+            const isBackdrop = this.productSearchBackdrop && (e.target === this.productSearchBackdrop || this.productSearchBackdrop.contains(e.target));
+            if (!isSearchInput && !isSearchResults && !isBackdrop) {
                 this.hideProductSearchResults();
             }
         });
+
+        // Backdrop click/touch closes results (same as fashion_order_form)
+        if (this.productSearchBackdrop) {
+            this.productSearchBackdrop.addEventListener('click', () => this.hideProductSearchResults());
+            this.productSearchBackdrop.addEventListener('touchend', (e) => {
+                e.preventDefault();
+                this.hideProductSearchResults();
+            }, { passive: false });
+        }
 
         // Event delegation for search results
         if (this.productSearchResults) {
@@ -212,6 +218,7 @@ class ReturnsService {
             console.warn('No products loaded yet');
             this.productSearchResults.innerHTML = '<div class="return-search-no-results">Loading products...</div>';
             this.productSearchResults.classList.add('active');
+            if (this.productSearchBackdrop) this.productSearchBackdrop.classList.add('active');
             requestAnimationFrame(() => this.positionSearchResultsDropdown());
             return;
         }
@@ -223,17 +230,23 @@ class ReturnsService {
         if (filtered.length === 0) {
             this.productSearchResults.innerHTML = '<div class="return-search-no-results">No items found</div>';
             this.productSearchResults.classList.add('active');
+            if (this.productSearchBackdrop) this.productSearchBackdrop.classList.add('active');
             requestAnimationFrame(() => this.positionSearchResultsDropdown());
             return;
         }
 
+        const priceDisplay = (p) => p.price != null ? `<span class="return-search-result-price">KES ${Number(p.price).toLocaleString()}</span>` : '';
         this.productSearchResults.innerHTML = filtered.map(product => `
             <div class="return-search-result-item" data-id="${product.id}">
                 <img src="${product.image}" alt="${product.name}" class="return-search-result-image">
-                <div class="return-search-result-name">${product.name}</div>
+                <div>
+                    <div class="return-search-result-name">${product.name}</div>
+                    ${priceDisplay(product)}
+                </div>
             </div>
         `).join('');
         this.productSearchResults.classList.add('active');
+        if (this.productSearchBackdrop) this.productSearchBackdrop.classList.add('active');
         requestAnimationFrame(() => this.positionSearchResultsDropdown());
         console.log(`✅ Displaying ${filtered.length} search results for query: "${query}"`);
     }
