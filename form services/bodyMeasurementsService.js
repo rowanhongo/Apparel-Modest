@@ -108,7 +108,7 @@ class BodyMeasurementsService {
         customFields.forEach(field => {
             field.addEventListener('input', function(e) {
                 // Remove any non-numeric characters
-                this.value = this.value.replace(/[^0-9]/g, '');
+                this.value = this.value.replace(/[^0-9'.]/g, '');
             });
 
             field.addEventListener('keypress', function(e) {
