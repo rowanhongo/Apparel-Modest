@@ -2830,10 +2830,19 @@
                     deliveryLocation = deliveryDisplayName; // Keep for backward compatibility
                 }
 
+                // Generate unique order number: ORD-YYYYMMDD-XXXXX
+                const now = new Date();
+                const datePart = now.getFullYear().toString() +
+                    String(now.getMonth() + 1).padStart(2, '0') +
+                    String(now.getDate()).padStart(2, '0');
+                const randomPart = Math.floor(10000 + Math.random() * 90000); // 5-digit random
+                const orderNumber = `ORD-${datePart}-${randomPart}`;
+
                 // Save order with payment reference in dedicated column
                 const { data: newOrder, error: orderError } = await supabaseClient
                     .from('orders')
                     .insert({
+                        order_number: orderNumber,
                         customer_id: customerId,
                         customer_phone: customerPhone, // Required field
                         product_id: selectedProduct.id,

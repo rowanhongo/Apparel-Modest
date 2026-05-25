@@ -3159,6 +3159,14 @@
                 let orderError = null;
                 let lastError = null;
 
+                // Generate unique order number: ORD-YYYYMMDD-XXXXX
+                const now = new Date();
+                const datePart = now.getFullYear().toString() +
+                    String(now.getMonth() + 1).padStart(2, '0') +
+                    String(now.getDate()).padStart(2, '0');
+                const randomPart = Math.floor(10000 + Math.random() * 90000); // 5-digit random
+                const orderNumber = `ORD-${datePart}-${randomPart}`;
+
                 for (let attempt = 1; attempt <= maxRetries; attempt++) {
                     try {
                         submitBtn.textContent = `Creating Order... (Attempt ${attempt}/${maxRetries})`;
@@ -3167,6 +3175,7 @@
                         const { data: orderData, error: createError } = await supabaseClient
                             .from('orders')
                             .insert({
+                                order_number: orderNumber,
                                 customer_id: customerId,
                                 customer_phone: customerPhone, // Required field
                                 product_id: orderCart[0].product.id, // First product for backward compatibility
