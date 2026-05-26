@@ -9694,15 +9694,37 @@
                         comments: finalComments || null
                     };
 
-                    const { data: newOrder, error: orderError } = await supabase
-                        .from('orders')
-                        .insert(orderData)
-                        .select()
-                        .single();
+                    const generateOrderNumber = () => {
+                        const now = new Date();
+                        const datePart = now.getFullYear().toString() +
+                            String(now.getMonth() + 1).padStart(2, '0') +
+                            String(now.getDate()).padStart(2, '0');
+                        const randomPart = Math.floor(10000000 + Math.random() * 90000000); // 8-digit random
+                        return `ORD-${datePart}-${randomPart}`;
+                    };
 
-                    if (orderError) {
-                        console.error('❌ Failed to create order:', orderError);
-                        throw new Error(`Failed to create order: ${orderError.message}`);
+                    let newOrder = null;
+                    const MAX_ATTEMPTS = 3;
+                    for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
+                        orderData.order_number = generateOrderNumber();
+                        const { data: orderResult, error: orderError } = await supabase
+                            .from('orders')
+                            .insert(orderData)
+                            .select()
+                            .single();
+
+                        if (!orderError) {
+                            newOrder = orderResult;
+                            break;
+                        }
+
+                        const isDuplicateOrderNumber =
+                            orderError.message && orderError.message.includes('orders_order_number_key');
+                        if (!isDuplicateOrderNumber || attempt === MAX_ATTEMPTS) {
+                            console.error('❌ Failed to create order:', orderError);
+                            throw new Error(`Failed to create order: ${orderError.message}`);
+                        }
+                        // Duplicate order_number collision — retry with a fresh number
                     }
 
                     console.log(`✅ Successfully created order ${newOrder.id} with ${itemsArray.length} items stored in JSONB column`);
