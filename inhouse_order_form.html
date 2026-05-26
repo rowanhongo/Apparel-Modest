@@ -2830,40 +2830,55 @@
                     deliveryLocation = deliveryDisplayName; // Keep for backward compatibility
                 }
 
-                // Generate unique order number: ORD-YYYYMMDD-XXXXX
-                const now = new Date();
-                const datePart = now.getFullYear().toString() +
-                    String(now.getMonth() + 1).padStart(2, '0') +
-                    String(now.getDate()).padStart(2, '0');
-                const randomPart = Math.floor(10000 + Math.random() * 90000); // 5-digit random
-                const orderNumber = `ORD-${datePart}-${randomPart}`;
+                // Generate unique order number: ORD-YYYYMMDD-XXXXXXXX
+                const generateOrderNumber = () => {
+                    const now = new Date();
+                    const datePart = now.getFullYear().toString() +
+                        String(now.getMonth() + 1).padStart(2, '0') +
+                        String(now.getDate()).padStart(2, '0');
+                    const randomPart = Math.floor(10000000 + Math.random() * 90000000); // 8-digit random
+                    return `ORD-${datePart}-${randomPart}`;
+                };
 
-                // Save order with payment reference in dedicated column
-                const { data: newOrder, error: orderError } = await supabaseClient
-                    .from('orders')
-                    .insert({
-                        order_number: orderNumber,
-                        customer_id: customerId,
-                        customer_phone: customerPhone, // Required field
-                        product_id: selectedProduct.id,
-                        status: 'pending',
-                        color: selectedColor,
-                        price: selectedProduct.price,
-                        delivery_option: deliveryOption,
-                        delivery_location: deliveryLocation || null, // Keep for backward compatibility
-                        delivery_latitude: deliveryLatitude ? parseFloat(deliveryLatitude) : null,
-                        delivery_longitude: deliveryLongitude ? parseFloat(deliveryLongitude) : null,
-                        delivery_display_name: deliveryDisplayName || null,
-                        payment_option: paymentOption, // 'mpesa' for in-person orders
-                        payment_reference: mpesaCodeValue, // Store M-Pesa code in payment_reference column
-                        payment_status: 'pending', // Payment status - pending verification for in-person orders
-                        comments: finalComments || null
-                    })
-                    .select()
-                    .single();
+                // Save order with retry loop to handle duplicate order_number collisions
+                let newOrder = null;
+                const MAX_ATTEMPTS = 3;
+                for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
+                    const orderNumber = generateOrderNumber();
+                    const { data: orderData, error: orderError } = await supabaseClient
+                        .from('orders')
+                        .insert({
+                            order_number: orderNumber,
+                            customer_id: customerId,
+                            customer_phone: customerPhone, // Required field
+                            product_id: selectedProduct.id,
+                            status: 'pending',
+                            color: selectedColor,
+                            price: selectedProduct.price,
+                            delivery_option: deliveryOption,
+                            delivery_location: deliveryLocation || null, // Keep for backward compatibility
+                            delivery_latitude: deliveryLatitude ? parseFloat(deliveryLatitude) : null,
+                            delivery_longitude: deliveryLongitude ? parseFloat(deliveryLongitude) : null,
+                            delivery_display_name: deliveryDisplayName || null,
+                            payment_option: paymentOption, // 'mpesa' for in-person orders
+                            payment_reference: mpesaCodeValue, // Store M-Pesa code in payment_reference column
+                            payment_status: 'pending', // Payment status - pending verification for in-person orders
+                            comments: finalComments || null
+                        })
+                        .select()
+                        .single();
 
-                if (orderError) {
-                    throw new Error(`Failed to create order: ${orderError.message}`);
+                    if (!orderError) {
+                        newOrder = orderData;
+                        break;
+                    }
+
+                    const isDuplicateOrderNumber =
+                        orderError.message && orderError.message.includes('orders_order_number_key');
+                    if (!isDuplicateOrderNumber || attempt === MAX_ATTEMPTS) {
+                        throw new Error(`Failed to create order: ${orderError.message}`);
+                    }
+                    // Duplicate order_number collision — retry with a fresh number
                 }
 
                 alert(`✓ Order submitted successfully!\n\nM-Pesa Code: ${mpesaCodeValue}\n\nYour order will be processed after payment verification.`);
